@@ -1,0 +1,283 @@
+{
+  "cannon_distant": {
+    "subtitle": "sounds.siegeworks.cannon_distant",
+    "sounds": [
+      "siegeworks:cannon_distant"
+    ]
+  },
+  "serpentine_fire": {
+    "subtitle": "sounds.siegeworks.serpentine_fire",
+    "sounds": [
+      "siegeworks:cannon_fire"
+    ]
+  },
+  "ram_impact": {
+    "subtitle": "sounds.siegeworks.ram_impact",
+    "sounds": [
+      "siegeworks:ram_impact_1",
+      "siegeworks:ram_impact_2",
+      "siegeworks:ram_impact_3",
+      "siegeworks:ram_impact_4"
+    ]
+  },
+  "ram_release": {
+    "subtitle": "sounds.siegeworks.ram_release",
+    "sounds": [
+      "siegeworks:ram_release"
+    ]
+  },
+  "rope_charge_br": {
+    "subtitle": "sounds.siegeworks.rope_charge_br",
+    "sounds": [
+      "siegeworks:rope_charge_br"
+    ]
+  },
+  "siege_engine_move": {
+    "subtitle": "sounds.siegeworks.siege_engine_move",
+    "sounds": [
+      "siegeworks:siege_engine_move_1",
+      "siegeworks:siege_engine_move_2",
+      "siegeworks:siege_engine_move_3",
+      "siegeworks:siege_engine_move_4"
+    ]
+  },
+  "mangonel_shoot": {
+    "subtitle": "sounds.siegeworks.mangonel_shoot",
+    "sounds": [
+      "siegeworks:mangonel_shoot"
+    ]
+  },
+  "mangonel_reload": {
+    "subtitle": "sounds.siegeworks.mangonel_reload",
+    "sounds": [
+      "siegeworks:mangonel_reload"
+    ]
+  },
+  "trebuchet_shoot": {
+    "subtitle": "sounds.siegeworks.trebuchet_shoot",
+    "sounds": [
+      "siegeworks:trebuchet_shoot_1",
+      "siegeworks:trebuchet_shoot_2"
+    ]
+  },
+  "trebuchet_reload": {
+    "subtitle": "sounds.siegeworks.trebuchet_reload",
+    "sounds": [
+      "siegeworks:trebuchet_reload"
+    ]
+  },
+  "tower_crossbow_shoot": {
+    "subtitle": "sounds.siegeworks.tower_crossbow_shoot",
+    "sounds": [
+      {
+        "name": "siegeworks:tower_crossbow_shoot",
+        "stream": true
+      }
+    ]
+  },
+  "arcballista_shoot": {
+    "subtitle": "sounds.siegeworks.arcballista_shoot",
+    "sounds": [
+      {
+        "name": "siegeworks:arcballista_shoot",
+        "stream": true
+      }
+    ]
+  },
+  "arcballista_reload": {
+    "subtitle": "sounds.siegeworks.arcballista_reload",
+    "sounds": [
+      "siegeworks:arcballista_reload"
+    ]
+  },
+  "tower_crossbow_reload": {
+    "subtitle": "sounds.siegeworks.tower_crossbow_reload",
+    "sounds": [
+      "siegeworks:tower_crossbow_reload"
+    ]
+  },
+  "ballista_lock": {
+    "subtitle": "sounds.siegeworks.ballista_lock",
+    "sounds": [
+      "siegeworks:ballista_lock"
+    ]
+  },
+  "cannon_fire": {
+    "subtitle": "sounds.siegeworks.cannon_fire",
+    "sounds": [
+      "siegeworks:cannon_fire"
+    ]
+  },
+  "bolt_impact": {
+    "subtitle": "sounds.siegeworks.bolt_impact",
+    "sounds": [
+      "siegeworks:bolt_impact_1",
+      "siegeworks:bolt_impact_2",
+      "siegeworks:bolt_impact_3",
+      "siegeworks:bolt_impact_4"
+    ]
+  },
+  "projectile_impact": {
+    "subtitle": "sounds.siegeworks.projectile_impact",
+    "sounds": [
+      {
+        "name": "siegeworks:projectile_impact",
+        "volume": 1.35,
+        "stream": true
+      }
+    ]
+  },
+  "impact_explosion_layer": {
+    "sounds": [
+      {
+        "name": "minecraft:random/explode1",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:random/explode2",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:random/explode3",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:random/explode4",
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "impact_body_layer": {
+    "sounds": [
+      {
+        "name": "minecraft:mob/goat/impact1",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:mob/goat/impact2",
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "impact_stone_layer": {
+    "sounds": [
+      {
+        "name": "minecraft:block/deepslate/break1",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:block/deepslate/break2",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:block/deepslate/break3",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:block/deepslate/break4",
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "impact_sharp_stone_layer": {
+    "sounds": [
+      {
+        "name": "minecraft:block/dripstone/break1",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:block/dripstone/break2",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:block/dripstone/break3",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:block/dripstone/break4",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:block/dripstone/break5",
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "impact_metal_layer": {
+    "sounds": [
+      {
+        "name": "minecraft:mob/irongolem/damage1",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:mob/irongolem/damage2",
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "impact_netherite_layer": {
+    "sounds": [
+      {
+        "name": "minecraft:block/netherite/break1",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:block/netherite/break2",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:block/netherite/break3",
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:block/netherite/break4",
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "impact_anvil_layer": {
+    "sounds": [
+      {
+        "name": "minecraft:random/anvil_land",
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "impact_fall_layer": {
+    "sounds": [
+      {
+        "name": "minecraft:damage/fallbig",
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "impact_firework_layer": {
+    "sounds": [
+      {
+        "name": "minecraft:fireworks/largeblast1",
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "rail_skid": {
+    "subtitle": "sounds.siegeworks.rail_skid",
+    "sounds": [
+      "siegeworks:rail_skid"
+    ]
+  },
+  "projectile_flight": {
+    "sounds": [
+      {
+        "name": "siegeworks:projectile_flight",
+        "stream": true,
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "siege_engine_damage": {
+    "subtitle": "sounds.siegeworks.siege_engine_damage",
+    "sounds": [
+      "siegeworks:siege_engine_damage"
+    ]
+  }
+}

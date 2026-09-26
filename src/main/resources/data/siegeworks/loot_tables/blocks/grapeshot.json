@@ -1,0 +1,81 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [{
+        "type": "minecraft:alternatives",
+        "children": [
+          {
+            "type": "minecraft:item",
+            "name": "siegeworks:grapeshot",
+            "conditions": [{
+              "condition": "minecraft:block_state_property",
+              "block": "siegeworks:grapeshot",
+              "properties": { "count": "4" }
+            }],
+            "functions": [{ "function": "minecraft:set_count", "count": 2 }]
+          },
+          {
+            "type": "minecraft:item",
+            "name": "siegeworks:grapeshot",
+            "conditions": [{
+              "condition": "minecraft:block_state_property",
+              "block": "siegeworks:grapeshot",
+              "properties": { "count": "3" }
+            }],
+            "functions": [{ "function": "minecraft:set_count", "count": 2 }]
+          },
+          {
+            "type": "minecraft:item",
+            "name": "siegeworks:grapeshot",
+            "conditions": [{
+              "condition": "minecraft:block_state_property",
+              "block": "siegeworks:grapeshot",
+              "properties": { "count": "2" }
+            }],
+            "functions": [{ "function": "minecraft:set_count", "count": 2 }]
+          },
+          {
+            "type": "minecraft:item",
+            "name": "siegeworks:grapeshot",
+            "conditions": [{
+              "condition": "minecraft:block_state_property",
+              "block": "siegeworks:grapeshot",
+              "properties": { "count": "1" }
+            }]
+          }
+        ]
+      }],
+      "conditions": [{ "condition": "minecraft:survives_explosion" }]
+    },
+    {
+      "rolls": 1,
+      "entries": [{
+        "type": "minecraft:alternatives",
+        "children": [
+          {
+            "type": "minecraft:item",
+            "name": "siegeworks:grapeshot",
+            "conditions": [{
+              "condition": "minecraft:block_state_property",
+              "block": "siegeworks:grapeshot",
+              "properties": { "count": "4" }
+            }],
+            "functions": [{ "function": "minecraft:set_count", "count": 2 }]
+          },
+          {
+            "type": "minecraft:item",
+            "name": "siegeworks:grapeshot",
+            "conditions": [{
+              "condition": "minecraft:block_state_property",
+              "block": "siegeworks:grapeshot",
+              "properties": { "count": "3" }
+            }]
+          }
+        ]
+      }],
+      "conditions": [{ "condition": "minecraft:survives_explosion" }]
+    }
+  ]
+}

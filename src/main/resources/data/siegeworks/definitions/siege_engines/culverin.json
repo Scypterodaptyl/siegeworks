@@ -1,0 +1,37 @@
+{
+  "baseDamage": 78.0,
+  "projectileSpeed": 145.0,
+  "accuracyMultiplier": 0.07,
+  "scattershot": {
+    "capacity": 12,
+    "minPellets": 1,
+    "maxPellets": 12,
+    "pelletsPerLoadedItemMin": 2,
+    "pelletsPerLoadedItemMax": 3,
+    "spreadDegrees": 5.5,
+    "baseDamagePerPellet": 47.3
+  },
+  "damageConfig": {
+    "entityDamageSources": {
+      "siegeworks:tower_crossbow_bolt_projectile": true,
+      "siegeworks:arcballista_bolt_projectile": true,
+      "siegeworks:singijeon_projectile": true,
+      "minecraft:vindicator": true,
+      "*": false
+    },
+    "itemDamageSources": {
+      "minecraft:wooden_axe": true,
+      "minecraft:stone_axe": true,
+      "minecraft:iron_axe": true,
+      "minecraft:golden_axe": true,
+      "minecraft:diamond_axe": true,
+      "minecraft:netherite_axe": true,
+      "*": false
+    },
+    "damageTypeSources": {
+      "projectile": false,
+      "explosion": true,
+      "*": false
+    }
+  }
+}

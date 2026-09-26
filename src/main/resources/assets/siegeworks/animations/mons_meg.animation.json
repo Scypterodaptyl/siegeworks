@@ -1,0 +1,50 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "shoot": {
+      "animation_length": 5,
+      "bones": {
+        "mons_meg": {
+          "position": {
+            "0.0": {"post":{"vector":[0,0,0]},"lerp_mode":"catmullrom"},
+            "0.375": {"vector":[0,0,25],"easing":"easeInElastic"},
+            "0.875": {"pre":{"vector":[0,0,25]},"post":{"vector":[0,0,25]},"lerp_mode":"catmullrom"},
+            "1.25": {"vector":[0,0,25],"easing":"easeOutElastic"},
+            "2.5417": {"vector":[0,0,25]},
+            "5.0": {"pre":{"vector":[0,0,0]},"post":{"vector":[0,0,0]},"lerp_mode":"catmullrom"}
+          }
+        },
+        "base": {
+          "rotation": {
+            "0.0": {"post":{"vector":[0,0,0]},"lerp_mode":"catmullrom"},
+            "0.125": {"post":{"vector":[-7.5,0,0]},"lerp_mode":"catmullrom"},
+            "0.375": {"post":{"vector":[0,0,0]},"lerp_mode":"catmullrom"},
+            "0.5833": {"vector":[2.5,0,0],"easing":"easeInElastic"},
+            "0.875": {"pre":{"vector":[0,0,0]},"post":{"vector":[0,0,0]},"lerp_mode":"catmullrom"}
+          }
+        },
+        "wheels_1": {
+          "rotation": {
+            "0.0": {"post":{"vector":[0,0,0]},"lerp_mode":"catmullrom"},
+            "0.375": {"vector":[-70,0,0],"easing":"easeInElastic"},
+            "0.875": {"pre":{"vector":[-70,0,0]},"post":{"vector":[-70,0,0]},"lerp_mode":"catmullrom"},
+            "1.25": {"vector":[-70,0,0],"easing":"easeOutElastic"},
+            "2.5417": {"vector":[-70,0,0]},
+            "5.0": {"pre":{"vector":[0,0,0]},"post":{"vector":[0,0,0]},"lerp_mode":"catmullrom"}
+          }
+        },
+        "wheels_2": {
+          "rotation": {
+            "0.0": {"post":{"vector":[0,0,0]},"lerp_mode":"catmullrom"},
+            "0.375": {"vector":[-70,0,0],"easing":"easeInElastic"},
+            "0.875": {"pre":{"vector":[-70,0,0]},"post":{"vector":[-70,0,0]},"lerp_mode":"catmullrom"},
+            "1.25": {"vector":[-70,0,0],"easing":"easeOutElastic"},
+            "2.5417": {"vector":[-70,0,0]},
+            "5.0": {"pre":{"vector":[0,0,0]},"post":{"vector":[0,0,0]},"lerp_mode":"catmullrom"}
+          }
+        }
+      }
+    }
+  },
+  "geckolib_format_version": 2
+}

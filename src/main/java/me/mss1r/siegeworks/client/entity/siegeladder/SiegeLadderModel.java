@@ -1,0 +1,42 @@
+package me.mss1r.siegeworks.client.entity.siegeladder;
+
+import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
+import net.minecraft.resources.ResourceLocation;
+//? if forge {
+/*import software.bernie.geckolib.core.animation.AnimationState;
+*///?} else {
+import software.bernie.geckolib.animation.AnimationState;
+//?}
+import software.bernie.geckolib.model.GeoModel;
+
+public class SiegeLadderModel extends GeoModel<SiegeLadderEntity> {
+    @Override
+    public ResourceLocation getModelResource(SiegeLadderEntity animatable) {
+        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "geo/siege_ladder.geo.json");
+    }
+
+    @Override
+    public ResourceLocation getTextureResource(SiegeLadderEntity animatable) {
+        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/siege_ladder.png");
+    }
+
+    @Override
+    public ResourceLocation getAnimationResource(SiegeLadderEntity animatable) {
+        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "animations/siege_ladder.animation.json");
+    }
+
+    @Override
+    public void setCustomAnimations(SiegeLadderEntity animatable, long instanceId, AnimationState<SiegeLadderEntity> animationState) {
+        super.setCustomAnimations(animatable, instanceId, animationState);
+        getBone("siege_ladder").ifPresent(geoBone ->
+                geoBone.setRotX((float) Math.toRadians(
+                        -animatable.getRenderedLeanAngleDegrees(animationState.getPartialTick()))));
+
+        int sections = animatable.getSections();
+        for (int i = SiegeLadderEntity.MIN_SECTIONS; i <= SiegeLadderEntity.MAX_SECTIONS; i++) {
+            int sectionIndex = i;
+            getBone("section_" + sectionIndex).ifPresent(geoBone -> geoBone.setHidden(sectionIndex > sections));
+        }
+    }
+}

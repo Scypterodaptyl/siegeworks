@@ -1,0 +1,53 @@
+[
+  {
+    "key": {
+      "L": {
+        "item": "minecraft:oak_log",
+        "count": 12
+      }
+    },
+    "result": {
+      "item": "siegeworks:siege_ladder_spawner",
+      "count": 1,
+      "deployment": {
+        "mode": "ground",
+        "preview_entity": "siegeworks:siege_ladder"
+      },
+      "custom_data": {
+        "Sections": 2
+      }
+    },
+    "construction": [
+      {
+        "section": "baza",
+        "hits": 8,
+        "materials": [
+          {
+            "key": "L",
+            "count": 4
+          }
+        ]
+      },
+      {
+        "section": "section_1",
+        "hits": 4,
+        "materials": [
+          {
+            "key": "L",
+            "count": 4
+          }
+        ]
+      },
+      {
+        "section": "section_2",
+        "hits": 4,
+        "materials": [
+          {
+            "key": "L",
+            "count": 4
+          }
+        ]
+      }
+    ]
+  }
+]

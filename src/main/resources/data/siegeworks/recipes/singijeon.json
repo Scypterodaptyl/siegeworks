@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "minecraft:paper" },
+    { "item": "minecraft:stick" },
+    { "item": "minecraft:iron_nugget" },
+    { "item": "minecraft:gunpowder" }
+  ],
+  "result": {
+    "item": "siegeworks:singijeon",
+    "count": 4
+  }
+}

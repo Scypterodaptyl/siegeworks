@@ -1,0 +1,134 @@
+package me.mss1r.siegeworks.network;
+
+import dev.architectury.networking.NetworkManager;
+import dev.architectury.utils.Env;
+import dev.architectury.utils.EnvExecutor;
+import io.netty.buffer.Unpooled;
+import me.mss1r.siegeworks.Siegeworks;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+//? if neoforge {
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+//?}
+
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
+public final class SiegeworksNetworking {
+    private static final ResourceLocation SIEGE_YAW = id("siege_yaw");
+    private static final ResourceLocation SIEGE_MOVEMENT = id("siege_movement");
+    private static final ResourceLocation BOLT_THROWER_FIRE = id("bolt_thrower_fire");
+    private static final ResourceLocation MANGONEL_FIRE = id("mangonel_fire");
+    private static final ResourceLocation MANTLET_ACTION = id("mantlet_action");
+    private static final ResourceLocation MAINTENANCE_ACTION = id("maintenance_action");
+    private static final ResourceLocation OPEN_MAINTENANCE = id("open_maintenance");
+
+    private SiegeworksNetworking() {
+    }
+
+    public static void register() {
+        //? if forge {
+        /*
+        register(NetworkManager.c2s(), SIEGE_YAW, SiegeYawC2SPayload::decode, SiegeYawC2SPayload::handle);
+        register(NetworkManager.c2s(), SIEGE_MOVEMENT,
+                SiegeMovementC2SPayload::decode, SiegeMovementC2SPayload::handle);
+        register(NetworkManager.c2s(), BOLT_THROWER_FIRE,
+                BoltThrowerFireC2SPayload::decode, BoltThrowerFireC2SPayload::handle);
+        register(NetworkManager.c2s(), MANGONEL_FIRE,
+                MangonelFireC2SPayload::decode, MangonelFireC2SPayload::handle);
+        register(NetworkManager.c2s(), MANTLET_ACTION,
+                MantletActionC2SPayload::decode, MantletActionC2SPayload::handle);
+        register(NetworkManager.c2s(), MAINTENANCE_ACTION,
+                MaintenanceActionC2SPayload::decode, MaintenanceActionC2SPayload::handle);
+        *///?} else {
+        NetworkManager.registerReceiver(NetworkManager.c2s(), SiegeYawC2SPayload.TYPE,
+                SiegeYawC2SPayload.STREAM_CODEC, SiegeYawC2SPayload::handle);
+        NetworkManager.registerReceiver(NetworkManager.c2s(), SiegeMovementC2SPayload.TYPE,
+                SiegeMovementC2SPayload.STREAM_CODEC, SiegeMovementC2SPayload::handle);
+        NetworkManager.registerReceiver(NetworkManager.c2s(), BoltThrowerFireC2SPayload.TYPE,
+                BoltThrowerFireC2SPayload.STREAM_CODEC, BoltThrowerFireC2SPayload::handle);
+        NetworkManager.registerReceiver(NetworkManager.c2s(), MangonelFireC2SPayload.TYPE,
+                MangonelFireC2SPayload.STREAM_CODEC, MangonelFireC2SPayload::handle);
+        NetworkManager.registerReceiver(NetworkManager.c2s(), MantletActionC2SPayload.TYPE,
+                MantletActionC2SPayload.STREAM_CODEC, MantletActionC2SPayload::handle);
+        NetworkManager.registerReceiver(NetworkManager.c2s(), MaintenanceActionC2SPayload.TYPE,
+                MaintenanceActionC2SPayload.STREAM_CODEC, MaintenanceActionC2SPayload::handle);
+        //?}
+        EnvExecutor.runInEnv(Env.CLIENT, () -> SiegeworksNetworking::registerClientReceivers);
+    }
+
+    private static void registerClientReceivers() {
+        //? if forge {
+        /*
+        register(NetworkManager.s2c(), OPEN_MAINTENANCE,
+                OpenMaintenanceS2CPayload::decode, OpenMaintenanceS2CPayload::handle);
+        *///?} else {
+        NetworkManager.registerReceiver(NetworkManager.s2c(), OpenMaintenanceS2CPayload.TYPE,
+                OpenMaintenanceS2CPayload.STREAM_CODEC, OpenMaintenanceS2CPayload::handle);
+        //?}
+    }
+
+    //? if forge {
+    /*
+    private static <T> void register(NetworkManager.Side side, ResourceLocation id,
+                                     Function<FriendlyByteBuf, T> decoder,
+                                     BiConsumer<T, NetworkManager.PacketContext> handler) {
+        NetworkManager.registerReceiver(side, id,
+                (buffer, context) -> handler.accept(decoder.apply(buffer), context));
+    }
+    *///?}
+
+    public static void sendToServer(Object packet) {
+        //? if forge {
+        /*
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        ResourceLocation id;
+        if (packet instanceof SiegeYawC2SPayload value) {
+            SiegeYawC2SPayload.encode(value, buffer);
+            id = SIEGE_YAW;
+        } else if (packet instanceof SiegeMovementC2SPayload value) {
+            SiegeMovementC2SPayload.encode(value, buffer);
+            id = SIEGE_MOVEMENT;
+        } else if (packet instanceof BoltThrowerFireC2SPayload value) {
+            BoltThrowerFireC2SPayload.encode(value, buffer);
+            id = BOLT_THROWER_FIRE;
+        } else if (packet instanceof MangonelFireC2SPayload value) {
+            MangonelFireC2SPayload.encode(value, buffer);
+            id = MANGONEL_FIRE;
+        } else if (packet instanceof MantletActionC2SPayload value) {
+            MantletActionC2SPayload.encode(value, buffer);
+            id = MANTLET_ACTION;
+        } else if (packet instanceof MaintenanceActionC2SPayload value) {
+            MaintenanceActionC2SPayload.encode(value, buffer);
+            id = MAINTENANCE_ACTION;
+        } else {
+            throw new IllegalArgumentException("Unsupported client packet: " + packet.getClass().getName());
+        }
+        NetworkManager.sendToServer(id, buffer);
+        *///?} else {
+        NetworkManager.sendToServer((CustomPacketPayload) packet);
+        //?}
+    }
+
+    public static void sendToPlayer(ServerPlayer player, Object packet) {
+        //? if forge {
+        /*
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        ResourceLocation id;
+        if (packet instanceof OpenMaintenanceS2CPayload value) {
+            OpenMaintenanceS2CPayload.encode(value, buffer);
+            id = OPEN_MAINTENANCE;
+        } else {
+            throw new IllegalArgumentException("Unsupported server packet: " + packet.getClass().getName());
+        }
+        NetworkManager.sendToPlayer(player, id, buffer);
+        *///?} else {
+        NetworkManager.sendToPlayer(player, (CustomPacketPayload) packet);
+        //?}
+    }
+
+    private static ResourceLocation id(String path) {
+        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, path);
+    }
+}

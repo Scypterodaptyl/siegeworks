@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": [
+    "H  ",
+    "CS ",
+    "A  "
+  ],
+  "key": {
+    "H": {
+      "item": "minecraft:honeycomb"
+    },
+    "C": {
+      "item": "minecraft:charcoal"
+    },
+    "S": {
+      "item": "siegeworks:rope"
+    },
+    "A": {
+      "item": "minecraft:stick"
+    }
+  },
+  "result": {
+    "item": "siegeworks:fire_arrow",
+    "count": 4
+  }
+}

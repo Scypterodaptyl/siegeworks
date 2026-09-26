@@ -1,0 +1,143 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "unloaded": {
+      "loop": "hold_on_last_frame",
+      "animation_length": 0.05,
+      "bones": {
+        "catapult": {"rotation":{"vector":[90,0,0]}},
+        "counterweight": {"rotation":{"vector":[-90,0,0]}},
+        "loader": {"rotation":{"vector":[0,0,0]}},
+        "sling": {"rotation":{"vector":[-175,0,0]}},
+        "projectile": {
+          "scale": {"vector":[0,0,0]}
+        },
+        "projectile_fire": {
+          "scale": {"vector":[0,0,0]}
+        }
+      }
+    },
+    "reload": {
+      "animation_length": 16.1667,
+      "bones": {
+        "catapult": {
+          "rotation": {
+            "0.0": {"vector":[90,0,0]},
+            "14.0": {"vector":[-3,0,0]},
+            "16.0": {"vector":[-22.5,0,0]}
+          }
+        },
+        "counterweight": {
+          "rotation": {
+            "0.0": {"vector":[-90,0,0]},
+            "14.0": {"vector":[3,0,0]},
+            "16.0": {"vector":[22.5,0,0]}
+          }
+        },
+        "loader": {
+          "rotation": {
+            "0.0": {"vector":[0,0,0]},
+            "16.0": {"vector":[-1800,0,0]}
+          }
+        },
+        "sling": {
+          "rotation": {
+            "0.0": {"vector":[-175,0,0]},
+            "11.0": {"vector":[-110.04,0,0]},
+            "12.125": {"vector":[-112.5,0,0]},
+            "12.9583": {"vector":[-113.5,0,0]},
+            "14.0": {"vector":[-130,0,0]},
+            "14.5": {"vector":[-139.5,0,0]},
+            "16.0": {"vector":[-157.5,0,0]}
+          }
+        },
+        "projectile": {
+          "scale": {
+            "15.9167": {"vector":[0,0,0]},
+            "16.0": {"vector":[1,1,1]}
+          }
+        },
+        "projectile_fire": {
+          "scale": {
+            "0.0": {"vector":[0,0,0]},
+            "15.9167": {"vector":[0,0,0]},
+            "16.0": {"vector":[1,1,1]}
+          }
+        }
+      }
+    },
+    "loaded": {
+      "loop": "hold_on_last_frame",
+      "animation_length": 0.05,
+      "bones": {
+        "catapult": {"rotation":{"vector":[-22.5,0,0]}},
+        "counterweight": {"rotation":{"vector":[22.5,0,0]}},
+        "loader": {"rotation":{"vector":[-1800,0,0]}},
+        "sling": {"rotation":{"vector":[-157.5,0,0]}},
+        "projectile": {
+          "scale": {"vector":[1,1,1]}
+        },
+        "projectile_fire": {
+          "scale": {"vector":[1,1,1]}
+        }
+      }
+    },
+    "shoot": {
+      "loop": "hold_on_last_frame",
+      "animation_length": 3.25,
+      "bones": {
+        "catapult": {
+          "rotation": {
+            "0.0": {"vector":[-22.5,0,0],"easing":"linear"},
+            "0.25": {"vector":[-20,0,0],"easing":"linear"},
+            "0.75": {"vector":[65,0,0],"easing":"linear"},
+            "1.25": {"vector":[145,0,0],"easing":"linear"},
+            "1.7": {"vector":[112.5,0,0],"easing":"linear"},
+            "2.2": {"vector":[82.5,0,0],"easing":"linear"},
+            "2.7": {"vector":[94,0,0],"easing":"linear"},
+            "3.25": {"vector":[90,0,0],"easing":"linear"}
+          }
+        },
+        "counterweight": {
+          "rotation": {
+            "0.0": {"vector":[22.5,0,0],"easing":"linear"},
+            "0.25": {"vector":[24,0,0],"easing":"linear"},
+            "0.75": {"vector":[-50,0,0],"easing":"linear"},
+            "1.25": {"vector":[-125,0,0],"easing":"linear"},
+            "1.7": {"vector":[-128,0,0],"easing":"linear"},
+            "2.2": {"vector":[-96,0,0],"easing":"linear"},
+            "2.7": {"vector":[-87,0,0],"easing":"linear"},
+            "3.25": {"vector":[-90,0,0],"easing":"linear"}
+          }
+        },
+        "sling": {
+          "rotation": {
+            "0.0": {"vector":[-157.5,0,0],"easing":"linear"},
+            "0.35": {"vector":[-135,0,0],"easing":"linear"},
+            "0.7": {"vector":[-80,0,0],"easing":"linear"},
+            "1.0": {"vector":[20,0,0],"easing":"linear"},
+            "1.2": {"vector":[140,0,0],"easing":"linear"},
+            "1.35": {"vector":[202.5,0,0],"easing":"linear"},
+            "1.8": {"vector":[190,0,0],"easing":"linear"},
+            "2.3": {"vector":[183,0,0],"easing":"linear"},
+            "2.8": {"vector":[186,0,0],"easing":"linear"},
+            "3.25": {"vector":[185,0,0],"easing":"linear"}
+          }
+        },
+        "projectile": {
+          "scale": {
+            "0.75": {"vector":[1,1,1]},
+            "0.8": {"vector":[0,0,0]}
+          }
+        },
+        "projectile_fire": {
+          "scale": {
+            "0.8": {"vector":[1,1,1]},
+            "0.85": {"vector":[0,0,0]}
+          }
+        }
+      }
+    }
+  },
+  "geckolib_format_version": 2
+}

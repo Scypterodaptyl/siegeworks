@@ -1,0 +1,26 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "me.mss1r.siegeworks.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "siegeworks.refmap.json",
+  "mixins": [
+    "DraftCamelWalkAnimationMixin",
+    "DraftMountControlMixin",
+    "DraftMountRotationMixin",
+    "ProjectileMixin",
+    "ProjectileUtilMixin",
+    "RecruitsPathNodeEvaluatorMixin"
+  ],
+  "client": [
+    "client.CapeLayerMixin",
+    "client.CameraMixin",
+    "client.DraftMountAnimationMixin",
+    "client.HumanoidModelMixin",
+    "client.MouseHandlerMixin",
+    "client.PlayerRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

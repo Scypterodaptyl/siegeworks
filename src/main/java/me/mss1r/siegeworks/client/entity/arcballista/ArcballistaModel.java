@@ -1,0 +1,37 @@
+package me.mss1r.siegeworks.client.entity.arcballista;
+
+import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.client.entity.TowedSiegeModel;
+import me.mss1r.siegeworks.entity.siege.ArcballistaEntity;
+import net.minecraft.resources.ResourceLocation;
+//? if forge {
+/*import software.bernie.geckolib.core.animation.AnimationState;
+*///?} else {
+import software.bernie.geckolib.animation.AnimationState;
+//?}
+
+public class ArcballistaModel extends TowedSiegeModel<ArcballistaEntity> {
+    @Override
+    public ResourceLocation getModelResource(ArcballistaEntity animatable) {
+        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "geo/arcballista.geo.json");
+    }
+
+    @Override
+    public ResourceLocation getTextureResource(ArcballistaEntity animatable) {
+        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/arcballista.png");
+    }
+
+    @Override
+    public ResourceLocation getAnimationResource(ArcballistaEntity animatable) {
+        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "animations/arcballista.animation.json");
+    }
+
+    @Override
+    public void setCustomAnimations(ArcballistaEntity animatable, long instanceId, AnimationState<ArcballistaEntity> animationState) {
+        super.setCustomAnimations(animatable, instanceId, animationState);
+
+        animatable.updateRenderedAim(animationState.getPartialTick());
+        getBone("base").ifPresent(bone -> bone.setRotX((float) Math.toRadians(animatable.getRenderedModelPitch())));
+        getBone("bolt").ifPresent(bone -> bone.setHidden(!animatable.hasAmmoLoaded()));
+    }
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": [
+    " R ",
+    "RCR",
+    " R "
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:cobblestone"
+    },
+    "R": {
+      "item": "siegeworks:rope"
+    }
+  },
+  "result": {
+    "item": "siegeworks:grapeshot",
+    "count": 1
+  }
+}

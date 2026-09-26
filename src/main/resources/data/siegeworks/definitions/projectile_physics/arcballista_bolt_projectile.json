@@ -1,0 +1,15 @@
+{
+  "mass": 16.0,
+  "penetration": 0.85,
+  "drag": 0.0007,
+  "impactFuse": false,
+  "blockCostMultiplier": 0.95,
+  "blockDamageMultiplier": 0.25,
+  "energyLossMultiplier": 1.0,
+  "armorPiercing": 0.55,
+  "entityDamageMultiplier": 1.1,
+  "shockRadius": 0.0,
+  "shockDamageMultiplier": 0.0,
+  "baseExplosionPower": 0.0,
+  "speedExplosionScale": 0.0
+}
