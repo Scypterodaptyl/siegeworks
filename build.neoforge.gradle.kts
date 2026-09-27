@@ -125,7 +125,9 @@ java {
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
-            artifactId = modId
+            groupId = System.getenv("GROUP") ?: project.group.toString()
+            artifactId = System.getenv("ARTIFACT") ?: modId
+            version = System.getenv("VERSION") ?: project.version.toString()
             from(components["java"])
         }
     }

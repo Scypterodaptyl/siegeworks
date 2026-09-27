@@ -50,13 +50,13 @@ configurations.named(gameTestSourceSet.runtimeOnlyConfigurationName) {
 }
 
 repositories {
-    mavenLocal {
-        content { includeGroup("me.mss1r.recruitsrtscommand") }
-    }
     mavenCentral()
     maven("https://jitpack.io") {
         name = "JitPack"
-        content { includeGroup("com.github.mess1re.axiomata") }
+        content {
+            includeGroup("com.github.mess1re")
+            includeGroup("com.github.mess1re.axiomata")
+        }
         metadataSources {
             mavenPom()
             artifact()
@@ -83,7 +83,7 @@ dependencies {
     // The RTS command layer, if the player has it. Compile only and optional in both directions:
     // this mod commands siege engines from Recruits' own screen without it, and it works with
     // Recruits without this mod. Neither is allowed to require the other.
-    "modCompileOnly"("me.mss1r.recruitsrtscommand:recruitsrtscommand:$rtsCommandVersion")
+    "modCompileOnly"("com.github.mess1re:recruitsrtscommand:$rtsCommandVersion")
     if (providers.gradleProperty("enable_recruits_compat_runtime").orNull?.toBoolean() == true) {
         "modRuntimeOnly"("maven.modrinth:villager-recruits:$recruitsVersion")
     }
@@ -93,7 +93,7 @@ dependencies {
     // works because the map's mixins are @Pseudo with remap = false and touch no Minecraft member,
     // so they do not care which names the game is wearing.
     if (providers.gradleProperty("enable_rts_compat_runtime").orNull?.toBoolean() == true) {
-        "modRuntimeOnly"("me.mss1r.recruitsrtscommand:recruitsrtscommand:$rtsCommandVersion")
+        "modRuntimeOnly"("com.github.mess1re:recruitsrtscommand:$rtsCommandVersion")
     }
     annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
     add(gameTestSourceSet.implementationConfigurationName, sourceSets.main.get().output)
@@ -179,7 +179,9 @@ java {
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
-            artifactId = modId
+            groupId = System.getenv("GROUP") ?: project.group.toString()
+            artifactId = System.getenv("ARTIFACT") ?: modId
+            version = System.getenv("VERSION") ?: project.version.toString()
             from(components["java"])
         }
     }
