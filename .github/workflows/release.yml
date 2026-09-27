@@ -28,7 +28,7 @@ jobs:
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
       RELEASE_CHANGELOG: ${{ inputs.changelog }}
-      CURSEFORGE_PROJECT_ID: "1713913"
+      CURSEFORGE_PROJECT_ID: "1713906"
 
     steps:
       - name: Check out repository
