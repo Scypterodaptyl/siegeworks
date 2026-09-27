@@ -1,0 +1,176 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "[0-9]*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag
+        required: true
+        type: string
+      changelog:
+        description: Optional release notes (used by GitHub and CurseForge)
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      RELEASE_CHANGELOG: ${{ inputs.changelog }}
+      CURSEFORGE_PROJECT_ID: "1713913"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Check release version
+        shell: bash
+        run: |
+          version=$(sed -n 's/^mod\.version = "\(.*\)"/\1/p' stonecutter.properties.toml)
+
+          if [[ -z "$version" ]]; then
+            echo "Could not read mod.version from stonecutter.properties.toml"
+            exit 1
+          fi
+
+          if [[ "$RELEASE_TAG" != "$version" ]]; then
+            echo "Tag '$RELEASE_TAG' does not match mod.version '$version'"
+            exit 1
+          fi
+
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew clean build
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$RELEASE_TAG"
+          forge_jar="versions/1.20.1-forge/build/libs/siegeworks-forge-${tag}+1.20.1.jar"
+          neoforge_jar="versions/1.21.1-neoforge/build/libs/siegeworks-neoforge-${tag}+1.21.1.jar"
+          release_flags=()
+
+          if [[ "$tag" == *-* ]]; then
+            release_flags+=(--prerelease)
+          fi
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" \
+              "$forge_jar" \
+              "$neoforge_jar" \
+              --clobber
+
+            if [[ -n "$RELEASE_CHANGELOG" ]]; then
+              gh release edit "$tag" --notes "$RELEASE_CHANGELOG"
+            fi
+          else
+            notes_flags=(--generate-notes)
+
+            if [[ -n "$RELEASE_CHANGELOG" ]]; then
+              notes_flags=(--notes "$RELEASE_CHANGELOG")
+            fi
+
+            gh release create "$tag" \
+              "$forge_jar" \
+              "$neoforge_jar" \
+              --verify-tag \
+              --title "$tag" \
+              "${notes_flags[@]}" \
+              "${release_flags[@]}"
+          fi
+
+      - name: Publish to CurseForge
+        shell: bash
+        env:
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ -z "$CURSEFORGE_TOKEN" ]]; then
+            echo "::error::Add CURSEFORGE_TOKEN to the repository Actions secrets."
+            exit 1
+          fi
+
+          tag="$RELEASE_TAG"
+          forge_jar="versions/1.20.1-forge/build/libs/siegeworks-forge-${tag}+1.20.1.jar"
+          neoforge_jar="versions/1.21.1-neoforge/build/libs/siegeworks-neoforge-${tag}+1.21.1.jar"
+          changelog=$(gh release view "$tag" --json body --jq '.body // ""')
+          release_type="release"
+
+          upload_file() {
+            local file="$1"
+            local minecraft_version="$2"
+            local loader="$3"
+            local metadata
+
+            metadata=$(jq -n \
+              --arg changelog "$changelog" \
+              --arg minecraft_version "$minecraft_version" \
+              --arg loader "$loader" \
+              --arg release_type "$release_type" \
+              '{
+                changelog: $changelog,
+                changelogType: "markdown",
+                gameVersionNames: [
+                  $minecraft_version,
+                  $loader,
+                  "Client",
+                  "Server"
+                ],
+                releaseType: $release_type,
+                relations: {
+                  projects: (
+                    [
+                      {slug: "axiomata", projectID: "1713796", type: "requiredDependency"},
+                      {slug: "geckolib", type: "requiredDependency"},
+                      {slug: "architectury-api", type: "requiredDependency"}
+                    ]
+                    + (if $loader == "Forge" then [
+                        {slug: "recruits", type: "optionalDependency"},
+                        {slug: "recruits-rts-command", projectID: "1713906", type: "optionalDependency"}
+                      ] else [] end)
+                  )
+                }
+              }')
+
+            curl --fail-with-body \
+              --request POST \
+              --header "X-Api-Token: $CURSEFORGE_TOKEN" \
+              --form-string "metadata=$metadata" \
+              --form "file=@$file" \
+              "https://minecraft.curseforge.com/api/projects/${CURSEFORGE_PROJECT_ID}/upload-file"
+          }
+
+          upload_file \
+            "$forge_jar" \
+            "1.20.1" \
+            "Forge"
+
+          upload_file \
+            "$neoforge_jar" \
+            "1.21.1" \
+            "NeoForge"
