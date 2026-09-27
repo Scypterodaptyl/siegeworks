@@ -94,9 +94,8 @@ public class MonsMegEntity extends AbstractSiegeEntity implements GeoEntity, Sie
     private static final double AIM_PIVOT_FORWARD = -2.0D / MODEL_UNITS_PER_BLOCK;
     private static final double MUZZLE_HEIGHT_FROM_PIVOT = 19.3D / MODEL_UNITS_PER_BLOCK;
     private static final double MUZZLE_FORWARD_FROM_PIVOT = 56.0D / MODEL_UNITS_PER_BLOCK;
-    private static final int FULL_DRAFT_TEAM = 2;
-    private static final double DRAFT_TEAM_LATERAL_OFFSET = 17.0D / MODEL_UNITS_PER_BLOCK;
-    private static final double TOW_DISTANCE = 37.0D / MODEL_UNITS_PER_BLOCK + 1.5D;
+    private static final int FULL_DRAFT_TEAM = 1;
+    private static final double TOW_DISTANCE = 4.15D;
     private static final int SHOOT_ANIMATION_TICKS = 100;
     private static final EntityDataAccessor<Integer> SHOOT_ANIMATION_TICK =
             SynchedEntityData.defineId(MonsMegEntity.class, EntityDataSerializers.INT);
@@ -640,8 +639,7 @@ public class MonsMegEntity extends AbstractSiegeEntity implements GeoEntity, Sie
 
     @Override
     public TowingProfile towingProfile() {
-        return TowingProfile.drawnFromBehind(TOW_DISTANCE,
-                DRAFT_TEAM_LATERAL_OFFSET, -DRAFT_TEAM_LATERAL_OFFSET);
+        return TowingProfile.drawnFromBehind(TOW_DISTANCE);
     }
 
     private double getDraftTeamPower(Entity operator) {

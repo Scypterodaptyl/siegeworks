@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks.client.maintenance;
 
+import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.network.MaintenanceActionC2SPayload;
 import me.mss1r.siegeworks.network.OpenMaintenanceS2CPayload;
 import net.minecraft.client.gui.GuiGraphics;
@@ -7,6 +8,7 @@ import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import me.mss1r.siegeworks.network.SiegeworksNetworking;
 
 import java.util.ArrayList;
@@ -15,6 +17,13 @@ import java.util.List;
 public class SiegeMaintenanceScreen extends Screen {
     private static final int PANEL_WIDTH = 280;
     private static final int PANEL_HEIGHT = 190;
+    private static final int TEXT_COLOR = 0x404040;
+    private static final int HEADING_COLOR = 0x303030;
+    private static final int PROGRESS_COLOR = 0x9A4D00;
+    private static final ResourceLocation PANEL_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+            Siegeworks.MOD_ID,
+            "textures/gui/maintenance.png"
+    );
 
     private final OpenMaintenanceS2CPayload payload;
 
@@ -56,10 +65,20 @@ public class SiegeMaintenanceScreen extends Screen {
 
         int left = (width - PANEL_WIDTH) / 2;
         int top = (height - PANEL_HEIGHT) / 2;
-        guiGraphics.fill(left, top, left + PANEL_WIDTH, top + PANEL_HEIGHT, 0xE0101010);
-        guiGraphics.fill(left + 1, top + 1, left + PANEL_WIDTH - 1, top + PANEL_HEIGHT - 1, 0xE0201B16);
+        guiGraphics.blit(
+                PANEL_TEXTURE,
+                left,
+                top,
+                0,
+                0,
+                PANEL_WIDTH,
+                PANEL_HEIGHT,
+                PANEL_WIDTH,
+                PANEL_HEIGHT
+        );
 
-        guiGraphics.drawCenteredString(font, title, width / 2, top + 10, 0xE8D8B8);
+        int titleX = (width - font.width(title)) / 2;
+        guiGraphics.drawString(font, title, titleX, top + 10, HEADING_COLOR, false);
 
         int healthPercent = payload.maxHealth() <= 0 ? 0 : Math.round(payload.health() * 100.0F / payload.maxHealth());
         Component healthLine = Component.translatable(
@@ -68,7 +87,7 @@ public class SiegeMaintenanceScreen extends Screen {
                 payload.maxHealth(),
                 healthPercent
         );
-        guiGraphics.drawString(font, healthLine, left + 14, top + 30, 0xFFFFFF, false);
+        guiGraphics.drawString(font, healthLine, left + 14, top + 30, TEXT_COLOR, false);
 
         if (payload.dismantling()) {
             Component progress = Component.translatable(
@@ -76,7 +95,7 @@ public class SiegeMaintenanceScreen extends Screen {
                     payload.dismantleProgress(),
                     payload.dismantleRequired()
             );
-            guiGraphics.drawString(font, progress, left + 14, top + 44, 0xFFCC88, false);
+            guiGraphics.drawString(font, progress, left + 14, top + 44, PROGRESS_COLOR, false);
         }
 
         drawSection(guiGraphics, left + 14, top + 62,
@@ -132,13 +151,13 @@ public class SiegeMaintenanceScreen extends Screen {
     }
 
     private void drawSection(GuiGraphics guiGraphics, int x, int y, Component heading, List<Component> lines) {
-        guiGraphics.drawString(font, heading, x, y, 0xE8D8B8, false);
+        guiGraphics.drawString(font, heading, x, y, HEADING_COLOR, false);
         int maxLines = 7;
         for (int i = 0; i < Math.min(maxLines, lines.size()); i++) {
-            guiGraphics.drawString(font, lines.get(i), x, y + 14 + i * 10, 0xD6D6D6, false);
+            guiGraphics.drawString(font, lines.get(i), x, y + 14 + i * 10, TEXT_COLOR, false);
         }
         if (lines.size() > maxLines) {
-            guiGraphics.drawString(font, Component.literal("..."), x, y + 14 + maxLines * 10, 0xD6D6D6, false);
+            guiGraphics.drawString(font, Component.literal("..."), x, y + 14 + maxLines * 10, TEXT_COLOR, false);
         }
     }
 }
