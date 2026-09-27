@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-beta.3
+
+### Changed
+
+- Updated the required Axiomata version to 0.1.0-beta.2.
+
 ## 0.1.0-beta.2
 
 ### Changed
