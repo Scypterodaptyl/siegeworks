@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/main/resources/siegeworks.png" width="200" alt="Siegeworks icon">
+</p>
+
 # Siegeworks
 
 Siegeworks adds medieval siege engines to Minecraft. Build them from blueprints, load and aim them by hand, then use them in battle.
