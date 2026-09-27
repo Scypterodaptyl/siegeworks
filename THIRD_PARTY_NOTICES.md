@@ -5,6 +5,19 @@ remain subject to their respective licenses and are not covered by either the
 Siegeworks code license or `LICENSE-ASSETS.md`. Any permission to extract,
 modify, or reuse them comes only from the terms identified below.
 
+## Project origins and visual sources
+
+Siegeworks began as a reworking of
+[Kingdoms & Sieges](https://github.com/B4nduty/kingdomsieges) and later developed
+into a substantially separate project. Some of its foundational concepts,
+including multi-step weapon loading and projectile damage to blocks, originated
+there.
+
+All current models and animations in Siegeworks are original. The colour
+palette and some small texture fragments were adapted from Kingdoms & Sieges,
+released under
+[CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
+
 ## Freesound recordings
 
 ### CC0 1.0
