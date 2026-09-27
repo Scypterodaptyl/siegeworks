@@ -145,13 +145,11 @@ jobs:
                 relations: {
                   projects: (
                     [
-                      {slug: "axiomata", projectID: 1713796, type: "requiredDependency"},
                       {slug: "geckolib", type: "requiredDependency"},
                       {slug: "architectury-api", type: "requiredDependency"}
                     ]
                     + (if $loader == "Forge" then [
-                        {slug: "recruits", type: "optionalDependency"},
-                        {slug: "recruits-rts-command", projectID: 1713906, type: "optionalDependency"}
+                        {slug: "recruits", type: "optionalDependency"}
                       ] else [] end)
                   )
                 }
