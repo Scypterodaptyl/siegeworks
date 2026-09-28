@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-beta.4
+
+### Fixed
+
+- Siege projectiles can now hit multipart targets such as the Ender Dragon.
+- Bolts no longer stop in mid-air after killing a target they can penetrate.
+- Bolts embedded in living targets now stay attached to the part they hit.
+
 ## 0.1.0-beta.3
 
 ### Changed
