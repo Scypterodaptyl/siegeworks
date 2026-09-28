@@ -2,6 +2,7 @@ package me.mss1r.siegeworks.api;
 
 import net.minecraft.world.phys.Vec3;
 
+/** A few aiming helpers shared by siege engines and integrations. */
 public final class SiegeBallistics {
     private static final double VANILLA_AIR_RETENTION = 0.99D;
     private static final int MAX_FLIGHT_TICKS = 600;
@@ -9,6 +10,7 @@ public final class SiegeBallistics {
     private SiegeBallistics() {
     }
 
+    /** Returns Minecraft pitch for the lower firing solution, or {@link Float#NaN} if it cannot reach. */
     public static float calculateLowAnglePitch(Vec3 origin, Vec3 target, double speed, double gravity) {
         double dx = target.x - origin.x;
         double dy = target.y - origin.y;
@@ -31,6 +33,7 @@ public final class SiegeBallistics {
         return (float) -Math.toDegrees(angle);
     }
 
+    /** Returns the power multiplier for a fixed launch slope, without drag, or NaN if unreachable. */
     public static double calculateFixedArcPower(Vec3 origin, Vec3 target, double baseSpeed,
                                                 double launchSlope, double gravity) {
         double dx = target.x - origin.x;
@@ -48,6 +51,7 @@ public final class SiegeBallistics {
         return requiredSpeedSquared <= 0.0D ? Double.NaN : Math.sqrt(requiredSpeedSquared) / baseSpeed;
     }
 
+    /** Returns a bounded power multiplier using per-tick drag, or NaN if the range has no solution. */
     public static double calculateFixedArcPower(Vec3 origin, Vec3 target, double baseSpeed,
                                                 double launchSlope, double gravity, double projectileDrag,
                                                 double minPower, double maxPower) {

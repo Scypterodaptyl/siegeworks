@@ -2,7 +2,9 @@ package me.mss1r.siegeworks.api;
 
 import java.util.Locale;
 
+/** Broad ammunition groups shared by the command UI and siege engines. */
 public enum SiegeAmmunitionMode {
+    /** Use whichever supported ammunition is available. */
     AUTO,
     STANDARD,
     EXPLOSIVE,

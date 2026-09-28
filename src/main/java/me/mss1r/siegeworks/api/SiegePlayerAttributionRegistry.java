@@ -12,6 +12,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 
+/** Resolves an indirect operator or owner back to a player for block-breaking attribution. */
 public final class SiegePlayerAttributionRegistry {
     private static final Map<ResourceLocation, Function<Entity, UUID>> RESOLVER_TYPES =
             new LinkedHashMap<>();
@@ -20,6 +21,7 @@ public final class SiegePlayerAttributionRegistry {
     private SiegePlayerAttributionRegistry() {
     }
 
+    /** A resolver returns null when it does not know the entity. */
     public static synchronized void register(ResourceLocation id, Function<Entity, UUID> resolver) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(resolver, "resolver");
@@ -29,6 +31,7 @@ public final class SiegePlayerAttributionRegistry {
         resolvers = List.copyOf(new ArrayList<>(RESOLVER_TYPES.values()));
     }
 
+    /** Resolvers run in registration order; the first non-null player id wins. */
     @Nullable
     public static UUID playerOwnerOf(Entity entity) {
         if (entity == null) {

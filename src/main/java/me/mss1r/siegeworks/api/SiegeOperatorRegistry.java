@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
 
+/** Registers living entities that may work as siege crew. */
 public final class SiegeOperatorRegistry {
     private static final Map<ResourceLocation, Predicate<LivingEntity>> OPERATOR_TYPES = new LinkedHashMap<>();
 
@@ -18,6 +19,7 @@ public final class SiegeOperatorRegistry {
     private SiegeOperatorRegistry() {
     }
 
+    /** The id must be unique so duplicate integration setup fails early. */
     public static synchronized void register(ResourceLocation id, Predicate<LivingEntity> predicate) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(predicate, "predicate");
