@@ -1,6 +1,8 @@
 package me.mss1r.siegeworks.gameplay.ballistics;
 
 import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
+import me.mss1r.siegeworks.entity.base.SiegeProjectile;
+import me.mss1r.siegeworks.gameplay.damage.SiegeProjectileCombat;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -41,6 +43,7 @@ public final class ProjectileBlastResolver {
         if (radius <= 0.0D || damage <= 0.0F) {
             return damagedTargets;
         }
+        owner = responsibleAttacker(directSource, owner);
 
         AABB area = new AABB(
                 center.x - radius, center.y - radius, center.z - radius,
@@ -79,6 +82,7 @@ public final class ProjectileBlastResolver {
             ServerLevel level, Vec3 center, @Nullable Entity directSource, @Nullable Entity owner,
             ProjectilePhysicsProfile physics, double speed, float baseDamage,
             ProjectileImpactEffects.Style style, @Nullable LivingEntity excludedTarget) {
+        owner = responsibleAttacker(directSource, owner);
         float explosionPower = physics.scaledExplosionPower(speed);
         if (explosionPower > 0.0F) {
             float damageScale = Mth.clamp(
@@ -124,6 +128,7 @@ public final class ProjectileBlastResolver {
     public static void explodeShrapnel(
             ServerLevel level, Vec3 center, @Nullable Entity directSource,
             @Nullable Entity owner, ProjectilePhysicsProfile physics, float explosionPower) {
+        owner = responsibleAttacker(directSource, owner);
         int fragments = physics.shrapnelFragments();
         double radius = physics.shrapnelRadius();
         float maxDamage = physics.shrapnelDamage();
@@ -173,5 +178,12 @@ public final class ProjectileBlastResolver {
         double closestY = Mth.clamp(point.y, bounds.minY, bounds.maxY);
         double closestZ = Mth.clamp(point.z, bounds.minZ, bounds.maxZ);
         return point.distanceTo(new Vec3(closestX, closestY, closestZ));
+    }
+
+    @Nullable
+    private static Entity responsibleAttacker(@Nullable Entity directSource, @Nullable Entity owner) {
+        return directSource instanceof SiegeProjectile projectile
+                ? SiegeProjectileCombat.responsibleAttacker(projectile)
+                : owner;
     }
 }

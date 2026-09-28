@@ -31,13 +31,41 @@ public class CrossbowBoltRenderer<T extends AbstractBoltProjectile> extends Enti
     @Override
     public void render(T entity, float yaw, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffer, int packedLight) {
+        if (entity.hasTargetAttachment()) {
+            return;
+        }
+
         poseStack.pushPose();
-        float renderYaw = entity.isEmbedded()
-                ? entity.getRenderYaw()
-                : Mth.rotLerp(partialTick, entity.getRenderYawO(), entity.getRenderYaw());
-        float renderPitch = entity.isEmbedded()
-                ? entity.getRenderPitch()
-                : Mth.lerp(partialTick, entity.getRenderPitchO(), entity.getRenderPitch());
+        AbstractBoltProjectile.AttachmentRenderState attachment = entity.getAttachmentRenderState(partialTick);
+        if (attachment != null) {
+            poseStack.translate(attachment.offset().x, attachment.offset().y, attachment.offset().z);
+        }
+        float renderYaw = attachment != null
+                ? attachment.yaw()
+                : entity.isEmbedded()
+                    ? entity.getRenderYaw()
+                    : Mth.rotLerp(partialTick, entity.getRenderYawO(), entity.getRenderYaw());
+        float renderPitch = attachment != null
+                ? attachment.pitch()
+                : entity.isEmbedded()
+                    ? entity.getRenderPitch()
+                    : Mth.lerp(partialTick, entity.getRenderPitchO(), entity.getRenderPitch());
+        renderModel(entity, renderYaw, renderPitch, poseStack, buffer, packedLight);
+
+        poseStack.popPose();
+        super.render(entity, yaw, partialTick, poseStack, buffer, packedLight);
+    }
+
+    public void renderStuck(T entity, float directionX, float directionY, float directionZ,
+                            PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+        float horizontal = Mth.sqrt(directionX * directionX + directionZ * directionZ);
+        float renderYaw = (float) (Math.atan2(directionX, directionZ) * Mth.RAD_TO_DEG);
+        float renderPitch = (float) (Math.atan2(directionY, horizontal) * Mth.RAD_TO_DEG);
+        renderModel(entity, renderYaw, renderPitch, poseStack, buffer, packedLight);
+    }
+
+    private void renderModel(T entity, float renderYaw, float renderPitch, PoseStack poseStack,
+                             MultiBufferSource buffer, int packedLight) {
         poseStack.mulPose(Axis.YP.rotationDegrees(renderYaw - 90.0F));
         poseStack.mulPose(Axis.ZP.rotationDegrees(renderPitch));
 
@@ -48,9 +76,6 @@ public class CrossbowBoltRenderer<T extends AbstractBoltProjectile> extends Enti
         *///?} else {
         model.renderToBuffer(poseStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
         //?}
-
-        poseStack.popPose();
-        super.render(entity, yaw, partialTick, poseStack, buffer, packedLight);
     }
 
     @Override

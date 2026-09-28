@@ -6,6 +6,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 //? if forge {
+/*import net.minecraftforge.entity.PartEntity;
+*///?} else {
+import net.neoforged.neoforge.entity.PartEntity;
+//?}
+import org.jetbrains.annotations.Nullable;
+//? if forge {
 /*import net.minecraftforge.common.ToolActions;
 *///?} else {
 import net.neoforged.neoforge.common.ItemAbilities;
@@ -17,15 +23,20 @@ public final class SiegeProjectileCombat {
 
     public static boolean mayHit(SiegeProjectile projectile, Entity target) {
         Entity attacker = responsibleAttacker(projectile);
-        return target != projectile.getOwner()
-                && target != attacker
-                && !isFriendlyFireProtected(attacker, target);
+        Entity logicalTarget = logicalTarget(target);
+        return logicalTarget != logicalTarget(projectile.getOwner())
+                && logicalTarget != logicalTarget(attacker)
+                && !isFriendlyFireProtected(attacker, logicalTarget);
     }
 
-    public static boolean damage(SiegeProjectile projectile, LivingEntity target,
+    public static boolean damage(SiegeProjectile projectile, Entity target,
                                  float damage, boolean breakShield) {
+        LivingEntity livingTarget = livingTarget(target);
+        if (livingTarget == null) {
+            return false;
+        }
         if (breakShield) {
-            breakBlockingShield(target);
+            breakBlockingShield(livingTarget);
         }
 
         if (projectile.getOwner() instanceof AbstractSiegeEntity) {
@@ -41,6 +52,24 @@ public final class SiegeProjectileCombat {
             return operator == null ? siege : operator;
         }
         return owner;
+    }
+
+    @Nullable
+    public static Entity logicalTarget(@Nullable Entity target) {
+        if (target instanceof PartEntity<?> part) {
+            return part.getParent();
+        }
+        return target;
+    }
+
+    @Nullable
+    public static LivingEntity livingTarget(Entity target) {
+        Entity logicalTarget = logicalTarget(target);
+        return logicalTarget instanceof LivingEntity living ? living : null;
+    }
+
+    public static int targetId(Entity target) {
+        return logicalTarget(target).getId();
     }
 
     private static boolean isFriendlyFireProtected(Entity attacker, Entity target) {

@@ -5,6 +5,7 @@ import me.mss1r.siegeworks.gameplay.ballistics.ProjectileImpactEffects;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectilePhysics;
 import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
@@ -68,9 +69,12 @@ public class GiantCannonProjectile extends CannonProjectile {
         ProjectilePhysicsProfile physics = getPhysicsProfile();
         double speed = getDeltaMovement().length();
         LivingEntity excludedTarget = null;
-        if (entityHitResult.getEntity() instanceof LivingEntity target) {
+        Entity hitTarget = entityHitResult.getEntity();
+        LivingEntity target = livingTarget(hitTarget);
+        rememberHitTarget(hitTarget);
+        if (target != null) {
             float damage = ProjectilePhysics.entityDamage(physics, (float) getBaseDamage(), speed, target);
-            if (damageLivingTarget(target, damage)) {
+            if (damageTarget(hitTarget, damage)) {
                 excludedTarget = target;
             }
         }

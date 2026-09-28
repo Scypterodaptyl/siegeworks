@@ -21,6 +21,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.AreaEffectCloud;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
@@ -162,6 +163,9 @@ public class TrebuchetProjectile extends SiegeProjectile {
     protected void onHitEntity(EntityHitResult entityHitResult) {
         ProjectilePhysicsProfile physics = getPhysicsProfile();
         int baseRadius = Math.max(1, (int) (getBaseDamage() / 8));
+        Entity hitTarget = entityHitResult.getEntity();
+        LivingEntity target = livingTarget(hitTarget);
+        rememberHitTarget(hitTarget);
 
         if (this.level() instanceof ServerLevel serverLevel && getImpactMode() == ImpactMode.SPREAD_FIRE) {
             Vec3 impact = entityHitResult.getLocation();
@@ -170,10 +174,10 @@ public class TrebuchetProjectile extends SiegeProjectile {
             return;
         }
 
-        if (this.level() instanceof ServerLevel serverLevel && entityHitResult.getEntity() instanceof LivingEntity target) {
+        if (this.level() instanceof ServerLevel serverLevel && target != null) {
             double speed = getDeltaMovement().length();
             float damage = ProjectilePhysics.entityDamage(physics, (float) getBaseDamage(), speed, target);
-            boolean directDamageApplied = damageLivingTarget(target, damage);
+            boolean directDamageApplied = damageTarget(hitTarget, damage);
             if (physics.baseExplosionPower() > 0.0f) {
                 ProjectileBlastResolver.applyControlledExplosion(serverLevel, entityHitResult.getLocation(), this, getOwner(),
                         physics, speed, (float) getBaseDamage(), ProjectileImpactEffects.Style.TREBUCHET,

@@ -2,11 +2,13 @@ package me.mss1r.siegeworks.client;
 
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.client.aim.SiegeAimOverlay;
+import me.mss1r.siegeworks.client.projectile.StuckBoltLayer;
 import me.mss1r.siegeworks.client.particle.ImpactSmokePlumeParticle;
 import me.mss1r.siegeworks.client.particle.MuzzlePlumeParticle;
 import me.mss1r.siegeworks.client.particle.SiegeSmokeParticle;
 import me.mss1r.siegeworks.particle.SiegeworksParticles;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 //? if forge {
 /*import net.minecraftforge.api.distmarker.Dist;
@@ -69,6 +71,31 @@ public final class SiegeworksClientModEvents {
             raw.addLayer(new HarnessLayer<>(raw));
          }
       }
+
+      for (EntityType<?> type : BuiltInRegistries.ENTITY_TYPE) {
+         //? if forge {
+         /*var renderer = event.getEntityRenderer(type);
+         *///?} else {
+         var renderer = event.getRenderer(type);
+         //?}
+         if (renderer instanceof LivingEntityRenderer<?, ?> livingRenderer) {
+            addStuckBoltLayer(event, livingRenderer);
+         }
+      }
+
+      for (var skin : event.getSkins()) {
+         Object renderer = event.getSkin(skin);
+         if (renderer instanceof LivingEntityRenderer<?, ?> livingRenderer) {
+            addStuckBoltLayer(event, livingRenderer);
+         }
+      }
+   }
+
+   @SuppressWarnings({"rawtypes", "unchecked"})
+   private static void addStuckBoltLayer(EntityRenderersEvent.AddLayers event,
+                                         LivingEntityRenderer<?, ?> renderer) {
+      LivingEntityRenderer raw = renderer;
+      raw.addLayer(new StuckBoltLayer<>(event.getContext(), raw));
    }
 
    @SubscribeEvent

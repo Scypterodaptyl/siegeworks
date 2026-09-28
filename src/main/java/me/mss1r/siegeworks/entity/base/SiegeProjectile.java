@@ -21,6 +21,9 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public abstract class SiegeProjectile extends ThrowableItemProjectile {
     private static final double RENDER_DISTANCE = 160.0D;
 
@@ -30,6 +33,7 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
 
     private boolean applyingPredictedPhysics;
     private boolean hitEntityThisTick;
+    private final Set<Integer> hitTargets = new HashSet<>();
     protected boolean inGround;
     protected int shakeTime;
     private double baseDamage = 2.0D;
@@ -82,7 +86,7 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
 
     @Override
     protected boolean canHitEntity(Entity target) {
-        if (!SiegeProjectileCombat.mayHit(this, target)) {
+        if (hasHitTarget(target) || !SiegeProjectileCombat.mayHit(this, target)) {
             return false;
         }
         if (target instanceof CollidableStructure structure && !structure.collisionGroups().isEmpty()) {
@@ -103,8 +107,10 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
     protected void onHitEntity(EntityHitResult entityHitResult) {
         super.onHitEntity(entityHitResult);
         if (entityHitResult.getEntity().level().isClientSide()) return;
-        if (entityHitResult.getEntity() instanceof LivingEntity target) {
-            damageLivingTarget(target, (float) this.getBaseDamage());
+        Entity hitTarget = entityHitResult.getEntity();
+        rememberHitTarget(hitTarget);
+        if (livingTarget(hitTarget) != null) {
+            damageTarget(hitTarget, (float) this.getBaseDamage());
         }
         setDeltaMovement(getDeltaMovement().scale(-0.9));
         setBaseDamage(getBaseDamage() * 0.9);
@@ -224,6 +230,30 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
     }
 
     protected boolean damageLivingTarget(LivingEntity target, float damage, boolean breakShield) {
+        return damageTarget(target, damage, breakShield);
+    }
+
+    protected boolean damageTarget(Entity target, float damage) {
+        return damageTarget(target, damage, true);
+    }
+
+    protected boolean damageTarget(Entity target, float damage, boolean breakShield) {
         return SiegeProjectileCombat.damage(this, target, damage, breakShield);
+    }
+
+    protected LivingEntity livingTarget(Entity target) {
+        return SiegeProjectileCombat.livingTarget(target);
+    }
+
+    protected void rememberHitTarget(Entity target) {
+        hitTargets.add(SiegeProjectileCombat.targetId(target));
+    }
+
+    protected boolean hasHitTarget(Entity target) {
+        return hitTargets.contains(SiegeProjectileCombat.targetId(target));
+    }
+
+    protected int hitTargetCount() {
+        return hitTargets.size();
     }
 }

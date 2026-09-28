@@ -75,8 +75,11 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.boss.EnderDragonPart;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.animal.horse.Horse;
 import net.minecraft.world.entity.projectile.Arrow;
@@ -1025,6 +1028,74 @@ public final class SiegeworksGameTests {
                 "A standard towerCrossbow bolt did not deal balanced damage to a cannon");
         helper.assertTrue(!fullDamageBolt.isRemoved() && fullDamageBolt.isEmbedded(),
                 "Tower Crossbow bolt did not remain embedded after dealing structural damage");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 40)
+    public static void siegeBoltsDamageMultipartTargets(GameTestHelper helper) {
+        buildFloor(helper);
+        ServerLevel level = helper.getLevel();
+        TowerCrossbowEntity towerCrossbow = SiegeworksEntities.TOWER_CROSSBOW_ENTITY.get().create(level);
+        FakePlayer operator = SiegeGameTestPlayers.create(level);
+        EnderDragon dragon = EntityType.ENDER_DRAGON.create(level);
+        helper.assertTrue(towerCrossbow != null && dragon != null,
+                "Failed to create multipart projectile test entities");
+
+        towerCrossbow.setOwner(operator);
+        moveToRelative(helper, dragon, 8.0D, 5.0D, 8.0D);
+        dragon.setNoAi(true);
+        helper.assertTrue(level.addFreshEntity(dragon), "Failed to add the Ender Dragon test target");
+
+        TestTowerCrossbowBoltProjectile bolt = new TestTowerCrossbowBoltProjectile(
+                SiegeworksEntities.TOWER_CROSSBOW_BOLT_PROJECTILE.get(), towerCrossbow, level);
+        bolt.setBaseDamage(44.0D);
+        bolt.setDeltaMovement(0.0D, 0.0D, 9.4D);
+        EnderDragonPart head = dragon.head;
+        float healthBefore = dragon.getHealth();
+        helper.assertTrue(bolt.canHitTarget(head), "A multipart hitbox was not a valid projectile target");
+        bolt.hitTarget(head);
+        helper.assertTrue(dragon.getHealth() < healthBefore,
+                "A hit on an Ender Dragon part did not damage its parent entity");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 40)
+    public static void lethalBoltHitsContinueAndSurvivorsKeepTheBolt(GameTestHelper helper) {
+        buildFloor(helper);
+        ServerLevel level = helper.getLevel();
+        TowerCrossbowEntity towerCrossbow = SiegeworksEntities.TOWER_CROSSBOW_ENTITY.get().create(level);
+        ArmorStand operator = EntityType.ARMOR_STAND.create(level);
+        Zombie lethalTarget = EntityType.ZOMBIE.create(level);
+        Zombie survivingTarget = EntityType.ZOMBIE.create(level);
+        helper.assertTrue(towerCrossbow != null && operator != null
+                        && lethalTarget != null && survivingTarget != null,
+                "Failed to create bolt attachment test entities");
+        towerCrossbow.setOwner(operator);
+        lethalTarget.setNoAi(true);
+        survivingTarget.setNoAi(true);
+        moveToRelative(helper, lethalTarget, 6.0D, 1.0D, 6.0D);
+        moveToRelative(helper, survivingTarget, 10.0D, 1.0D, 6.0D);
+        helper.assertTrue(level.addFreshEntity(lethalTarget), "Failed to add the lethal bolt target");
+        helper.assertTrue(level.addFreshEntity(survivingTarget), "Failed to add the attachment target");
+
+        TestTowerCrossbowBoltProjectile lethalBolt = new TestTowerCrossbowBoltProjectile(
+                SiegeworksEntities.TOWER_CROSSBOW_BOLT_PROJECTILE.get(), towerCrossbow, level);
+        lethalBolt.setBaseDamage(200.0D);
+        lethalBolt.setDeltaMovement(0.0D, 0.0D, 12.0D);
+        lethalBolt.hitTarget(lethalTarget);
+        helper.assertTrue(!lethalTarget.isAlive(), "The lethal bolt test target survived");
+        helper.assertTrue(!lethalBolt.isRemoved() && !lethalBolt.isEmbedded()
+                        && lethalBolt.getDeltaMovement().lengthSqr() > 0.01D,
+                "A bolt stopped after killing a penetrable target");
+
+        TestTowerCrossbowBoltProjectile attachingBolt = new TestTowerCrossbowBoltProjectile(
+                SiegeworksEntities.TOWER_CROSSBOW_BOLT_PROJECTILE.get(), towerCrossbow, level);
+        attachingBolt.setBaseDamage(1.0D);
+        attachingBolt.setDeltaMovement(0.0D, 0.0D, 5.0D);
+        attachingBolt.hitTarget(survivingTarget);
+        helper.assertTrue(survivingTarget.isAlive(), "The attachment test target was killed");
+        helper.assertTrue(!attachingBolt.isRemoved() && attachingBolt.isEmbedded(),
+                "A nonlethal bolt did not remain attached to its target");
         helper.succeed();
     }
 

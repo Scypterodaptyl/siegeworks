@@ -64,7 +64,7 @@ public final class BoltPinningController {
         targetAnchor = pin.targetAnchor();
         ticksRemaining = host.pinDurationTicks();
         lock(target);
-        host.embed(pin.boltImpact(), direction, pin.blockPos());
+        host.attach(target, pin.boltImpact(), direction);
         return true;
     }
 
@@ -111,7 +111,7 @@ public final class BoltPinningController {
 
         Vec3 anchor = calculateTargetAnchor(target, hit.getLocation(), supportDirection);
         Vec3 boltImpact = calculateBoltPosition(target, impact, anchor, normalizedDirection);
-        return new PinData(anchor, boltImpact, hit.getBlockPos());
+        return new PinData(anchor, boltImpact);
     }
 
     private BlockHitResult findSupport(ServerLevel level, LivingEntity target, Vec3 impact, Vec3 direction) {
@@ -176,9 +176,9 @@ public final class BoltPinningController {
 
         int pinDurationTicks();
 
-        void embed(Vec3 impact, Vec3 direction, BlockPos supportPos);
+        void attach(LivingEntity target, Vec3 impact, Vec3 direction);
     }
 
-    private record PinData(Vec3 targetAnchor, Vec3 boltImpact, BlockPos blockPos) {
+    private record PinData(Vec3 targetAnchor, Vec3 boltImpact) {
     }
 }

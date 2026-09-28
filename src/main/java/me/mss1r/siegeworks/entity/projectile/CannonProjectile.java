@@ -181,12 +181,15 @@ public class CannonProjectile extends SiegeProjectile {
     @Override
     protected void onHitEntity(EntityHitResult entityHitResult) {
         ProjectilePhysicsProfile physics = getPhysicsProfile();
+        Entity hitTarget = entityHitResult.getEntity();
+        LivingEntity target = livingTarget(hitTarget);
+        rememberHitTarget(hitTarget);
 
-        if (this.level() instanceof ServerLevel serverLevel && entityHitResult.getEntity() instanceof LivingEntity target) {
+        if (this.level() instanceof ServerLevel serverLevel && target != null) {
             Vec3 impact = entityHitResult.getLocation();
             double speed = getDeltaMovement().length();
             float damage = ProjectilePhysics.entityDamage(physics, (float) getBaseDamage(), speed, target);
-            boolean directDamageApplied = damageLivingTarget(target, damage);
+            boolean directDamageApplied = damageTarget(hitTarget, damage);
             playImpactReport(serverLevel, impact, 4.5f, 0.9f);
             if (shouldBreakBlocks()) {
                 applyImpactShockDamage(serverLevel, impact, physics,

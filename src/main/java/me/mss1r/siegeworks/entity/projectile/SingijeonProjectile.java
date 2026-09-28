@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
@@ -159,12 +160,14 @@ public class SingijeonProjectile extends SiegeProjectile {
         if (level().isClientSide()) {
             return;
         }
-        LivingEntity directTarget = hit.getEntity() instanceof LivingEntity target ? target : null;
+        Entity hitTarget = hit.getEntity();
+        LivingEntity directTarget = livingTarget(hitTarget);
+        rememberHitTarget(hitTarget);
         boolean directDamageApplied = false;
         if (directTarget != null) {
             float damage = ProjectilePhysics.entityDamage(getPhysicsProfile(), (float) getBaseDamage(),
                     getDeltaMovement().length(), directTarget);
-            directDamageApplied = damageLivingTarget(directTarget, damage);
+            directDamageApplied = damageTarget(hitTarget, damage);
         }
         if (isExplosive()) {
             if (directDamageApplied) {
