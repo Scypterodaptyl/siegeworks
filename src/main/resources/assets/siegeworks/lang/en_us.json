@@ -103,6 +103,7 @@
   "message.siegeworks.maintenance.passengers": "Dismount everyone before dismantling.",
   "message.siegeworks.maintenance.dismantle_started": "Dismantling started. Strike the engine with the construction hammer.",
   "message.siegeworks.maintenance.dismantle_cancelled": "Dismantling cancelled.",
+  "message.siegeworks.maintenance.not_owner": "Only the owner can dismantle this engine.",
   "message.siegeworks.maintenance.dismantling": "This engine is being dismantled.",
   "component.siege_engine.siegeworks.cooling_down": "%s is cooling down",
   "text.config.siegeworks.title": "Siegeworks",
