@@ -3,8 +3,10 @@ package me.mss1r.siegeworks.integration.recruits;
 import com.talhanation.recruits.Main;
 import com.talhanation.recruits.config.RecruitsServerConfig;
 import com.talhanation.recruits.ClaimEvents;
+import com.talhanation.recruits.FactionEvents;
 import com.talhanation.recruits.entities.AbstractRecruitEntity;
 import com.talhanation.recruits.world.RecruitsClaim;
+import com.talhanation.recruits.world.RecruitsDiplomacyManager;
 import com.talhanation.recruits.entities.SiegeEngineerEntity;
 import me.mss1r.axiomata.blueprint.api.BlueprintPermissions;
 import me.mss1r.axiomata.blueprint.api.BlueprintStacks;
@@ -12,6 +14,7 @@ import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinition;
 import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinitions;
 import me.mss1r.axiomata.blueprint.api.construction.ConstructionDeployer;
 import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.api.SiegeAllianceRegistry;
 import me.mss1r.siegeworks.api.SiegeAmmunitionControl;
 import me.mss1r.siegeworks.api.SiegeAmmunitionMode;
 import me.mss1r.siegeworks.api.SiegeArtilleryControl;
@@ -25,6 +28,7 @@ import me.mss1r.siegeworks.entity.siege.MantletEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeTowerEntity;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsSiegeCommandC2SPayload;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsNetworking;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsTowerCrewC2SPayload;
@@ -74,6 +78,7 @@ public final class RecruitsCompat {
         SiegeOperatorRegistry.register(OPERATOR_TYPE, entity -> entity instanceof SiegeEngineerEntity);
         SiegePlayerAttributionRegistry.register(OPERATOR_TYPE, entity ->
                 entity instanceof AbstractRecruitEntity recruit ? recruit.getOwnerUUID() : null);
+        SiegeAllianceRegistry.register(OPERATOR_TYPE, RecruitsCompat::alliedFactions);
         modBus.addListener(RecruitsCompat::onLoadComplete);
         modBus.addListener(RecruitsCompat::onClientSetup);
         MinecraftForge.EVENT_BUS.addListener(RecruitsCompat::onLivingTick);
@@ -351,7 +356,8 @@ public final class RecruitsCompat {
         NOBODY("message.siegeworks.recruits.maintenance_requires_engineer"),
         NO_HAND("message.siegeworks.recruits.maintenance_requires_hammer"),
         OCCUPIED("message.siegeworks.recruits.maintenance_requires_empty"),
-        REFUSED("message.siegeworks.recruits.maintenance_refused");
+        REFUSED("message.siegeworks.recruits.maintenance_refused"),
+        FOREIGN("message.siegeworks.access.denied");
 
         private final String key;
 
@@ -379,6 +385,9 @@ public final class RecruitsCompat {
         RecruitsMaintenanceController.Action action = dismantle
                 ? RecruitsMaintenanceController.Action.DISMANTLE
                 : RecruitsMaintenanceController.Action.REPAIR;
+        if (!SiegeAccess.allows(player, siege, dismantle ? SiegeAccess.Action.DISMANTLE : SiegeAccess.Action.REPAIR)) {
+            return MaintenanceRefusal.FOREIGN;
+        }
         if (nearbyRecruits == null) {
             nearbyRecruits = commandRangeRecruits(player);
         }
@@ -520,7 +529,8 @@ public final class RecruitsCompat {
         RecruitsDebug.commandReceived(player, "tower crew", action, 0, null, towerEntityId);
         if (groupIds.isEmpty()
                 || !(player.serverLevel().getEntity(towerEntityId) instanceof SiegeTowerEntity tower)
-                || player.distanceToSqr(tower) > COMMAND_RANGE_SQR) {
+                || player.distanceToSqr(tower) > COMMAND_RANGE_SQR
+                || !SiegeAccess.allows(player, tower, SiegeAccess.Action.USE)) {
             sendCommandFeedback(player, 0);
             return;
         }
@@ -995,6 +1005,9 @@ public final class RecruitsCompat {
 
     public static int crewMachine(ServerPlayer player, AbstractSiegeEntity siege,
                                   java.util.function.Predicate<AbstractRecruitEntity> chosen) {
+        if (!SiegeAccess.allows(player, siege, SiegeAccess.Action.USE)) {
+            return 0;
+        }
         if (siege instanceof SiegeTowerEntity tower) {
             return crewTower(player, tower, chosen);
         }
@@ -1070,7 +1083,13 @@ public final class RecruitsCompat {
     }
 
     public static boolean commands(ServerPlayer player, AbstractSiegeEntity siege) {
-        return player.getUUID().equals(commanderOf(siege));
+        return SiegeAccess.allows(player, siege, SiegeAccess.Action.USE);
+    }
+
+    private static boolean alliedFactions(String firstTeam, String secondTeam) {
+        RecruitsDiplomacyManager diplomacy = FactionEvents.recruitsDiplomacyManager;
+        return diplomacy != null
+                && diplomacy.getRelation(firstTeam, secondTeam) == RecruitsDiplomacyManager.DiplomacyStatus.ALLY;
     }
 
     public static UUID commanderOf(AbstractSiegeEntity siege) {

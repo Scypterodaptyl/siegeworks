@@ -5,6 +5,7 @@ import me.mss1r.siegeworks.event.SiegeMaintenanceCheckEvent;
 import me.mss1r.siegeworks.event.SiegeMaintenanceCompletedEvent;
 import me.mss1r.siegeworks.event.SiegeMaintenanceEvents;
 import me.mss1r.siegeworks.gameplay.deployment.SiegeDeploymentLimits;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.network.MaintenanceActionC2SPayload;
 import me.mss1r.siegeworks.network.OpenMaintenanceS2CPayload;
 import me.mss1r.siegeworks.network.SiegeworksNetworking;
@@ -25,7 +26,6 @@ import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
-import java.util.UUID;
 
 public final class SiegeMaintenanceController {
     private static final int HIT_COOLDOWN_TICKS = 5;
@@ -84,10 +84,11 @@ public final class SiegeMaintenanceController {
             case MaintenanceActionC2SPayload.ACTION_CANCEL_DISMANTLE -> SiegeMaintenanceCheckEvent.Action.CANCEL_DISMANTLE;
             default -> null;
         };
-        if ((checkedAction == SiegeMaintenanceCheckEvent.Action.START_DISMANTLE
-                || checkedAction == SiegeMaintenanceCheckEvent.Action.CANCEL_DISMANTLE)
-                && !mayDismantle(player)) {
-            player.displayClientMessage(Component.translatable("message.siegeworks.maintenance.not_owner"), true);
+        if (checkedAction != null && !SiegeAccess.allows(player, siege,
+                checkedAction == SiegeMaintenanceCheckEvent.Action.REPAIR
+                        ? SiegeAccess.Action.REPAIR
+                        : SiegeAccess.Action.DISMANTLE)) {
+            player.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
             return;
         }
         if (checkedAction != null) {
@@ -131,7 +132,7 @@ public final class SiegeMaintenanceController {
 
     public boolean repairFromWorker(LivingEntity worker, Container materials) {
         AbstractSiegeEntity siege = siege();
-        if (!needsRepair()) {
+        if (!needsRepair() || !SiegeAccess.allows(worker, siege, SiegeAccess.Action.REPAIR)) {
             return false;
         }
 
@@ -151,7 +152,8 @@ public final class SiegeMaintenanceController {
         AbstractSiegeEntity siege = siege();
         return !siege.isDismantling()
                 && !SiegeMaintenanceData.forSiege(siege).isEmpty()
-                && siege.getPassengers().stream().allMatch(passenger -> passenger == worker);
+                && siege.getPassengers().stream().allMatch(passenger -> passenger == worker)
+                && SiegeAccess.allows(worker, siege, SiegeAccess.Action.DISMANTLE);
     }
 
     public boolean startAutomatedDismantling(LivingEntity worker) {
@@ -216,12 +218,6 @@ public final class SiegeMaintenanceController {
         }
     }
 
-    /** Unowned engines stay open to everyone; owned ones only to their owner and server operators. */
-    private boolean mayDismantle(ServerPlayer player) {
-        UUID owner = siege().getOwnerUuid();
-        return owner == null || owner.equals(player.getUUID()) || player.hasPermissions(2);
-    }
-
     private void startDismantling(ServerPlayer player) {
         AbstractSiegeEntity siege = siege();
         if (SiegeMaintenanceData.forSiege(siege).isEmpty()) {
@@ -257,10 +253,10 @@ public final class SiegeMaintenanceController {
             return false;
         }
 
+        if (!SiegeAccess.allows(worker, siege, SiegeAccess.Action.DISMANTLE)) {
+            return false;
+        }
         if (worker instanceof ServerPlayer serverPlayer) {
-            if (!mayDismantle(serverPlayer)) {
-                return false;
-            }
             SiegeMaintenanceCheckEvent checkEvent = new SiegeMaintenanceCheckEvent(
                     serverPlayer, siege, SiegeMaintenanceCheckEvent.Action.DISMANTLE_HIT);
             SiegeMaintenanceEvents.CHECK.invoker().check(checkEvent);

@@ -54,9 +54,17 @@ public final class SiegeOwnership {
     @Nullable
     public static UUID playerOf(@Nullable Entity entity) {
         if (entity instanceof Player player) {
-            return MinecraftVersionCompat.isFakePlayer(player) ? null : player.getUUID();
+            return player.getUUID();
         }
         return entity == null ? null : SiegePlayerAttributionRegistry.playerOwnerOf(entity);
+    }
+
+    /** Like {@link #playerOf}, but automation acting as a fake player never takes an engine. */
+    @Nullable
+    public static UUID claimantOf(@Nullable Entity entity) {
+        return entity instanceof Player player && MinecraftVersionCompat.isFakePlayer(player)
+                ? null
+                : playerOf(entity);
     }
 
     public static boolean isKnownPlayer(@Nullable MinecraftServer server, @Nullable UUID uuid) {

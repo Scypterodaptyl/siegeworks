@@ -28,6 +28,7 @@ import me.mss1r.siegeworks.gameplay.deployment.SiegeDeploymentState;
 import me.mss1r.siegeworks.gameplay.construction.SiegeConstructionController;
 import me.mss1r.siegeworks.gameplay.maintenance.SiegeMaintenanceController;
 import me.mss1r.siegeworks.gameplay.damage.SiegeAttackPolicy;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeOperatorReference;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeOwnership;
 import me.mss1r.siegeworks.data.profile.ScattershotProfile;
@@ -726,7 +727,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     public void setOperator(@Nullable Entity operator) {
         this.operator.set(operator);
         if (operator != null && !level().isClientSide) {
-            ownership.claim(SiegeOwnership.playerOf(operator));
+            ownership.claim(SiegeOwnership.claimantOf(operator));
         }
     }
 
@@ -833,6 +834,9 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     public final boolean canAddPassenger(Entity entity) {
         if (isDraftMount(entity)) {
             return towing.canAddDraftMount(entity);
+        }
+        if (!SiegeAccess.allows(entity, this, SiegeAccess.Action.USE)) {
+            return false;
         }
         if (!towing.operatorSlotAvailable() && !takesPassengersWhileTowed(entity)) {
             return false;
@@ -1473,6 +1477,11 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         if (isDismantling()) {
             player.displayClientMessage(Component.translatable("message.siegeworks.maintenance.dismantling"), true);
             return InteractionResult.SUCCESS;
+        }
+
+        if (!SiegeAccess.allows(player, this, SiegeAccess.Action.USE)) {
+            player.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
+            return InteractionResult.FAIL;
         }
 
         InteractionResult horseResult = towing.interact(player, hand, serverLevel);

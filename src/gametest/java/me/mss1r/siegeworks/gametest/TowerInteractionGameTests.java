@@ -13,6 +13,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.PlayerTeam;
 //? if forge {
 /*import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.common.util.FakePlayerFactory;
@@ -123,6 +124,15 @@ public final class TowerInteractionGameTests {
         TestTower test = createTowerAndRideablePlayer(helper, new Vec3(0.0D, 0.0D, REAR_BOARDING_Z));
         Player pusher = createRideablePlayer(test.tower,
                 new Vec3(20.0D / 16.0D, 0.0D, REAR_BOARDING_Z), "tower-pusher");
+        FakePlayer owner = createPlayer(helper, test.tower, Vec3.ZERO, "tower-owner");
+        PlayerTeam crew = helper.getLevel().getScoreboard().getPlayerTeam("tower_rear_crew");
+        if (crew == null) {
+            crew = helper.getLevel().getScoreboard().addPlayerTeam("tower_rear_crew");
+        }
+        for (Player member : java.util.List.of(owner, test.player, pusher)) {
+            helper.getLevel().getScoreboard().addPlayerToTeam(member.getScoreboardName(), crew);
+        }
+        test.tower.setOwnerUuid(owner.getUUID());
 
         test.tower.interact(test.player, InteractionHand.MAIN_HAND);
         test.tower.interact(pusher, InteractionHand.MAIN_HAND);

@@ -1,8 +1,8 @@
 package me.mss1r.siegeworks.gameplay.deployment;
 
-import com.mojang.authlib.GameProfile;
 import me.mss1r.siegeworks.config.SiegeworksServerConfig;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeTeams;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -20,7 +20,6 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.util.datafix.DataFixTypes;
 //?}
-import net.minecraft.world.scores.Team;
 //? if forge {
 /*import net.minecraftforge.common.util.FakePlayer;
 *///?} else {
@@ -30,7 +29,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 public final class SiegeDeploymentLimits extends SavedData {
@@ -209,26 +207,8 @@ public final class SiegeDeploymentLimits extends SavedData {
     }
 
     private static String groupForOwner(MinecraftServer server, UUID ownerUuid) {
-        ServerPlayer onlinePlayer = server.getPlayerList().getPlayer(ownerUuid);
-        if (onlinePlayer != null) {
-            return groupForPlayer(onlinePlayer, ownerUuid);
-        }
-
-        Optional<GameProfile> profile = server.getProfileCache() == null
-                ? Optional.empty()
-                : server.getProfileCache().get(ownerUuid);
-        if (profile.isPresent()) {
-            Team team = server.getScoreboard().getPlayersTeam(profile.get().getName());
-            if (team != null) {
-                return "team:" + team.getName();
-            }
-        }
-        return "player:" + ownerUuid;
-    }
-
-    private static String groupForPlayer(ServerPlayer player, UUID ownerUuid) {
-        Team team = player.getTeam();
-        return team == null ? "player:" + ownerUuid : "team:" + team.getName();
+        String team = SiegeTeams.teamOf(server, ownerUuid);
+        return team == null ? "player:" + ownerUuid : "team:" + team;
     }
 
     public record Deployment(UUID ownerUuid, String groupKey) {

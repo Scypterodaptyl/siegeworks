@@ -9,6 +9,8 @@ import me.mss1r.recruitsrtscommand.api.MapOrder;
 import me.mss1r.recruitsrtscommand.api.RecruitsRTSCommandApi;
 import me.mss1r.siegeworks.api.SiegeOperationState;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeRelation;
 import me.mss1r.siegeworks.integration.recruits.RecruitsCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -106,7 +108,8 @@ final class RtsMapObjects {
 
     private static MapObjectSnapshot describe(ServerPlayer player, AbstractSiegeEntity siege) {
         UUID ownerId = RecruitsCompat.commanderOf(siege);
-        boolean ours = player.getUUID().equals(ownerId);
+        boolean ours = ownerId != null
+                && SiegeAccess.relationOf(player.getUUID(), siege) != SiegeRelation.HOSTILE;
         LivingEntity crew = siege.getControllingPassenger();
 
         List<Component> lines = new ArrayList<>(4);

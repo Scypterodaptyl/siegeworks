@@ -7,6 +7,7 @@ import me.mss1r.axiomata.collision.CollisionGroup;
 import me.mss1r.axiomata.collision.system.StructureMotionSystem;
 import me.mss1r.siegeworks.gameplay.collision.generated.GeneratedCollisionShapes;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.gameplay.crew.SiegePassengerPhysics;
 import me.mss1r.siegeworks.gameplay.crew.tower.TowerCrewRoster;
 import me.mss1r.siegeworks.gameplay.crew.tower.TowerCrewRoster.Seat;
@@ -606,14 +607,7 @@ public class SiegeTowerEntity extends AbstractSiegeEntity
     }
 
     private boolean canCustomizeTower(Player player) {
-        UUID owner = getOwnerUuid();
-        if (player.getAbilities().instabuild || owner == null || owner.equals(player.getUUID())) {
-            return true;
-        }
-
-        String deploymentGroup = getDeploymentGroup();
-        return player.getTeam() != null
-                && deploymentGroup.equals("team:" + player.getTeam().getName());
+        return player.getAbilities().instabuild || SiegeAccess.allows(player, this, SiegeAccess.Action.USE);
     }
 
     @Override

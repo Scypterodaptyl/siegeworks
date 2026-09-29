@@ -7,6 +7,7 @@ import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.entity.siege.MantletEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeTowerEntity;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsSiegeCommandC2SPayload;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsTowerCrewC2SPayload;
 import me.mss1r.siegeworks.integration.recruits.RecruitsCompat;
@@ -40,6 +41,7 @@ final class RtsMachineActions {
     static final String CANCEL_WORK = "siegeworks:cancel_work";
     static final String HALT = "siegeworks:halt_machine";
     private static final String OUT_OF_RANGE = "siegeworks:out_of_range";
+    private static final String FOREIGN = "siegeworks:foreign";
     private static final String GROUP_FIRE = "siegeworks:fire";
     private static final String GROUP_AMMO = "siegeworks:ammo";
     private static final String GROUP_BRIDGE = "siegeworks:bridge";
@@ -57,6 +59,11 @@ final class RtsMachineActions {
             return List.of(MapObjectAction.blocked(OUT_OF_RANGE,
                     Component.translatable("gui.siegeworks.rts.action.out_of_range"), null,
                     Component.translatable("gui.siegeworks.rts.action.out_of_range.reason")));
+        }
+        if (!SiegeAccess.allows(commander, siege, SiegeAccess.Action.USE)) {
+            return List.of(MapObjectAction.blocked(FOREIGN,
+                    Component.translatable("gui.siegeworks.rts.action.foreign"), null,
+                    Component.translatable("message.siegeworks.access.denied")));
         }
 
         List<AbstractRecruitEntity> nearby = RecruitsCompat.commandRangeRecruits(commander);
@@ -190,6 +197,10 @@ final class RtsMachineActions {
                     Component.translatable("gui.siegeworks.rts.action.out_of_range.reason"), true);
             return;
         }
+        if (!SiegeAccess.allows(commander, siege, SiegeAccess.Action.USE)) {
+            commander.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
+            return;
+        }
         if (DRIVE.equals(actionId) || DRIVE_APPEND.equals(actionId)) {
             boolean sent = target != null && (DRIVE_APPEND.equals(actionId)
                     ? RecruitsCompat.queueDrive(commander, siege, target, false)
@@ -208,6 +219,10 @@ final class RtsMachineActions {
         if (!RecruitsCompat.withinCommandRange(commander, siege)) {
             commander.displayClientMessage(
                     Component.translatable("gui.siegeworks.rts.action.out_of_range.reason"), true);
+            return;
+        }
+        if (!SiegeAccess.allows(commander, siege, SiegeAccess.Action.USE)) {
+            commander.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
             return;
         }
         if (CREW.equals(actionId)) {

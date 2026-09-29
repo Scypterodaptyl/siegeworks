@@ -2,6 +2,8 @@ package me.mss1r.siegeworks.gameplay.damage;
 
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.entity.base.SiegeProjectile;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeRelation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -78,6 +80,9 @@ public final class SiegeProjectileCombat {
         }
 
         if (target instanceof AbstractSiegeEntity siegeTarget) {
+            if (siegeTarget.getOwnerUuid() != null) {
+                return SiegeAccess.relationOf(attacker, siegeTarget) != SiegeRelation.HOSTILE;
+            }
             Entity targetOwner = siegeTarget.getOperator();
             if (targetOwner != null && targetOwner != siegeTarget) {
                 return attacker.isAlliedTo(targetOwner);

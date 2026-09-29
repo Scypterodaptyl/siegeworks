@@ -55,6 +55,8 @@ import me.mss1r.siegeworks.item.SiegeAmmo;
 import me.mss1r.siegeworks.registry.SiegeworksItems;
 import me.mss1r.siegeworks.gameplay.deployment.SiegeDeploymentLimits;
 import me.mss1r.siegeworks.gameplay.maintenance.SiegeMaintenanceData;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeRelation;
 import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -205,6 +207,41 @@ public final class SiegeworksGameTests {
                 "A later operator took ownership of the engine");
         helper.assertTrue(ballista.getOperator() == second,
                 "The operator did not follow the latest crew");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void onlyTheOwnersSideMayUseAnOwnedEngine(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        ArcballistaEntity ballista = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
+        helper.assertTrue(ballista != null, "Failed to create access test ballista");
+        moveToRelative(helper, ballista, 6.0D, 1.0D, 6.0D);
+        helper.assertTrue(level.addFreshEntity(ballista), "Failed to add access test ballista");
+
+        net.minecraft.server.level.ServerPlayer owner = SiegeGameTestPlayers.create(level);
+        level.players().add(owner);
+        Player teammate = SiegeGameTestPlayers.createRideable(level);
+        Player stranger = SiegeGameTestPlayers.createRideable(level);
+        PlayerTeam team = level.getScoreboard().getPlayerTeam("siege_access_test");
+        if (team == null) {
+            team = level.getScoreboard().addPlayerTeam("siege_access_test");
+        }
+        level.getScoreboard().addPlayerToTeam(owner.getScoreboardName(), team);
+        level.getScoreboard().addPlayerToTeam(teammate.getScoreboardName(), team);
+        ballista.setOwnerUuid(owner.getUUID());
+
+        helper.assertTrue(SiegeAccess.relationOf(owner.getUUID(), ballista) == SiegeRelation.OWNER,
+                "The owner was not recognised as the owner");
+        helper.assertTrue(SiegeAccess.relationOf(teammate, ballista) == SiegeRelation.FRIENDLY,
+                "A teammate of the owner was not recognised as friendly");
+        helper.assertTrue(SiegeAccess.allows(teammate, ballista, SiegeAccess.Action.DISMANTLE),
+                "A teammate could not dismantle the owner's engine");
+        helper.assertTrue(!ballista.canAddPassenger(stranger), "A stranger could board an owned engine");
+        helper.assertTrue(!ballista.canStartAutomatedDismantling(stranger),
+                "A stranger could start dismantling an owned engine");
+        helper.assertTrue(!SiegeAccess.allows(stranger, ballista, SiegeAccess.Action.REPAIR),
+                "A stranger could repair an owned engine");
+        level.players().remove(owner);
         helper.succeed();
     }
 
@@ -1448,19 +1485,18 @@ public final class SiegeworksGameTests {
         buildFloor(helper);
         ServerLevel level = helper.getLevel();
         MantletEntity mantlet = SiegeworksEntities.MANTLET_ENTITY.get().create(level);
-        ArmorStand worker = EntityType.ARMOR_STAND.create(level);
-        helper.assertTrue(mantlet != null && worker != null,
+        Player worker = SiegeGameTestPlayers.createRideable(level);
+        helper.assertTrue(mantlet != null,
                 "Failed to create automated dismantling test entities");
 
         moveToRelative(helper, mantlet, 8.0D, 1.0D, 8.0D);
-        UUID deploymentOwner = UUID.randomUUID();
+        UUID deploymentOwner = worker.getUUID();
         SiegeDeploymentLimits.Deployment deployment = new SiegeDeploymentLimits.Deployment(
                 deploymentOwner, "team:dismantling_test_" + deploymentOwner);
         mantlet.setDeploymentIdentity(deployment.ownerUuid(), deployment.groupKey());
         worker.setPos(mantlet.getX(), mantlet.getY(), mantlet.getZ() + 1.0D);
         worker.setItemSlot(EquipmentSlot.MAINHAND, BlueprintStacks.constructionHammer());
         helper.assertTrue(level.addFreshEntity(mantlet), "Failed to add the dismantling test engine");
-        helper.assertTrue(level.addFreshEntity(worker), "Failed to add the dismantling test worker");
         SiegeDeploymentLimits.register(mantlet);
         int registeredDeployments = SiegeDeploymentLimits.check(
                 level, mantlet.getType(), deployment).current();

@@ -11,6 +11,8 @@ import me.mss1r.axiomata.collision.system.StructureMotionSystem;
 import me.mss1r.axiomata.collision.system.StructureCollisionSystem;
 import me.mss1r.siegeworks.gameplay.collision.generated.GeneratedCollisionShapes;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeRelation;
 import me.mss1r.siegeworks.gameplay.audio.SiegeSoundProfile;
 import me.mss1r.siegeworks.gameplay.movement.SyncedFloatInterpolator;
 import me.mss1r.siegeworks.gameplay.movement.ladder.LadderAutomatedTraversal;
@@ -545,9 +547,9 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
                 && !isDismantling();
     }
 
-    public boolean canBeRelocatedBy(UUID ownerUuid) {
-        return ownerUuid != null
-                && (getOwnerUuid() == null || isOwnedBy(ownerUuid));
+    public boolean canBeRelocatedBy(UUID playerUuid) {
+        return playerUuid != null && (getOwnerUuid() == null
+                || SiegeAccess.relationOf(playerUuid, this) != SiegeRelation.HOSTILE);
     }
 
     public ItemStack createRelocationItem() {
