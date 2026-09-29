@@ -90,10 +90,18 @@ public final class SiegeworksRecruitController implements ISiegeController {
         }
 
         Vec3 destination = getMovementTarget();
-        if (!hasFartherToGo(destination)) {
-            if (advanceMarch(destination) || updateAttacking()) {
+        if (RecruitsDriveOrders.any(siege)) {
+            if (hasFartherToGo(destination)) {
+                moveToward(destination);
                 return;
             }
+            if (advanceMarch(destination)) {
+                return;
+            }
+        }
+
+        if (updateAttacking()) {
+            return;
         }
 
         moveToward(destination);
