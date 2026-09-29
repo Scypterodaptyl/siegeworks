@@ -7,22 +7,18 @@ import com.talhanation.recruits.client.gui.CommandScreen;
 import com.talhanation.recruits.client.gui.commandscreen.ICommandCategory;
 import com.talhanation.recruits.client.gui.group.RecruitsCommandButton;
 import com.talhanation.recruits.network.MessageBackToMountEntity;
-import com.talhanation.recruits.network.MessageMountEntity;
+import com.talhanation.recruits.entities.SiegeEngineerEntity;
 import com.talhanation.recruits.world.RecruitsGroup;
 import me.mss1r.axiomata.blueprint.api.BlueprintStacks;
+import me.mss1r.siegeworks.api.SiegeAmmunitionMode;
+import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeTowerEntity;
-import me.mss1r.siegeworks.api.SiegeAmmunitionControl;
-import me.mss1r.siegeworks.api.SiegeAmmunitionMode;
-import me.mss1r.siegeworks.api.SiegeArtilleryControl;
-import me.mss1r.siegeworks.api.SiegeDeployableControl;
-import me.mss1r.siegeworks.entity.siege.MantletEntity;
-import net.minecraft.world.entity.Entity;
-import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
-import me.mss1r.siegeworks.registry.SiegeworksItems;
-import me.mss1r.siegeworks.integration.recruits.network.RecruitsSiegeCommandC2SPayload;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsNetworking;
+import me.mss1r.siegeworks.integration.recruits.network.RecruitsSiegeCommandC2SPayload;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsTowerCrewC2SPayload;
+import me.mss1r.siegeworks.registry.SiegeworksItems;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -40,14 +36,21 @@ import net.neoforged.api.distmarker.OnlyIn;
 //?}
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @OnlyIn(Dist.CLIENT)
 final class RecruitsSiegeCommandCategory implements ICommandCategory {
     private static final String HOLD_FIRE_STATE = "hold_fire";
     private static final String STRATEGIC_FIRE_STATE = "strategic_fire";
+    private static final int TYPE_COLUMNS = 6;
+    private static final int TYPE_SPACING = 22;
     private static boolean registered;
+
+    private CommandScreen activeScreen;
+    private SiegeCommandType selectedType;
 
     static void register() {
         if (!registered) {
@@ -63,137 +66,180 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
 
     @Override
     public ItemStack getIcon() {
-        return new ItemStack(SiegeworksItems.CANNON_BALL.get());
+        return new ItemStack(SiegeworksItems.GIANT_CANNON_BALL.get());
     }
 
     @Override
     public void createButtons(CommandScreen screen, int x, int y, List<RecruitsGroup> groups, Player player) {
         boolean hasActiveGroup = groups.stream().anyMatch(group -> !group.isDisabled());
-        AbstractSiegeEntity machine = screen.rayEntity instanceof AbstractSiegeEntity siege ? siege : null;
+        AbstractSiegeEntity target = screen.rayEntity instanceof AbstractSiegeEntity siege ? siege : null;
+        List<SiegeCommandType> availableTypes = availableTypes(player, groups);
+        SiegeCommandType targetType = target == null ? null : SiegeCommandType.from(target);
+        if (activeScreen != screen) {
+            activeScreen = screen;
+            selectedType = availableTypes.contains(targetType)
+                    ? targetType
+                    : availableTypes.stream().findFirst().orElse(null);
+        } else if (!availableTypes.contains(selectedType)) {
+            selectedType = availableTypes.stream().findFirst().orElse(null);
+        }
+
+        addTypeButtons(screen, x, y - 80, availableTypes);
         Layout layout = new Layout();
 
-        if (machine instanceof SiegeTowerEntity tower) {
-            layout.add(screen, "crew_machine", hasActiveGroup,
+        if (target instanceof SiegeTowerEntity tower) {
+            layout.add("crew_machine", hasActiveGroup,
                     () -> sendTowerCrewCommand(groups, tower, RecruitsTowerCrewC2SPayload.ACTION_BOARD));
-            layout.add(screen, "return", hasActiveGroup,
+            layout.add("return", hasActiveGroup,
                     () -> sendTowerCrewCommand(groups, tower, RecruitsTowerCrewC2SPayload.ACTION_RETURN));
-            layout.add(screen, "unload_tower", hasActiveGroup,
-                    () -> sendTowerCrewCommand(groups, tower, RecruitsTowerCrewC2SPayload.ACTION_UNLOAD));
-        } else if (machine != null && !(machine instanceof SiegeLadderEntity)) {
-            layout.add(screen, "crew", hasActiveGroup,
-                    () -> forEachActiveGroup(groups, group -> Main.SIMPLE_CHANNEL.sendToServer(
-                            new MessageMountEntity(player.getUUID(), machine.getUUID(), group.getUUID()))));
-            layout.add(screen, "return", hasActiveGroup,
+        } else if (target != null && !(target instanceof SiegeLadderEntity)) {
+            layout.add("crew", hasActiveGroup,
+                    () -> sendTargetedCommand(groups,
+                            RecruitsSiegeCommandC2SPayload.ACTION_CREW_MACHINE, target.getId()));
+            layout.add("return", hasActiveGroup,
                     () -> forEachActiveGroup(groups, group -> Main.SIMPLE_CHANNEL.sendToServer(
                             new MessageBackToMountEntity(player.getUUID(), group.getUUID()))));
         }
-        if (machine != null && !(machine instanceof SiegeLadderEntity)) {
-            layout.addCustom(screen, "leave", hasActiveGroup, groups,
-                    RecruitsSiegeCommandC2SPayload.ACTION_LEAVE_ENGINE);
+
+        if (selectedType != null) {
+            addSelectedTypeCommands(screen, layout, groups, hasActiveGroup, selectedType);
         }
 
-        if (machine instanceof SiegeDeployableControl) {
-            layout.column();
-            layout.addCustom(screen, "bridge_lower", hasActiveGroup, groups,
-                    RecruitsSiegeCommandC2SPayload.ACTION_BRIDGE_LOWER);
-            layout.addCustom(screen, "bridge_raise", hasActiveGroup, groups,
-                    RecruitsSiegeCommandC2SPayload.ACTION_BRIDGE_RAISE);
-            layout.addCustom(screen, "bridge_auto", hasActiveGroup, groups,
-                    RecruitsSiegeCommandC2SPayload.ACTION_BRIDGE_AUTO);
-        }
-
-        if (machine instanceof MantletEntity) {
-            layout.column();
-            layout.addTargeted(screen, "flap_open", hasActiveGroup, groups,
-                    RecruitsSiegeCommandC2SPayload.ACTION_FLAP_OPEN, machine);
-            layout.addTargeted(screen, "flap_close", hasActiveGroup, groups,
-                    RecruitsSiegeCommandC2SPayload.ACTION_FLAP_CLOSE, machine);
-        }
-
-        if (machine instanceof SiegeArtilleryControl) {
-            layout.column();
-            layout.add(screen, "fire_position", hasActiveGroup && screen.rayBlockPos != null,
-                    () -> {
-                        sendCustomCommand(groups, RecruitsSiegeCommandC2SPayload.ACTION_FIRE_POSITION,
-                                screen.rayBlockPos);
-                        forEachActiveGroup(groups, group -> {
-                            ClientManager.addGroupSpecialState(group.getUUID(), STRATEGIC_FIRE_STATE);
-                            ClientManager.removeGroupSpecialState(group.getUUID(), HOLD_FIRE_STATE);
-                        });
-                    });
-            layout.add(screen, "stop_attack", hasActiveGroup,
-                    () -> {
-                        sendCustomCommand(groups, RecruitsSiegeCommandC2SPayload.ACTION_HOLD_FIRE, null);
-                        forEachActiveGroup(groups, group -> {
-                            ClientManager.addGroupSpecialState(group.getUUID(), HOLD_FIRE_STATE);
-                            ClientManager.removeGroupSpecialState(group.getUUID(), STRATEGIC_FIRE_STATE);
-                        });
-                    });
-            layout.add(screen, "fire_at_will", hasActiveGroup,
-                    () -> {
-                        sendCustomCommand(groups, RecruitsSiegeCommandC2SPayload.ACTION_FIRE_AT_WILL, null);
-                        forEachActiveGroup(groups, group -> {
-                            ClientManager.removeGroupSpecialState(group.getUUID(), HOLD_FIRE_STATE);
-                            ClientManager.removeGroupSpecialState(group.getUUID(), STRATEGIC_FIRE_STATE);
-                        });
-                    });
-        }
-
-        if (machine instanceof SiegeAmmunitionControl ammunition) {
-            layout.column();
-            addAmmunitionButton(screen, layout, groups, hasActiveGroup, ammunition,
-                    SiegeAmmunitionMode.AUTO, "ammo_auto", RecruitsSiegeCommandC2SPayload.ACTION_AMMO_AUTO);
-            addAmmunitionButton(screen, layout, groups, hasActiveGroup, ammunition,
-                    SiegeAmmunitionMode.STANDARD, "ammo_standard",
-                    RecruitsSiegeCommandC2SPayload.ACTION_AMMO_STANDARD);
-            addAmmunitionButton(screen, layout, groups, hasActiveGroup, ammunition,
-                    SiegeAmmunitionMode.EXPLOSIVE, "ammo_explosive",
-                    RecruitsSiegeCommandC2SPayload.ACTION_AMMO_EXPLOSIVE);
-            addAmmunitionButton(screen, layout, groups, hasActiveGroup, ammunition,
-                    SiegeAmmunitionMode.INCENDIARY, "ammo_incendiary",
-                    RecruitsSiegeCommandC2SPayload.ACTION_AMMO_INCENDIARY);
-        }
-
-        if (machine instanceof SiegeLadderEntity) {
-            layout.column();
-            layout.addTargeted(screen, "pickup_ladder", hasActiveGroup,
-                    groups, RecruitsSiegeCommandC2SPayload.ACTION_PICKUP_LADDER, machine);
-        }
-        layout.column();
-        layout.addTargetedAt(screen, "place_ladder",
-                hasActiveGroup && screen.rayBlockPos != null, groups,
+        layout.addGeneric("place_ladder", hasActiveGroup && screen.rayBlockPos != null, groups,
                 RecruitsSiegeCommandC2SPayload.ACTION_PLACE_LADDER, screen.rayBlockPos);
-
-        layout.column();
-        layout.addTargetedAt(screen, "build",
+        layout.addGeneric("build",
                 hasActiveGroup && screen.rayBlockPos != null
                         && BlueprintStacks.isBlueprint(player.getOffhandItem()),
                 groups, RecruitsSiegeCommandC2SPayload.ACTION_BUILD, screen.rayBlockPos);
-        layout.addTargetedAt(screen, "supply", hasActiveGroup && screen.rayBlockPos != null,
+        layout.addGeneric("supply", hasActiveGroup && screen.rayBlockPos != null,
                 groups, RecruitsSiegeCommandC2SPayload.ACTION_SET_SUPPLIES, screen.rayBlockPos);
+        layout.addGeneric("cancel_work", hasActiveGroup, groups,
+                RecruitsSiegeCommandC2SPayload.ACTION_CANCEL_MAINTENANCE, null);
 
-        if (machine != null) {
-            int targetEntityId = machine.getId();
-            layout.add(screen, "repair", hasActiveGroup,
-                    () -> sendMaintenanceCommand(groups, RecruitsSiegeCommandC2SPayload.ACTION_REPAIR,
-                            targetEntityId));
-            layout.add(screen, "dismantle", hasActiveGroup,
-                    () -> sendMaintenanceCommand(groups, RecruitsSiegeCommandC2SPayload.ACTION_DISMANTLE,
-                            targetEntityId));
-            layout.add(screen, "cancel_work", hasActiveGroup,
-                    () -> sendMaintenanceCommand(groups,
-                            RecruitsSiegeCommandC2SPayload.ACTION_CANCEL_MAINTENANCE, targetEntityId));
+        if (target instanceof SiegeLadderEntity) {
+            layout.addTargeted("pickup_ladder", hasActiveGroup, groups,
+                    RecruitsSiegeCommandC2SPayload.ACTION_PICKUP_LADDER, target.getId());
+        }
+        if (target != null) {
+            layout.addTargeted("repair", hasActiveGroup, groups,
+                    RecruitsSiegeCommandC2SPayload.ACTION_REPAIR, target.getId());
+            layout.addTargeted("dismantle", hasActiveGroup, groups,
+                    RecruitsSiegeCommandC2SPayload.ACTION_DISMANTLE, target.getId());
         }
 
-        layout.place(screen, x, y);
+        layout.place(screen, x, y + 35);
     }
 
-    private static void addAmmunitionButton(CommandScreen screen, Layout layout,
-                                            List<RecruitsGroup> groups, boolean hasActiveGroup,
-                                            SiegeAmmunitionControl ammunition, SiegeAmmunitionMode mode,
-                                            String key, int action) {
-        if (ammunition.supportsAmmunitionMode(mode)) {
-            layout.addCustom(screen, key, hasActiveGroup, groups, action);
+    private void addTypeButtons(CommandScreen screen, int centerX, int firstY,
+                                List<SiegeCommandType> availableTypes) {
+        int columns = Math.min(TYPE_COLUMNS, availableTypes.size());
+        int firstX = centerX - (columns * TYPE_SPACING - 2) / 2;
+        for (int index = 0; index < availableTypes.size(); index++) {
+            SiegeCommandType type = availableTypes.get(index);
+            int buttonX = firstX + index % TYPE_COLUMNS * TYPE_SPACING;
+            int buttonY = firstY + index / TYPE_COLUMNS * TYPE_SPACING;
+            screen.addRenderableWidget(new SiegeTypeButton(buttonX, buttonY, type, type == selectedType, () -> {
+                selectedType = type;
+                screen.init(Minecraft.getInstance(), screen.width, screen.height);
+            }));
+        }
+    }
+
+    private static List<SiegeCommandType> availableTypes(Player player, List<RecruitsGroup> groups) {
+        Set<UUID> selectedGroups = Set.copyOf(activeGroupIds(groups));
+        if (selectedGroups.isEmpty()) {
+            return List.of();
+        }
+
+        EnumSet<SiegeCommandType> found = EnumSet.noneOf(SiegeCommandType.class);
+        List<SiegeEngineerEntity> engineers = player.level().getEntitiesOfClass(
+                SiegeEngineerEntity.class,
+                player.getBoundingBox().inflate(RecruitsCompat.COMMAND_RANGE),
+                engineer -> selectedGroups.contains(engineer.getGroup()));
+        for (SiegeEngineerEntity engineer : engineers) {
+            AbstractSiegeEntity machine = RecruitsCompat.workedMachine(engineer);
+            if (machine != null && machine.isOperator(engineer)) {
+                SiegeCommandType type = SiegeCommandType.from(machine);
+                if (type != null) {
+                    found.add(type);
+                }
+            }
+        }
+        return List.of(SiegeCommandType.values()).stream().filter(found::contains).toList();
+    }
+
+    private static void addSelectedTypeCommands(CommandScreen screen, Layout layout,
+                                                List<RecruitsGroup> groups, boolean hasActiveGroup,
+                                                SiegeCommandType type) {
+        if (type.kind() != SiegeCommandType.Kind.LADDER) {
+            layout.addSelected("leave", hasActiveGroup, groups, type,
+                    RecruitsSiegeCommandC2SPayload.ACTION_LEAVE_ENGINE, null);
+        }
+
+        switch (type.kind()) {
+            case ARTILLERY -> {
+                layout.add("fire_position", hasActiveGroup && screen.rayBlockPos != null, () -> {
+                    sendSelectedCommand(groups, type, RecruitsSiegeCommandC2SPayload.ACTION_FIRE_POSITION,
+                            screen.rayBlockPos);
+                    forEachActiveGroup(groups, group -> {
+                        ClientManager.addGroupSpecialState(group.getUUID(), STRATEGIC_FIRE_STATE);
+                        ClientManager.removeGroupSpecialState(group.getUUID(), HOLD_FIRE_STATE);
+                    });
+                });
+                layout.add("stop_attack", hasActiveGroup, () -> {
+                    sendSelectedCommand(groups, type, RecruitsSiegeCommandC2SPayload.ACTION_HOLD_FIRE, null);
+                    forEachActiveGroup(groups, group -> {
+                        ClientManager.addGroupSpecialState(group.getUUID(), HOLD_FIRE_STATE);
+                        ClientManager.removeGroupSpecialState(group.getUUID(), STRATEGIC_FIRE_STATE);
+                    });
+                });
+                layout.add("fire_at_will", hasActiveGroup, () -> {
+                    sendSelectedCommand(groups, type, RecruitsSiegeCommandC2SPayload.ACTION_FIRE_AT_WILL, null);
+                    forEachActiveGroup(groups, group -> {
+                        ClientManager.removeGroupSpecialState(group.getUUID(), HOLD_FIRE_STATE);
+                        ClientManager.removeGroupSpecialState(group.getUUID(), STRATEGIC_FIRE_STATE);
+                    });
+                });
+                addAmmunitionButtons(layout, groups, hasActiveGroup, type);
+            }
+            case TOWER -> {
+                layout.addSelected("bridge_lower", hasActiveGroup, groups, type,
+                        RecruitsSiegeCommandC2SPayload.ACTION_BRIDGE_LOWER, null);
+                layout.addSelected("bridge_raise", hasActiveGroup, groups, type,
+                        RecruitsSiegeCommandC2SPayload.ACTION_BRIDGE_RAISE, null);
+                layout.addSelected("bridge_auto", hasActiveGroup, groups, type,
+                        RecruitsSiegeCommandC2SPayload.ACTION_BRIDGE_AUTO, null);
+                layout.addSelected("unload_tower", hasActiveGroup, groups, type,
+                        RecruitsSiegeCommandC2SPayload.ACTION_UNLOAD_TOWER, null);
+            }
+            case MANTLET -> {
+                layout.addSelected("flap_open", hasActiveGroup, groups, type,
+                        RecruitsSiegeCommandC2SPayload.ACTION_FLAP_OPEN, null);
+                layout.addSelected("flap_close", hasActiveGroup, groups, type,
+                        RecruitsSiegeCommandC2SPayload.ACTION_FLAP_CLOSE, null);
+            }
+            case MACHINE, LADDER -> {
+            }
+        }
+    }
+
+    private static void addAmmunitionButtons(Layout layout, List<RecruitsGroup> groups,
+                                             boolean hasActiveGroup, SiegeCommandType type) {
+        addAmmunitionButton(layout, groups, hasActiveGroup, type, SiegeAmmunitionMode.AUTO,
+                "ammo_auto", RecruitsSiegeCommandC2SPayload.ACTION_AMMO_AUTO);
+        addAmmunitionButton(layout, groups, hasActiveGroup, type, SiegeAmmunitionMode.STANDARD,
+                "ammo_standard", RecruitsSiegeCommandC2SPayload.ACTION_AMMO_STANDARD);
+        addAmmunitionButton(layout, groups, hasActiveGroup, type, SiegeAmmunitionMode.EXPLOSIVE,
+                "ammo_explosive", RecruitsSiegeCommandC2SPayload.ACTION_AMMO_EXPLOSIVE);
+        addAmmunitionButton(layout, groups, hasActiveGroup, type, SiegeAmmunitionMode.INCENDIARY,
+                "ammo_incendiary", RecruitsSiegeCommandC2SPayload.ACTION_AMMO_INCENDIARY);
+    }
+
+    private static void addAmmunitionButton(Layout layout, List<RecruitsGroup> groups,
+                                            boolean hasActiveGroup, SiegeCommandType type,
+                                            SiegeAmmunitionMode mode, String key, int action) {
+        if (type.supports(mode)) {
+            layout.addSelected(key, hasActiveGroup, groups, type, action, null);
         }
     }
 
@@ -207,26 +253,23 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
         private record Entry(String key, boolean enabled, Runnable action) {
         }
 
-        private void column() {
-        }
-
-        private void add(CommandScreen screen, String key, boolean enabled, Runnable action) {
+        private void add(String key, boolean enabled, Runnable action) {
             entries.add(new Entry(key, enabled, action));
         }
 
-        private void addCustom(CommandScreen screen, String key, boolean enabled,
-                               List<RecruitsGroup> groups, int action) {
-            add(screen, key, enabled, () -> sendCustomCommand(groups, action, null));
+        private void addSelected(String key, boolean enabled, List<RecruitsGroup> groups,
+                                 SiegeCommandType type, int action, BlockPos target) {
+            add(key, enabled, () -> sendSelectedCommand(groups, type, action, target));
         }
 
-        private void addTargeted(CommandScreen screen, String key, boolean enabled,
-                                 List<RecruitsGroup> groups, int action, Entity target) {
-            add(screen, key, enabled, () -> sendMaintenanceCommand(groups, action, target.getId()));
+        private void addGeneric(String key, boolean enabled, List<RecruitsGroup> groups,
+                                int action, BlockPos target) {
+            add(key, enabled, () -> sendGenericCommand(groups, action, target));
         }
 
-        private void addTargetedAt(CommandScreen screen, String key, boolean enabled,
-                                   List<RecruitsGroup> groups, int action, BlockPos target) {
-            add(screen, key, enabled, () -> sendCustomCommand(groups, action, target));
+        private void addTargeted(String key, boolean enabled, List<RecruitsGroup> groups,
+                                 int action, int targetEntityId) {
+            add(key, enabled, () -> sendTargetedCommand(groups, action, targetEntityId));
         }
 
         private void place(CommandScreen screen, int originX, int originY) {
@@ -239,70 +282,27 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
                 Entry entry = entries.get(index);
                 int column = index / ROWS_PER_COLUMN;
                 int row = index % ROWS_PER_COLUMN;
-                int x = originX + Math.round((column - (columns - 1) / 2.0F) * COLUMN_WIDTH);
-                int y = originY + Math.round((row - (rows - 1) / 2.0F) * ROW_HEIGHT);
-                addButton(screen, x, y, entry.key(), entry.enabled(), entry.action());
+                int buttonX = originX + Math.round((column - (columns - 1) / 2.0F) * COLUMN_WIDTH);
+                int buttonY = originY + Math.round((row - (rows - 1) / 2.0F) * ROW_HEIGHT);
+                addButton(screen, buttonX, buttonY, entry.key(), entry.enabled(), entry.action());
             }
         }
     }
 
-    private static void addMaintenanceButtons(CommandScreen screen, int x, int y, List<RecruitsGroup> groups,
-                                              boolean hasActiveGroup, boolean towerLayout) {
-        boolean hasSiegeTarget = hasActiveGroup && screen.rayEntity instanceof AbstractSiegeEntity;
-        int targetEntityId = hasSiegeTarget
-                ? screen.rayEntity.getId()
-                : RecruitsSiegeCommandC2SPayload.NO_TARGET_ENTITY;
-        int maintenanceX = towerLayout ? x + 100 : x - 50;
-        int repairY = towerLayout ? y - 50 : y + 25;
-        int dismantleY = towerLayout ? y - 25 : y + 50;
-        int cancelX = towerLayout ? x + 100 : x + 150;
-        int cancelY = towerLayout ? y : y + 50;
-        addButton(screen, maintenanceX, repairY, "repair", hasSiegeTarget,
-                () -> sendMaintenanceCommand(groups, RecruitsSiegeCommandC2SPayload.ACTION_REPAIR,
-                        targetEntityId));
-        addButton(screen, maintenanceX, dismantleY, "dismantle", hasSiegeTarget,
-                () -> sendMaintenanceCommand(groups, RecruitsSiegeCommandC2SPayload.ACTION_DISMANTLE,
-                        targetEntityId));
-        addButton(screen, cancelX, cancelY, "cancel_work", hasActiveGroup,
-                () -> sendMaintenanceCommand(groups,
-                        RecruitsSiegeCommandC2SPayload.ACTION_CANCEL_MAINTENANCE,
-                        RecruitsSiegeCommandC2SPayload.NO_TARGET_ENTITY));
-
-        if (towerLayout) {
-            return;
-        }
-
-        boolean hasLadderTarget = hasActiveGroup && screen.rayEntity instanceof SiegeLadderEntity;
-        int ladderEntityId = hasLadderTarget
-                ? screen.rayEntity.getId()
-                : RecruitsSiegeCommandC2SPayload.NO_TARGET_ENTITY;
-        addButton(screen, x + 50, y + 25, "pickup_ladder", hasLadderTarget,
-                () -> sendMaintenanceCommand(groups,
-                        RecruitsSiegeCommandC2SPayload.ACTION_PICKUP_LADDER, ladderEntityId));
-        addTargetedCustomCommandButton(screen, x + 50, y + 50, "place_ladder",
-                hasActiveGroup && screen.rayBlockPos != null && !hasLadderTarget,
-                groups, RecruitsSiegeCommandC2SPayload.ACTION_PLACE_LADDER, screen.rayBlockPos);
+    private static void sendSelectedCommand(List<RecruitsGroup> groups, SiegeCommandType type,
+                                            int action, BlockPos targetPos) {
+        RecruitsNetworking.sendToServer(new RecruitsSiegeCommandC2SPayload(
+                action, activeGroupIds(groups), targetPos, type.id()));
     }
 
-    private static void addCustomCommandButton(CommandScreen screen, int x, int y, String key, boolean active,
-                                               List<RecruitsGroup> groups, int action) {
-        addTargetedCustomCommandButton(screen, x, y, key, active, groups, action, null);
-    }
-
-    private static void addTargetedCustomCommandButton(CommandScreen screen, int x, int y, String key,
-                                                       boolean active, List<RecruitsGroup> groups, int action,
-                                                       BlockPos targetPos) {
-        addButton(screen, x, y, key, active, () -> sendCustomCommand(groups, action, targetPos));
-    }
-
-    private static void sendCustomCommand(List<RecruitsGroup> groups, int action, BlockPos targetPos) {
+    private static void sendGenericCommand(List<RecruitsGroup> groups, int action, BlockPos targetPos) {
         RecruitsNetworking.sendToServer(
                 new RecruitsSiegeCommandC2SPayload(action, activeGroupIds(groups), targetPos));
     }
 
-    private static void sendMaintenanceCommand(List<RecruitsGroup> groups, int action, int targetEntityId) {
+    private static void sendTargetedCommand(List<RecruitsGroup> groups, int action, int targetEntityId) {
         RecruitsNetworking.sendToServer(new RecruitsSiegeCommandC2SPayload(
-                action, activeGroupIds(groups), null, targetEntityId));
+                action, activeGroupIds(groups), null, targetEntityId, null));
     }
 
     private static void sendTowerCrewCommand(List<RecruitsGroup> groups, SiegeTowerEntity tower, int action) {

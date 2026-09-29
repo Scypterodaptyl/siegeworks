@@ -159,6 +159,9 @@ public final class StuckBoltLayer<T extends LivingEntity, M extends EntityModel<
     }
 
     private static List<ModelPart> findModelRoots(EntityModel<?> model) {
+        if (model == null) {
+            return List.of();
+        }
         if (model instanceof HierarchicalModel<?> hierarchicalModel) {
             return List.of(hierarchicalModel.root());
         }
