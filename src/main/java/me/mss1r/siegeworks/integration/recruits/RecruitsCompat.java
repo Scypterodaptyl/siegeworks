@@ -1074,14 +1074,7 @@ public final class RecruitsCompat {
     }
 
     public static UUID commanderOf(AbstractSiegeEntity siege) {
-        Entity owner = siege.getOwner();
-        if (owner instanceof AbstractRecruitEntity recruit) {
-            return recruit.getOwnerUUID();
-        }
-        if (owner != null) {
-            return owner.getUUID();
-        }
-        return siege.getDeploymentOwnerUuid();
+        return siege.getOwnerUuid();
     }
 
     public static boolean withinCommandRange(ServerPlayer player, AbstractSiegeEntity siege) {
@@ -1237,6 +1230,9 @@ public final class RecruitsCompat {
 
         if (!player.getAbilities().instabuild) {
             blueprint.shrink(1);
+        }
+        if (site instanceof AbstractSiegeEntity siege) {
+            siege.claimOwnership(player.getUUID());
         }
         RecruitsConstructionController.assign(engineer, site);
         player.displayClientMessage(

@@ -112,7 +112,7 @@ public class SiegeLadderDeploymentItem extends SiegeDeploymentItem {
                 ? null
                 : player.getUUID();
         entity.setSections(getSections(context.getItemInHand()));
-        entity.setRelocationOwnerUuid(placementOwner);
+        entity.setOwnerUuid(placementOwner);
         float storedHealth = getStoredHealth(context.getItemInHand());
         if (storedHealth > 0.0F) {
             entity.setHealth(Math.min(entity.getMaxHealth(), storedHealth));

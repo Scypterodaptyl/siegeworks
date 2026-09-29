@@ -369,7 +369,7 @@ public abstract class AbstractBoltThrowerEntity extends AbstractSiegeEntity impl
         ItemStack stack = player.getItemInHand(hand);
         if (stack.isEmpty() && !player.isShiftKeyDown() && player.getVehicle() != this && canAddPassenger(player)) {
             player.startRiding(this);
-            setOwner(player);
+            setOperator(player);
             return InteractionResult.SUCCESS;
         }
 
@@ -481,7 +481,7 @@ public abstract class AbstractBoltThrowerEntity extends AbstractSiegeEntity impl
         ResourceLocation ammoId = BuiltInRegistries.ITEM.getKey(getBoltItem());
         setAmmoLoaded(ammoId.toString());
         setWindingTime(getWindingDurationTicks());
-        setOwner(operator);
+        setOperator(operator);
         resetAutomatedLoading();
         return SiegeActionResult.LOADED;
     }
@@ -557,7 +557,7 @@ public abstract class AbstractBoltThrowerEntity extends AbstractSiegeEntity impl
         ResourceLocation ammoId = BuiltInRegistries.ITEM.getKey(getBoltItem());
         setAmmoLoaded(ammoId.toString());
         setWindingTime(getWindingDurationTicks());
-        setOwner(player);
+        setOperator(player);
     }
 
     protected abstract LoadingRequirement[] getLoadStages();
@@ -586,7 +586,7 @@ public abstract class AbstractBoltThrowerEntity extends AbstractSiegeEntity impl
 
         setAmmoLoaded("");
         startRecovery();
-        setOwner(operator);
+        setOperator(operator);
     }
 
     @Override

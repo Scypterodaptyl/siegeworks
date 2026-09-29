@@ -28,7 +28,8 @@ import me.mss1r.siegeworks.gameplay.deployment.SiegeDeploymentState;
 import me.mss1r.siegeworks.gameplay.construction.SiegeConstructionController;
 import me.mss1r.siegeworks.gameplay.maintenance.SiegeMaintenanceController;
 import me.mss1r.siegeworks.gameplay.damage.SiegeAttackPolicy;
-import me.mss1r.siegeworks.gameplay.ownership.SiegeOwnerReference;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeOperatorReference;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeOwnership;
 import me.mss1r.siegeworks.data.profile.ScattershotProfile;
 import me.mss1r.siegeworks.data.profile.SiegeEngineProfile;
 import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
@@ -116,7 +117,8 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     public float lastRiderPitch;
     public float wheelRotation;
     protected final Set<UUID> playersNotified = new HashSet<>();
-    private final SiegeOwnerReference ownership = new SiegeOwnerReference(this);
+    private final SiegeOperatorReference operator = new SiegeOperatorReference(this);
+    private final SiegeOwnership ownership = new SiegeOwnership();
     private final SiegeDeploymentState deployment = new SiegeDeploymentState(this);
     private final SiegeAudioController audio = new SiegeAudioController(this);
     private final SiegeTransformInterpolator interpolation = new SiegeTransformInterpolator(this);
@@ -597,6 +599,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         construction.save(tag);
         aiming.save(tag);
         weapon.save(tag);
+        operator.save(tag);
         ownership.save(tag);
         deployment.save(tag);
         tag.putBoolean(TAG_DISMANTLING, isDismantling());
@@ -610,8 +613,11 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         construction.load(tag);
         aiming.load(tag);
         weapon.load(tag);
-        ownership.load(tag);
+        operator.load(tag);
         deployment.load(tag);
+        if (!ownership.load(tag)) {
+            ownership.set(legacyOwner());
+        }
         if (tag.contains(TAG_DISMANTLING)) {
             setDismantling(tag.getBoolean(TAG_DISMANTLING));
         }
@@ -623,6 +629,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
 
     public void setDeploymentIdentity(UUID ownerUuid, String groupKey) {
         deployment.setIdentity(ownerUuid, groupKey);
+        ownership.claim(ownerUuid);
     }
 
     public UUID getDeploymentOwnerUuid() {
@@ -710,12 +717,43 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         this.entityData.set(DISMANTLE_PROGRESS, Math.max(0, progress));
     }
 
-    public Entity getOwner() {
-        return ownership.get();
+    /** Whoever last crewed or fired the engine; blamed for its damage, never granted its ownership. */
+    @Nullable
+    public Entity getOperator() {
+        return operator.get();
     }
 
-    public void setOwner(Entity owner) {
-        ownership.set(owner);
+    public void setOperator(@Nullable Entity operator) {
+        this.operator.set(operator);
+        if (operator != null && !level().isClientSide) {
+            ownership.claim(SiegeOwnership.playerOf(operator));
+        }
+    }
+
+    @Nullable
+    public UUID getOwnerUuid() {
+        return ownership.ownerUuid();
+    }
+
+    public void setOwnerUuid(@Nullable UUID ownerUuid) {
+        ownership.set(ownerUuid);
+    }
+
+    public boolean claimOwnership(@Nullable UUID claimant) {
+        return ownership.claim(claimant);
+    }
+
+    public boolean isOwnedBy(@Nullable UUID playerUuid) {
+        return ownership.isOwnedBy(playerUuid);
+    }
+
+    @Nullable
+    private UUID legacyOwner() {
+        if (getDeploymentOwnerUuid() != null) {
+            return getDeploymentOwnerUuid();
+        }
+        UUID lastOperator = operator.uuid();
+        return SiegeOwnership.isKnownPlayer(level().getServer(), lastOperator) ? lastOperator : null;
     }
 
     public float getWheelRotation() {

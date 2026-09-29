@@ -193,7 +193,7 @@ public class BatteringRamEntity extends AbstractSiegeEntity implements GeoEntity
             boolean becomesDriver = getPassengers().isEmpty();
             player.startRiding(this);
             if (becomesDriver) {
-                setOwner(player);
+                setOperator(player);
             }
             return InteractionResult.SUCCESS;
         }
@@ -276,7 +276,7 @@ public class BatteringRamEntity extends AbstractSiegeEntity implements GeoEntity
         setAttackHappened(false);
         setAttackAnimationTick(0);
         startRecovery();
-        setOwner(attacker);
+        setOperator(attacker);
         playReloadSound(serverLevel);
     }
 
@@ -378,7 +378,7 @@ public class BatteringRamEntity extends AbstractSiegeEntity implements GeoEntity
         AABB impactBox = createRamHeadBox(center, forward, right);
         Vec3 knockback = forward.scale(2.5D).add(0.0D, 0.25D, 0.0D);
         float baseDamage = (float) getBaseDamage();
-        LivingEntity attacker = getOwner() instanceof LivingEntity living ? living : this;
+        LivingEntity attacker = getOperator() instanceof LivingEntity living ? living : this;
 
         serverLevel.getEntities(this, impactBox.inflate(0.1D),
                         entity -> entity instanceof LivingEntity
@@ -392,7 +392,7 @@ public class BatteringRamEntity extends AbstractSiegeEntity implements GeoEntity
         });
 
         Explosion probe = SiegeBlockBreaker.damageProbe(
-                serverLevel, impactBox.getCenter(), SiegeBlockBreaker.responsiblePlayer(getOwner()));
+                serverLevel, impactBox.getCenter(), SiegeBlockBreaker.responsiblePlayer(getOperator()));
         int minX = (int) Math.floor(impactBox.minX);
         int minY = (int) Math.floor(impactBox.minY);
         int minZ = (int) Math.floor(impactBox.minZ);
@@ -409,7 +409,7 @@ public class BatteringRamEntity extends AbstractSiegeEntity implements GeoEntity
             if (StructuralDamageSystem.applyImpact(serverLevel, pos, baseDamage / 40.0F, hardness)
                     == StructuralDamageSystem.ImpactResult.BREAK_BLOCK
                     && !SiegeBlockBreaker.breakBlock(
-                            serverLevel, pos, SiegeBlockBreaker.responsiblePlayer(getOwner()))) {
+                            serverLevel, pos, SiegeBlockBreaker.responsiblePlayer(getOperator()))) {
                 break;
             }
         }

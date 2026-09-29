@@ -179,11 +179,73 @@ public final class SiegeworksGameTests {
         moveToRelative(helper, second, 10.0D, 1.0D, 6.0D);
         helper.assertTrue(level.addFreshEntity(first) && level.addFreshEntity(second),
                 "Failed to add cyclic ownership test machines");
-        first.setOwner(second);
-        second.setOwner(first);
+        first.setOperator(second);
+        second.setOperator(first);
 
         helper.assertTrue(SiegeBlockBreaker.responsiblePlayer(first) == null,
                 "Cyclic machine ownership produced a player attribution");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void operatingAnOwnedEngineDoesNotTransferOwnership(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        ArcballistaEntity ballista = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
+        helper.assertTrue(ballista != null, "Failed to create ownership test ballista");
+        moveToRelative(helper, ballista, 6.0D, 1.0D, 6.0D);
+        helper.assertTrue(level.addFreshEntity(ballista), "Failed to add ownership test ballista");
+
+        Player first = SiegeGameTestPlayers.createRideable(level);
+        Player second = SiegeGameTestPlayers.createRideable(level);
+        ballista.setOperator(first);
+        helper.assertTrue(ballista.isOwnedBy(first.getUUID()),
+                "An unowned engine was not claimed by its first operator");
+        ballista.setOperator(second);
+        helper.assertTrue(ballista.isOwnedBy(first.getUUID()),
+                "A later operator took ownership of the engine");
+        helper.assertTrue(ballista.getOperator() == second,
+                "The operator did not follow the latest crew");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void engineOwnershipPersistsAndMigratesLegacySaves(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        UUID owner = UUID.randomUUID();
+        ArcballistaEntity original = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
+        helper.assertTrue(original != null, "Failed to create ownership persistence ballista");
+        CompoundTag unowned = new CompoundTag();
+        original.addAdditionalSaveData(unowned);
+
+        original.setOwnerUuid(owner);
+        CompoundTag saved = new CompoundTag();
+        original.addAdditionalSaveData(saved);
+        ArcballistaEntity restored = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
+        restored.readAdditionalSaveData(saved);
+        helper.assertTrue(restored.isOwnedBy(owner), "Engine ownership did not survive NBT persistence");
+
+        CompoundTag legacyDeployment = unowned.copy();
+        legacyDeployment.putUUID("DeploymentOwner", owner);
+        legacyDeployment.putString("DeploymentGroup", "player:" + owner);
+        ArcballistaEntity deployed = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
+        deployed.readAdditionalSaveData(legacyDeployment);
+        helper.assertTrue(deployed.isOwnedBy(owner), "A legacy deployment owner was not migrated");
+
+        CompoundTag legacyOperator = unowned.copy();
+        legacyOperator.putUUID("Owner", UUID.randomUUID());
+        ArcballistaEntity operated = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
+        operated.readAdditionalSaveData(legacyOperator);
+        helper.assertTrue(operated.getOwnerUuid() == null,
+                "A legacy operator that is not a known player became the owner");
+
+        SiegeLadderEntity ladder = SiegeworksEntities.SIEGE_LADDER_ENTITY.get().create(level);
+        helper.assertTrue(ladder != null, "Failed to create ownership persistence ladder");
+        CompoundTag legacyLadder = new CompoundTag();
+        ladder.addAdditionalSaveData(legacyLadder);
+        legacyLadder.putUUID("RelocationOwner", owner);
+        SiegeLadderEntity restoredLadder = SiegeworksEntities.SIEGE_LADDER_ENTITY.get().create(level);
+        restoredLadder.readAdditionalSaveData(legacyLadder);
+        helper.assertTrue(restoredLadder.isOwnedBy(owner), "A legacy ladder relocation owner was not migrated");
         helper.succeed();
     }
 
@@ -940,7 +1002,7 @@ public final class SiegeworksGameTests {
         level.getScoreboard().addPlayerToTeam(operator.getScoreboardName(), team);
         level.getScoreboard().addPlayerToTeam(ally.getScoreboardName(), team);
 
-        towerCrossbow.setOwner(operator);
+        towerCrossbow.setOperator(operator);
         TestTowerCrossbowBoltProjectile bolt = new TestTowerCrossbowBoltProjectile(
                 SiegeworksEntities.TOWER_CROSSBOW_BOLT_PROJECTILE.get(), towerCrossbow, level);
         helper.assertTrue(!bolt.canHitTarget(ally),
@@ -952,8 +1014,8 @@ public final class SiegeworksGameTests {
         SerpentineEntity enemySiege = SiegeworksEntities.SERPENTINE_ENTITY.get().create(level);
         helper.assertTrue(alliedSiege != null && enemySiege != null,
                 "Failed to create friendly-fire siege targets");
-        alliedSiege.setOwner(ally);
-        enemySiege.setOwner(enemy);
+        alliedSiege.setOperator(ally);
+        enemySiege.setOperator(enemy);
         helper.assertTrue(!bolt.canHitTarget(alliedSiege),
                 "A teammate's siege engine remained a projectile collision target");
         helper.assertTrue(bolt.canHitTarget(enemySiege),
@@ -975,7 +1037,7 @@ public final class SiegeworksGameTests {
         ArmorStand operator = EntityType.ARMOR_STAND.create(level);
         helper.assertTrue(towerCrossbow != null && operator != null,
                 "Failed to create siege projectile test entities");
-        towerCrossbow.setOwner(operator);
+        towerCrossbow.setOperator(operator);
 
         EntityType<?>[] siegeTypes = {
                 SiegeworksEntities.SERPENTINE_ENTITY.get(),
@@ -1041,7 +1103,7 @@ public final class SiegeworksGameTests {
         helper.assertTrue(towerCrossbow != null && dragon != null,
                 "Failed to create multipart projectile test entities");
 
-        towerCrossbow.setOwner(operator);
+        towerCrossbow.setOperator(operator);
         moveToRelative(helper, dragon, 8.0D, 5.0D, 8.0D);
         dragon.setNoAi(true);
         helper.assertTrue(level.addFreshEntity(dragon), "Failed to add the Ender Dragon test target");
@@ -1070,7 +1132,7 @@ public final class SiegeworksGameTests {
         helper.assertTrue(towerCrossbow != null && operator != null
                         && lethalTarget != null && survivingTarget != null,
                 "Failed to create bolt attachment test entities");
-        towerCrossbow.setOwner(operator);
+        towerCrossbow.setOperator(operator);
         lethalTarget.setNoAi(true);
         survivingTarget.setNoAi(true);
         moveToRelative(helper, lethalTarget, 6.0D, 1.0D, 6.0D);
@@ -1295,7 +1357,7 @@ public final class SiegeworksGameTests {
         SiegeLadderEntity ladder = SiegeworksEntities.SIEGE_LADDER_ENTITY.get().create(level);
         helper.assertTrue(ladder != null, "Failed to create the owned ladder test entity");
 
-        ladder.setRelocationOwnerUuid(UUID.randomUUID());
+        ladder.setOwnerUuid(UUID.randomUUID());
         moveToRelative(helper, ladder, 8.0D, 1.0D, 8.0D);
         helper.assertTrue(level.addFreshEntity(ladder), "Failed to add the owned ladder test entity");
 
@@ -1529,7 +1591,7 @@ public final class SiegeworksGameTests {
             helper.assertTrue(placed.getSections() == 3, "Placed ladder lost its section count");
             helper.assertTrue(Math.abs(placed.getHealth() - 57.0F) < 0.01F,
                     "Placed ladder lost its health");
-            helper.assertTrue(commander.getUUID().equals(placed.getRelocationOwnerUuid()),
+            helper.assertTrue(commander.getUUID().equals(placed.getOwnerUuid()),
                     "Placed ladder did not retain the recruit owner's UUID");
             helper.assertTrue(Math.abs(net.minecraft.util.Mth.wrapDegrees(placed.getYRot() + 90.0F)) < 0.01F,
                     "Placed ladder did not use the commander's facing direction");
@@ -2113,7 +2175,7 @@ public final class SiegeworksGameTests {
         level.addFreshEntity(tower);
         level.addFreshEntity(cannon);
         level.addFreshEntity(operator);
-        cannon.setOwner(operator);
+        cannon.setOperator(operator);
 
         fireTestCannonBall(level, cannon, tower);
         helper.runAfterDelay(30, () -> fireTestCannonBall(level, cannon, tower));
@@ -2146,7 +2208,7 @@ public final class SiegeworksGameTests {
         moveToRelative(helper, cannon, 16.0D, 1.0D, 7.0D);
         level.addFreshEntity(tower);
         level.addFreshEntity(cannon);
-        cannon.setOwner(operator);
+        cannon.setOperator(operator);
 
         fireTestCannonBall(level, cannon, tower);
         helper.runAfterDelay(40, () -> {

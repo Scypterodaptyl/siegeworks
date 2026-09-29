@@ -167,7 +167,7 @@ public class MantletEntity extends AbstractSiegeEntity implements GeoEntity, Pro
         }
         if (!player.isShiftKeyDown() && player.getItemInHand(hand).isEmpty() && canAddPassenger(player)) {
             player.startRiding(this);
-            setOwner(player);
+            setOperator(player);
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;

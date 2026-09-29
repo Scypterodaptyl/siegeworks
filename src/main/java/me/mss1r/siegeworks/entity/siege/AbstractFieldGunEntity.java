@@ -180,7 +180,7 @@ public abstract class AbstractFieldGunEntity extends AbstractSiegeEntity
 
         if (stack.isEmpty() && canAddPassenger(player) && !player.isShiftKeyDown()) {
             player.startRiding(this);
-            setOwner(player);
+            setOperator(player);
             return InteractionResult.SUCCESS;
         }
 
@@ -323,7 +323,7 @@ public abstract class AbstractFieldGunEntity extends AbstractSiegeEntity
         }
         if (stageItem == Items.FLINT_AND_STEEL) {
             fire(serverLevel);
-            setOwner(operator);
+            setOperator(operator);
             return SiegeActionResult.FIRED;
         }
 
@@ -388,7 +388,7 @@ public abstract class AbstractFieldGunEntity extends AbstractSiegeEntity
         if (!consumeLoadingRequirement(player, hand, stage)) return;
         if (stage.item() == Items.FLINT_AND_STEEL) {
             fire(serverLevel);
-            setOwner(player);
+            setOperator(player);
             return;
         }
         setLoadStage(stageIndex + 1);
@@ -431,7 +431,7 @@ public abstract class AbstractFieldGunEntity extends AbstractSiegeEntity
         setScattershotCount(0);
         setAmmoLoaded(AMMO_CANNON_BALL);
         fire(serverLevel);
-        setOwner(operator);
+        setOperator(operator);
         return true;
     }
 

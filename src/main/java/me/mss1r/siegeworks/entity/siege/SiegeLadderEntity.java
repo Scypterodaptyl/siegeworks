@@ -84,7 +84,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
     private static final String TAG_SECTIONS = "Sections";
     private static final String TAG_LEAN_PROGRESS = "LeanProgress";
     private static final String TAG_DEPLOY_TICKS = "DeployTicks";
-    private static final String TAG_RELOCATION_OWNER = "RelocationOwner";
+    private static final String TAG_LEGACY_RELOCATION_OWNER = "RelocationOwner";
 
     private static final int DEPLOY_DELAY_TICKS = 35;
     private static final double BLOCKBENCH_SECTION_LENGTH = 48.0D / 16.0D;
@@ -159,7 +159,6 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
     private boolean restingOnSurface;
     private int nextSurfaceRestProbeTick;
     private final SyncedFloatInterpolator clientLeanProgress = new SyncedFloatInterpolator();
-    private UUID relocationOwnerUuid;
     private float previousCollisionLeanDegrees;
     private int previousCollisionSections;
 
@@ -195,9 +194,9 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         setSections(tag.contains(TAG_SECTIONS) ? tag.getInt(TAG_SECTIONS) : 1);
         setLeanProgress(tag.contains(TAG_LEAN_PROGRESS) ? tag.getFloat(TAG_LEAN_PROGRESS) : 0.0F);
         setDeployTicks(tag.contains(TAG_DEPLOY_TICKS) ? tag.getInt(TAG_DEPLOY_TICKS) : 0);
-        relocationOwnerUuid = tag.hasUUID(TAG_RELOCATION_OWNER)
-                ? tag.getUUID(TAG_RELOCATION_OWNER)
-                : null;
+        if (tag.hasUUID(TAG_LEGACY_RELOCATION_OWNER)) {
+            setOwnerUuid(tag.getUUID(TAG_LEGACY_RELOCATION_OWNER));
+        }
         leanVelocity = 0.0F;
         restingOnSurface = false;
     }
@@ -208,9 +207,6 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         tag.putInt(TAG_SECTIONS, getSections());
         tag.putFloat(TAG_LEAN_PROGRESS, getLeanProgress());
         tag.putInt(TAG_DEPLOY_TICKS, getDeployTicks());
-        if (relocationOwnerUuid != null) {
-            tag.putUUID(TAG_RELOCATION_OWNER, relocationOwnerUuid);
-        }
     }
 
     @Override
@@ -551,29 +547,15 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
 
     public boolean canBeRelocatedBy(UUID ownerUuid) {
         return ownerUuid != null
-                && (relocationOwnerUuid == null || relocationOwnerUuid.equals(ownerUuid));
-    }
-
-    public void claimRelocationOwnership(UUID ownerUuid) {
-        if (relocationOwnerUuid == null && ownerUuid != null) {
-            relocationOwnerUuid = ownerUuid;
-        }
-    }
-
-    public UUID getRelocationOwnerUuid() {
-        return relocationOwnerUuid;
-    }
-
-    public void setRelocationOwnerUuid(UUID ownerUuid) {
-        relocationOwnerUuid = ownerUuid;
+                && (getOwnerUuid() == null || isOwnedBy(ownerUuid));
     }
 
     public ItemStack createRelocationItem() {
         ItemStack stack = SiegeLadderDeploymentItem.withSections(
                 new ItemStack(SiegeworksItems.SIEGE_LADDER_SPAWNER.get()), getSections());
         SiegeLadderDeploymentItem.withStoredHealth(stack, getHealth());
-        if (relocationOwnerUuid != null) {
-            SiegeLadderDeploymentItem.withRelocationOwner(stack, relocationOwnerUuid);
+        if (getOwnerUuid() != null) {
+            SiegeLadderDeploymentItem.withRelocationOwner(stack, getOwnerUuid());
         }
         if (getDeploymentOwnerUuid() != null && !getDeploymentGroup().isBlank()) {
             SiegeDeploymentLimits.writeToStack(stack, new SiegeDeploymentLimits.Deployment(
@@ -640,7 +622,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
             return InteractionResult.SUCCESS;
         }
 
-        claimRelocationOwnership(player.getUUID());
+        claimOwnership(player.getUUID());
         if (getDeploymentOwnerUuid() == null) {
             SiegeDeploymentLimits.Deployment deployment =
                     SiegeDeploymentLimits.forOwner(serverLevel, player.getUUID());

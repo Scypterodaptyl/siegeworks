@@ -221,7 +221,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         if (itemStack.isEmpty() && !player.isShiftKeyDown() && hasLaunchPayload()
                 && operator == null && canAddPassenger(player)) {
             player.startRiding(this);
-            setOwner(player);
+            setOperator(player);
             return InteractionResult.SUCCESS;
         }
 
@@ -231,7 +231,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
 
         if (itemStack.isEmpty() && !hasLaunchLoad && canAddPassenger(player) && !player.isShiftKeyDown()) {
             player.startRiding(this);
-            setOwner(player);
+            setOperator(player);
             return InteractionResult.SUCCESS;
         }
 
@@ -276,7 +276,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         setShootAnimationTick(0);
         startRecovery();
         playShootSound(serverLevel);
-        setOwner(operator);
+        setOperator(operator);
     }
 
     @Override
@@ -329,7 +329,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
 
         setAmmoLoaded(ammo.ammoKey());
         setWindingTime(getLoadingRequirementTicks("winding"));
-        setOwner(operator);
+        setOperator(operator);
         automatedLoading.reset();
         return SiegeActionResult.LOADED;
     }
@@ -429,7 +429,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
             setAmmoLoaded(SiegeAmmo.AMMO_FIRE);
         }
         setWindingTime(getLoadingRequirementTicks("winding"));
-        setOwner(player);
+        setOperator(player);
     }
 
     private LoadingRequirement findMatchingAmmo(ItemStack stack) {
@@ -774,7 +774,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
             return false;
         }
         setWindingTime(getLoadingRequirementTicks("winding"));
-        setOwner(player);
+        setOperator(player);
         return true;
     }
 

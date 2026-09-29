@@ -206,7 +206,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
 
         beginShot();
         playShootSound(serverLevel);
-        setOwner(player);
+        setOperator(player);
 
         return InteractionResult.SUCCESS;
     }
@@ -223,7 +223,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
         if (hasAmmoLoaded()) {
             beginShot();
             playShootSound(serverLevel);
-            setOwner(operator);
+            setOperator(operator);
             return SiegeActionResult.FIRED;
         }
 
@@ -246,7 +246,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
 
         setAmmoLoaded(ammo.ammoKey());
         setWindingTime(getLoadingRequirementTicks("winding"));
-        setOwner(operator);
+        setOperator(operator);
         automatedLoading.reset();
         return SiegeActionResult.LOADED;
     }
@@ -340,7 +340,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
             setAmmoLoaded(SiegeAmmo.AMMO_FIRE);
         }
         setWindingTime(getLoadingRequirementTicks("winding"));
-        setOwner(player);
+        setOperator(player);
     }
 
     private LoadingRequirement findMatchingAmmo(ItemStack stack) {
@@ -437,7 +437,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
         setAmmoLoaded(SiegeAmmo.AMMO_STONE);
         beginShot();
         playShootSound(serverLevel);
-        setOwner(operator);
+        setOperator(operator);
         return true;
     }
 

@@ -1,6 +1,5 @@
 package me.mss1r.siegeworks.gameplay.maintenance;
 
-import me.mss1r.siegeworks.api.SiegePlayerAttributionRegistry;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.event.SiegeMaintenanceCheckEvent;
 import me.mss1r.siegeworks.event.SiegeMaintenanceCompletedEvent;
@@ -21,7 +20,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
@@ -218,20 +216,10 @@ public final class SiegeMaintenanceController {
         }
     }
 
-    /** Unowned engines stay open to everyone; owned ones only to their owner and operators. */
+    /** Unowned engines stay open to everyone; owned ones only to their owner and server operators. */
     private boolean mayDismantle(ServerPlayer player) {
-        UUID owner = ownerUuid(siege());
+        UUID owner = siege().getOwnerUuid();
         return owner == null || owner.equals(player.getUUID()) || player.hasPermissions(2);
-    }
-
-    @Nullable
-    private static UUID ownerUuid(AbstractSiegeEntity siege) {
-        Entity owner = siege.getOwner();
-        if (owner != null) {
-            UUID attributed = SiegePlayerAttributionRegistry.playerOwnerOf(owner);
-            return attributed != null ? attributed : owner.getUUID();
-        }
-        return siege.getDeploymentOwnerUuid();
     }
 
     private void startDismantling(ServerPlayer player) {

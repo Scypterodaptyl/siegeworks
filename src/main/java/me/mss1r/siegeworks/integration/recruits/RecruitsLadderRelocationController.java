@@ -59,7 +59,7 @@ final class RecruitsLadderRelocationController {
             return false;
         }
 
-        ladder.claimRelocationOwnership(recruit.getOwnerUUID());
+        ladder.claimOwnership(recruit.getOwnerUUID());
         if (ladder.getDeploymentOwnerUuid() == null
                 && recruit.level() instanceof ServerLevel serverLevel
                 && recruit.getOwnerUUID() != null) {
@@ -207,7 +207,7 @@ final class RecruitsLadderRelocationController {
 
         float yaw = data.getFloat(YAW_TAG);
         ladder.setSections(SiegeLadderDeploymentItem.getSections(ladderStack));
-        ladder.setRelocationOwnerUuid(ownerUuid);
+        ladder.setOwnerUuid(ownerUuid);
         if (deployment != null) {
             ladder.setDeploymentIdentity(deployment.ownerUuid(), deployment.groupKey());
         }

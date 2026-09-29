@@ -71,17 +71,17 @@ public final class SiegeBlockBreaker {
             if (siege.getControllingPassenger() instanceof Player crew) {
                 return crew;
             }
-            Entity machineOwner = siege.getOwner();
+            Entity machineOwner = siege.getOperator();
             if (machineOwner != null && machineOwner != siege) {
                 Player attributed = responsiblePlayer(machineOwner, visited);
                 if (attributed != null) {
                     return attributed;
                 }
             }
-            UUID deploymentOwner = siege.getDeploymentOwnerUuid();
-            return deploymentOwner == null || siege.level().getServer() == null
+            UUID engineOwner = siege.getOwnerUuid();
+            return engineOwner == null || siege.level().getServer() == null
                     ? null
-                    : siege.level().getServer().getPlayerList().getPlayer(deploymentOwner);
+                    : siege.level().getServer().getPlayerList().getPlayer(engineOwner);
         }
         UUID playerOwner = SiegePlayerAttributionRegistry.playerOwnerOf(owner);
         return playerOwner == null || owner.level().getServer() == null

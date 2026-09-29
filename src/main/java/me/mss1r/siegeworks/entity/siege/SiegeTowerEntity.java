@@ -187,8 +187,8 @@ public class SiegeTowerEntity extends AbstractSiegeEntity
                 @Override public boolean supportedDirectOperator(Entity entity) {
                     return isSupportedDirectOperator(entity);
                 }
-                @Override public void setOwner(LivingEntity owner) {
-                    SiegeTowerEntity.this.setOwner(owner);
+                @Override public void setOperator(LivingEntity operator) {
+                    SiegeTowerEntity.this.setOperator(operator);
                 }
             }, crewRoster);
     private final TowerBridgeController bridge = new TowerBridgeController(
@@ -606,9 +606,8 @@ public class SiegeTowerEntity extends AbstractSiegeEntity
     }
 
     private boolean canCustomizeTower(Player player) {
-        UUID deploymentOwner = getDeploymentOwnerUuid();
-        if (player.getAbilities().instabuild || deploymentOwner == null
-                || deploymentOwner.equals(player.getUUID())) {
+        UUID owner = getOwnerUuid();
+        if (player.getAbilities().instabuild || owner == null || owner.equals(player.getUUID())) {
             return true;
         }
 
@@ -647,7 +646,7 @@ public class SiegeTowerEntity extends AbstractSiegeEntity
         }
 
         crewRoster.assignDriver(uuid);
-        setOwner(player);
+        setOperator(player);
         return InteractionResult.SUCCESS;
     }
 

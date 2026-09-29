@@ -210,7 +210,7 @@ public class MonsMegEntity extends AbstractSiegeEntity implements GeoEntity, Sie
 
         if (stack.isEmpty() && canAddPassenger(player) && !player.isShiftKeyDown()) {
             player.startRiding(this);
-            setOwner(player);
+            setOperator(player);
             return InteractionResult.SUCCESS;
         }
 
@@ -356,7 +356,7 @@ public class MonsMegEntity extends AbstractSiegeEntity implements GeoEntity, Sie
         }
         if (stageItem == Items.FLINT_AND_STEEL) {
             fireMonsMeg(serverLevel);
-            setOwner(operator);
+            setOperator(operator);
             return SiegeActionResult.FIRED;
         }
 
@@ -423,7 +423,7 @@ public class MonsMegEntity extends AbstractSiegeEntity implements GeoEntity, Sie
 
         if (required.item() == Items.FLINT_AND_STEEL) {
             fireMonsMeg(serverLevel);
-            setOwner(player);
+            setOperator(player);
             setLoadStage(0);
             return;
         }
@@ -526,7 +526,7 @@ public class MonsMegEntity extends AbstractSiegeEntity implements GeoEntity, Sie
         setScattershotCount(0);
         setAmmoLoaded(AMMO_GIANT_CANNON_BALL);
         fireMonsMeg(serverLevel);
-        setOwner(operator);
+        setOperator(operator);
         return true;
     }
 

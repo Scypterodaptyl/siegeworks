@@ -238,7 +238,7 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
             setTrackedPitch(0.0F);
             setXRot(0.0F);
             player.startRiding(this);
-            setOwner(player);
+            setOperator(player);
             return InteractionResult.SUCCESS;
         }
         if (isRocketItem(stack.getItem())) {
@@ -323,7 +323,7 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
         }
         appendAmmunition(1, pendingManualExplosive);
         pendingManualCount--;
-        setOwner(player);
+        setOperator(player);
         playRocketInsertionSound(serverLevel);
     }
 
@@ -375,7 +375,7 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
         }
         clearPendingAutomatedAmmunition();
         automatedLoading.reset();
-        setOwner(operator);
+        setOperator(operator);
         return SiegeActionResult.LOADED;
     }
 
@@ -495,7 +495,7 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
         }
         entityData.set(FIRING_INDEX, 0);
         nextShotTicks = 0;
-        setOwner(operator);
+        setOperator(operator);
     }
 
     private void tickVolley(ServerLevel serverLevel) {
@@ -699,7 +699,7 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
             pendingAutomatedNormal--;
         }
         appendAmmunition(1, explosive);
-        setOwner(operator);
+        setOperator(operator);
         playRocketInsertionSound((ServerLevel) level());
         return true;
     }

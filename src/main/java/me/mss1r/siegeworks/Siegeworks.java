@@ -8,6 +8,7 @@ import me.mss1r.siegeworks.event.ExplosionPhysicsHandler;
 import me.mss1r.siegeworks.event.MountedSiegeItemHandler;
 import me.mss1r.siegeworks.event.SiegeProfileReloads;
 import me.mss1r.siegeworks.event.SiegeDeploymentLimitEvents;
+import me.mss1r.siegeworks.event.SiegeOwnershipEvents;
 import me.mss1r.siegeworks.event.SiegeworksServerTickHandler;
 import me.mss1r.siegeworks.particle.SiegeworksParticles;
 import me.mss1r.siegeworks.registry.SiegeworksItemGroups;
@@ -47,6 +48,7 @@ public final class Siegeworks {
       CommandRegistrationEvent.EVENT.register(SiegeworksCommands::register);
       LifecycleEvent.SERVER_BEFORE_START.register(server -> SiegeworksDebug.reset());
       SiegeDeploymentLimitEvents.register();
+      SiegeOwnershipEvents.register();
       EntityAttributesHandler.register();
       SiegeProfileReloads.register();
       SiegeworksServerTickHandler.register();

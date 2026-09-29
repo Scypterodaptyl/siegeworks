@@ -48,7 +48,7 @@ public final class SiegeProjectileCombat {
     public static Entity responsibleAttacker(SiegeProjectile projectile) {
         Entity owner = projectile.getOwner();
         if (owner instanceof AbstractSiegeEntity siege) {
-            Entity operator = siege.getOwner();
+            Entity operator = siege.getOperator();
             return operator == null ? siege : operator;
         }
         return owner;
@@ -78,7 +78,7 @@ public final class SiegeProjectileCombat {
         }
 
         if (target instanceof AbstractSiegeEntity siegeTarget) {
-            Entity targetOwner = siegeTarget.getOwner();
+            Entity targetOwner = siegeTarget.getOperator();
             if (targetOwner != null && targetOwner != siegeTarget) {
                 return attacker.isAlliedTo(targetOwner);
             }

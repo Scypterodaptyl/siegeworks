@@ -49,7 +49,7 @@ public final class TowerCrewCoordinator {
         }
         if (host.supportedDirectOperator(passenger) && roster.driverSlotAvailable(uuid)) {
             roster.assignDriver(uuid);
-            host.setOwner(living);
+            host.setOperator(living);
             return;
         }
 
@@ -222,6 +222,6 @@ public final class TowerCrewCoordinator {
 
         boolean supportedDirectOperator(Entity entity);
 
-        void setOwner(LivingEntity owner);
+        void setOperator(LivingEntity operator);
     }
 }
