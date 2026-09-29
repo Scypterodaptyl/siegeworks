@@ -57,6 +57,7 @@ import me.mss1r.siegeworks.gameplay.deployment.SiegeDeploymentLimits;
 import me.mss1r.siegeworks.gameplay.maintenance.SiegeMaintenanceData;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeCaptureController;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeOwnerActivity;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeRelation;
 import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.BlockPos;
@@ -310,6 +311,38 @@ public final class SiegeworksGameTests {
         level.players().remove(owner);
         helper.assertTrue(ballista.captureRefusal(enemy) == SiegeCaptureController.Refusal.DEFENDERS_OFFLINE,
                 "An enemy could capture an engine while nobody on its side was online");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void engineIsReleasedOnlyWhenItsWholeSideStoppedPlaying(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        long now = System.currentTimeMillis();
+        long day = java.util.concurrent.TimeUnit.DAYS.toMillis(1);
+        UUID owner = UUID.randomUUID();
+        ArcballistaEntity ballista = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
+        ArcballistaEntity teamBallista = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
+        helper.assertTrue(ballista != null && teamBallista != null, "Failed to create abandonment test engines");
+        ballista.setOwnerUuid(owner);
+        teamBallista.setOwnerUuid(owner);
+
+        SiegeOwnerActivity.record(level, owner, "SiegeAbandonOwner", now - 2 * day);
+        helper.assertTrue(!ballista.releaseIfAbandoned(level, now), "An engine of a recently seen owner was released");
+
+        SiegeOwnerActivity.record(level, owner, "SiegeAbandonOwner", now - 30 * day);
+        PlayerTeam team = level.getScoreboard().getPlayerTeam("siege_abandon_test");
+        if (team == null) {
+            team = level.getScoreboard().addPlayerTeam("siege_abandon_test");
+        }
+        level.getScoreboard().addPlayerToTeam("SiegeAbandonOwner", team);
+        level.getScoreboard().addPlayerToTeam("SiegeAbandonMate", team);
+        SiegeOwnerActivity.record(level, UUID.randomUUID(), "SiegeAbandonMate", now - day);
+        helper.assertTrue(!teamBallista.releaseIfAbandoned(level, now),
+                "An engine was released while a teammate of its owner still played");
+
+        level.getScoreboard().removePlayerFromTeam("SiegeAbandonMate", team);
+        helper.assertTrue(ballista.releaseIfAbandoned(level, now) && ballista.getOwnerUuid() == null,
+                "An engine of a side gone for a month was not released");
         helper.succeed();
     }
 

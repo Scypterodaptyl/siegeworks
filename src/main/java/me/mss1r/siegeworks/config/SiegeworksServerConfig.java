@@ -24,6 +24,7 @@ public final class SiegeworksServerConfig {
     private static final SiegeworksConfigSpec.DoubleValue CAPTURE_SECONDS_PER_DISMANTLE_HIT;
     private static final SiegeworksConfigSpec.IntValue MINIMUM_CAPTURE_SECONDS;
     private static final SiegeworksConfigSpec.IntValue MAXIMUM_CAPTURE_SECONDS;
+    private static final SiegeworksConfigSpec.IntValue ABANDON_AFTER_DAYS;
 
     static {
         SiegeworksConfigSpec.Builder builder = new SiegeworksConfigSpec.Builder();
@@ -112,6 +113,10 @@ public final class SiegeworksServerConfig {
         MAXIMUM_CAPTURE_SECONDS = builder
                 .comment("Longest capture time, in seconds.")
                 .defineInRange("maximumCaptureSeconds", 45, 1, 600);
+        ABANDON_AFTER_DAYS = builder
+                .comment("Release an engine to whoever uses it next once neither its owner nor anyone on their team",
+                        "has been online for this many days. Set to 0 to keep ownership forever.")
+                .defineInRange("abandonAfterDays", 14, 0, 3650);
         builder.pop(2);
 
         builder.push("movement");
@@ -242,6 +247,10 @@ public final class SiegeworksServerConfig {
         int maximum = Math.max(minimum, MAXIMUM_CAPTURE_SECONDS.get());
         double seconds = Math.max(minimum, Math.min(maximum, dismantleHits * CAPTURE_SECONDS_PER_DISMANTLE_HIT.get()));
         return (int) Math.round(seconds * 20.0D);
+    }
+
+    public static int getAbandonAfterDays() {
+        return ABANDON_AFTER_DAYS.get();
     }
 
     public static boolean isGeometryTerrainCollisionEnabled() {

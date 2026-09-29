@@ -24,6 +24,7 @@ import me.mss1r.siegeworks.gameplay.audio.SiegeAudioController;
 import me.mss1r.siegeworks.gameplay.aiming.SiegeAimingController;
 import me.mss1r.siegeworks.gameplay.audio.SiegeSoundProfile;
 import me.mss1r.siegeworks.item.SiegeDeploymentItemLookup;
+import me.mss1r.siegeworks.gameplay.deployment.SiegeDeploymentLimits;
 import me.mss1r.siegeworks.gameplay.deployment.SiegeDeploymentState;
 import me.mss1r.siegeworks.gameplay.construction.SiegeConstructionController;
 import me.mss1r.siegeworks.gameplay.maintenance.SiegeMaintenanceController;
@@ -31,6 +32,7 @@ import me.mss1r.siegeworks.gameplay.damage.SiegeAttackPolicy;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeCaptureController;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeOperatorReference;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeOwnerActivity;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeOwnership;
 import me.mss1r.siegeworks.data.profile.ScattershotProfile;
 import me.mss1r.siegeworks.data.profile.SiegeEngineProfile;
@@ -359,6 +361,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     }
 
     private static final int UNSTICK_INTERVAL_TICKS = 10;
+    private static final int ABANDONMENT_CHECK_INTERVAL_TICKS = 1200;
 
     public float geometryStepHeight() {
         return maxUpStep();
@@ -728,8 +731,12 @@ public abstract class AbstractSiegeEntity extends LivingEntity
 
     public void setOperator(@Nullable Entity operator) {
         this.operator.set(operator);
-        if (operator != null && !level().isClientSide) {
-            ownership.claim(SiegeOwnership.claimantOf(operator));
+        if (operator != null && level() instanceof ServerLevel serverLevel) {
+            UUID claimant = SiegeOwnership.claimantOf(operator);
+            if (ownership.claim(claimant) && getDeploymentOwnerUuid() == null) {
+                SiegeDeploymentLimits.Deployment claimed = SiegeDeploymentLimits.forOwner(serverLevel, claimant);
+                deployment.setIdentity(claimed.ownerUuid(), claimed.groupKey());
+            }
         }
     }
 
@@ -748,6 +755,20 @@ public abstract class AbstractSiegeEntity extends LivingEntity
 
     public boolean isOwnedBy(@Nullable UUID playerUuid) {
         return ownership.isOwnedBy(playerUuid);
+    }
+
+    /** Frees the engine once its side has been offline for the configured time; returns whether it did. */
+    public boolean releaseIfAbandoned(ServerLevel level, long nowMillis) {
+        UUID owner = getOwnerUuid();
+        int days = SiegeworksServerConfig.getAbandonAfterDays();
+        if (owner == null || days <= 0 || capture.isActive() || SiegeOwnerActivity.sideSeenWithin(
+                level, owner, java.util.concurrent.TimeUnit.DAYS.toMillis(days), nowMillis)) {
+            return false;
+        }
+        ownership.set(null);
+        SiegeDeploymentLimits.unregister(this);
+        deployment.setIdentity(null, "");
+        return true;
     }
 
     public boolean isBeingCaptured() {
@@ -1168,6 +1189,9 @@ public abstract class AbstractSiegeEntity extends LivingEntity
 
         deployment.tick();
         capture.tick(serverLevel);
+        if (tickCount % ABANDONMENT_CHECK_INTERVAL_TICKS == 0) {
+            releaseIfAbandoned(serverLevel, System.currentTimeMillis());
+        }
 
         aiming.updateFromController();
         if (tickCount % UNSTICK_INTERVAL_TICKS == 0) {
