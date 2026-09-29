@@ -62,7 +62,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class RecruitsCompat {
-    private static final double COMMAND_RANGE = 200.0D;
+    static final double COMMAND_RANGE = 200.0D;
     private static final double COMMAND_RANGE_SQR = COMMAND_RANGE * COMMAND_RANGE;
     private static final ResourceLocation OPERATOR_TYPE = ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "recruits");
 
@@ -87,7 +87,7 @@ public final class RecruitsCompat {
     }
 
     public static void handleSiegeCommand(ServerPlayer player, int action, List<UUID> groupIds, BlockPos targetPos,
-                                          int targetEntityId) {
+                                          int targetEntityId, ResourceLocation siegeTypeId) {
         RecruitsDebug.commandReceived(player, "siege", action, groupIds.size(), targetPos, targetEntityId);
         if (groupIds.isEmpty()) {
             return;
@@ -97,7 +97,11 @@ public final class RecruitsCompat {
         List<AbstractRecruitEntity> nearbyRecruits = player.serverLevel().getEntitiesOfClass(
                 AbstractRecruitEntity.class, player.getBoundingBox().inflate(COMMAND_RANGE));
         if (action == RecruitsSiegeCommandC2SPayload.ACTION_UNLOAD_TOWER) {
-            sendCommandFeedback(player, handleTowerUnload(player, nearbyRecruits, selectedGroups));
+            int applied = siegeTypeId == null
+                    || siegeTypeId.equals(BuiltInRegistries.ENTITY_TYPE.getKey(SiegeworksEntities.SIEGE_TOWER_ENTITY.get()))
+                    ? handleTowerUnload(player, nearbyRecruits, selectedGroups)
+                    : 0;
+            sendCommandFeedback(player, applied);
             return;
         }
         if (action == RecruitsSiegeCommandC2SPayload.ACTION_BUILD) {
@@ -110,15 +114,16 @@ public final class RecruitsCompat {
                     action, targetPos, targetEntityId);
             return;
         }
-        if (action == RecruitsSiegeCommandC2SPayload.ACTION_FLAP_OPEN
-                || action == RecruitsSiegeCommandC2SPayload.ACTION_FLAP_CLOSE) {
-            boolean open = action == RecruitsSiegeCommandC2SPayload.ACTION_FLAP_OPEN;
-            sendCommandFeedback(player,
-                    player.serverLevel().getEntity(targetEntityId) instanceof AbstractSiegeEntity siege
-                            && setMantletFlap(player, siege, open, false) ? 1 : 0);
+        if (action == RecruitsSiegeCommandC2SPayload.ACTION_CREW_MACHINE) {
+            Entity target = player.serverLevel().getEntity(targetEntityId);
+            int applied = target instanceof AbstractSiegeEntity siege
+                    && !siege.isRemoved() && withinCommandRange(player, siege)
+                    ? crewMachine(player, siege,
+                            recruit -> isSelectedAndCommandable(player, recruit, selectedGroups))
+                    : 0;
+            sendCommandFeedback(player, applied);
             return;
         }
-
         if (action >= RecruitsSiegeCommandC2SPayload.ACTION_REPAIR
                 && action <= RecruitsSiegeCommandC2SPayload.ACTION_CANCEL_MAINTENANCE) {
             handleMaintenanceCommand(player, nearbyRecruits, selectedGroups, action, targetEntityId);
@@ -135,7 +140,7 @@ public final class RecruitsCompat {
             }
 
             if (action == RecruitsSiegeCommandC2SPayload.ACTION_LEAVE_ENGINE) {
-                if (leaveEngine(player, recruit)) {
+                if (matchesSelectedMachine(recruit, siegeTypeId) && leaveEngine(player, recruit)) {
                     applied++;
                 }
                 continue;
@@ -155,7 +160,7 @@ public final class RecruitsCompat {
                 continue;
             }
             AbstractSiegeEntity siege = workedMachine(engineer);
-            if (siege == null || !siege.isOperator(engineer)) {
+            if (siege == null || !siege.isOperator(engineer) || !matchesSiegeType(siege, siegeTypeId)) {
                 continue;
             }
 
@@ -168,11 +173,21 @@ public final class RecruitsCompat {
                 continue;
             }
 
-            if (action >= RecruitsSiegeCommandC2SPayload.ACTION_AMMO_AUTO) {
+            if (action >= RecruitsSiegeCommandC2SPayload.ACTION_AMMO_AUTO
+                    && action <= RecruitsSiegeCommandC2SPayload.ACTION_AMMO_INCENDIARY) {
                 SiegeAmmunitionMode mode = ammunitionModeForAction(action);
                 if (mode != null && siege instanceof SiegeAmmunitionControl ammunition
                         && ammunition.supportsAmmunitionMode(mode)) {
                     ammunition.setAutomatedAmmunitionMode(mode);
+                    applied++;
+                }
+                continue;
+            }
+
+            if (action == RecruitsSiegeCommandC2SPayload.ACTION_FLAP_OPEN
+                    || action == RecruitsSiegeCommandC2SPayload.ACTION_FLAP_CLOSE) {
+                boolean open = action == RecruitsSiegeCommandC2SPayload.ACTION_FLAP_OPEN;
+                if (setMantletFlap(player, siege, open, false)) {
                     applied++;
                 }
                 continue;
@@ -194,6 +209,19 @@ public final class RecruitsCompat {
         }
 
         sendCommandFeedback(player, applied);
+    }
+
+    private static boolean matchesSelectedMachine(AbstractRecruitEntity recruit, ResourceLocation siegeTypeId) {
+        if (siegeTypeId == null) {
+            return true;
+        }
+        return recruit instanceof SiegeEngineerEntity engineer
+                && matchesSiegeType(workedMachine(engineer), siegeTypeId);
+    }
+
+    private static boolean matchesSiegeType(AbstractSiegeEntity siege, ResourceLocation siegeTypeId) {
+        return siegeTypeId == null || siege != null
+                && siegeTypeId.equals(BuiltInRegistries.ENTITY_TYPE.getKey(siege.getType()));
     }
 
     public static void handleFireZoneCommand(ServerPlayer player, List<UUID> groupIds,

@@ -5,6 +5,7 @@ import dev.architectury.platform.Platform;
 import me.mss1r.siegeworks.integration.recruits.RecruitsCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record RecruitsSiegeCommandC2SPayload(int action, List<UUID> groupIds, BlockPos targetPos,
-                                             int targetEntityId) {
+                                             int targetEntityId, ResourceLocation siegeTypeId) {
     public static final int ACTION_BRIDGE_LOWER = 0;
     public static final int ACTION_BRIDGE_RAISE = 1;
     public static final int ACTION_BRIDGE_AUTO = 2;
@@ -34,6 +35,7 @@ public record RecruitsSiegeCommandC2SPayload(int action, List<UUID> groupIds, Bl
     public static final int ACTION_PLACE_LADDER = 18;
     public static final int ACTION_FLAP_OPEN = 19;
     public static final int ACTION_FLAP_CLOSE = 20;
+    public static final int ACTION_CREW_MACHINE = 21;
     public static final int NO_TARGET_ENTITY = -1;
     private static final int MAX_GROUPS = 64;
 
@@ -42,11 +44,16 @@ public record RecruitsSiegeCommandC2SPayload(int action, List<UUID> groupIds, Bl
     }
 
     public RecruitsSiegeCommandC2SPayload(int action, List<UUID> groupIds) {
-        this(action, groupIds, null, NO_TARGET_ENTITY);
+        this(action, groupIds, null, NO_TARGET_ENTITY, null);
     }
 
     public RecruitsSiegeCommandC2SPayload(int action, List<UUID> groupIds, BlockPos targetPos) {
-        this(action, groupIds, targetPos, NO_TARGET_ENTITY);
+        this(action, groupIds, targetPos, NO_TARGET_ENTITY, null);
+    }
+
+    public RecruitsSiegeCommandC2SPayload(int action, List<UUID> groupIds, BlockPos targetPos,
+                                         ResourceLocation siegeTypeId) {
+        this(action, groupIds, targetPos, NO_TARGET_ENTITY, siegeTypeId);
     }
 
     public static void encode(RecruitsSiegeCommandC2SPayload packet, FriendlyByteBuf buffer) {
@@ -58,6 +65,10 @@ public record RecruitsSiegeCommandC2SPayload(int action, List<UUID> groupIds, Bl
             buffer.writeBlockPos(packet.targetPos);
         }
         buffer.writeVarInt(packet.targetEntityId);
+        buffer.writeBoolean(packet.siegeTypeId != null);
+        if (packet.siegeTypeId != null) {
+            buffer.writeResourceLocation(packet.siegeTypeId);
+        }
     }
 
     public static RecruitsSiegeCommandC2SPayload decode(FriendlyByteBuf buffer) {
@@ -72,14 +83,16 @@ public record RecruitsSiegeCommandC2SPayload(int action, List<UUID> groupIds, Bl
         }
         BlockPos targetPos = buffer.readBoolean() ? buffer.readBlockPos() : null;
         int targetEntityId = buffer.readVarInt();
-        return new RecruitsSiegeCommandC2SPayload(action, groupIds, targetPos, targetEntityId);
+        ResourceLocation siegeTypeId = buffer.readBoolean() ? buffer.readResourceLocation() : null;
+        return new RecruitsSiegeCommandC2SPayload(action, groupIds, targetPos, targetEntityId, siegeTypeId);
     }
 
     public static void handle(RecruitsSiegeCommandC2SPayload packet, NetworkManager.PacketContext context) {
         context.queue(() -> {
             if (context.getPlayer() instanceof ServerPlayer sender && Platform.isModLoaded("recruits")) {
                 RecruitsCompat.handleSiegeCommand(
-                        sender, packet.action, packet.groupIds, packet.targetPos, packet.targetEntityId);
+                        sender, packet.action, packet.groupIds, packet.targetPos, packet.targetEntityId,
+                        packet.siegeTypeId);
             }
         });
     }

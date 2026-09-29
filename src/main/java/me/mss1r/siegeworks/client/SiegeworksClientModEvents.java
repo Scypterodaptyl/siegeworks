@@ -94,6 +94,10 @@ public final class SiegeworksClientModEvents {
    @SuppressWarnings({"rawtypes", "unchecked"})
    private static void addStuckBoltLayer(EntityRenderersEvent.AddLayers event,
                                          LivingEntityRenderer<?, ?> renderer) {
+      // Renderer replacements from other mods may not expose a vanilla entity model.
+      if (renderer.getModel() == null) {
+         return;
+      }
       LivingEntityRenderer raw = renderer;
       raw.addLayer(new StuckBoltLayer<>(event.getContext(), raw));
    }
