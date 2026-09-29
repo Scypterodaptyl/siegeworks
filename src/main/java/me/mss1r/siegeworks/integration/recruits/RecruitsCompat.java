@@ -2,7 +2,9 @@ package me.mss1r.siegeworks.integration.recruits;
 
 import com.talhanation.recruits.Main;
 import com.talhanation.recruits.config.RecruitsServerConfig;
+import com.talhanation.recruits.ClaimEvents;
 import com.talhanation.recruits.entities.AbstractRecruitEntity;
+import com.talhanation.recruits.world.RecruitsClaim;
 import com.talhanation.recruits.entities.SiegeEngineerEntity;
 import me.mss1r.axiomata.blueprint.api.BlueprintPermissions;
 import me.mss1r.axiomata.blueprint.api.BlueprintStacks;
@@ -40,6 +42,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -123,7 +126,8 @@ public final class RecruitsCompat {
         }
 
         boolean validTarget = isValidCommandTarget(player, targetPos);
-        boolean validSupply = validTarget && isContainer(player, targetPos);
+        boolean validSupply = validTarget && player.serverLevel().mayInteract(player, targetPos)
+                && mayOpenInClaim(player, targetPos) && isContainer(player, targetPos);
         int applied = 0;
         for (AbstractRecruitEntity recruit : nearbyRecruits) {
             if (!isSelectedAndCommandable(player, recruit, selectedGroups)) {
@@ -1331,6 +1335,20 @@ public final class RecruitsCompat {
         return targetPos != null
                 && player.distanceToSqr(Vec3.atCenterOf(targetPos)) <= COMMAND_RANGE_SQR
                 && player.serverLevel().hasChunkAt(targetPos);
+    }
+
+    /** Mirrors Recruits' own container rule for claimed chunks. */
+    private static boolean mayOpenInClaim(ServerPlayer player, BlockPos pos) {
+        if (ClaimEvents.recruitsClaimManager == null) {
+            return true;
+        }
+        RecruitsClaim claim = ClaimEvents.recruitsClaimManager.getClaim(new ChunkPos(pos));
+        if (claim == null || claim.isBlockInteractionAllowed()
+                || player.isCreative() && player.hasPermissions(2)) {
+            return true;
+        }
+        return player.getTeam() != null
+                && player.getTeam().getName().equals(claim.getOwnerFactionStringID());
     }
 
     private static boolean isContainer(ServerPlayer player, BlockPos targetPos) {
