@@ -2418,8 +2418,8 @@ public final class SiegeworksGameTests {
         try {
             Class<?> compat = Class.forName("me.mss1r.siegeworks.integration.recruits.RecruitsCompat");
             compat.getMethod("handleSiegeCommand", net.minecraft.server.level.ServerPlayer.class,
-                            int.class, java.util.List.class, BlockPos.class, int.class)
-                    .invoke(null, commander, action, java.util.List.of(groupId), targetPos, targetEntityId);
+                            int.class, java.util.List.class, BlockPos.class, int.class, ResourceLocation.class)
+                    .invoke(null, commander, action, java.util.List.of(groupId), targetPos, targetEntityId, null);
         } catch (ReflectiveOperationException exception) {
             throw new AssertionError("Could not issue the Recruits ladder relocation command", exception);
         }
