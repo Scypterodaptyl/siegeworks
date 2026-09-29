@@ -4,6 +4,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,6 +22,21 @@ public final class SiegeTeams {
             return team == null ? null : team.getName();
         }
         return teamOf(level.getServer(), playerUuid);
+    }
+
+    /** Whether the player or anyone on their team is online to defend what they own. */
+    public static boolean sideOnline(Level level, UUID playerUuid) {
+        MinecraftServer server = level.getServer();
+        if (server == null) {
+            return false;
+        }
+        if (level.getPlayerByUUID(playerUuid) != null || server.getPlayerList().getPlayer(playerUuid) != null) {
+            return true;
+        }
+        String teamName = teamOf(level, playerUuid);
+        PlayerTeam team = teamName == null ? null : server.getScoreboard().getPlayerTeam(teamName);
+        return team != null && team.getPlayers().stream()
+                .anyMatch(name -> server.getPlayerList().getPlayerByName(name) != null);
     }
 
     /** The player's scoreboard team, looked up through the profile cache when they are offline. */

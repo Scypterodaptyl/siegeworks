@@ -1005,7 +1005,7 @@ public final class RecruitsCompat {
 
     public static int crewMachine(ServerPlayer player, AbstractSiegeEntity siege,
                                   java.util.function.Predicate<AbstractRecruitEntity> chosen) {
-        if (!SiegeAccess.allows(player, siege, SiegeAccess.Action.USE)) {
+        if (!SiegeAccess.allows(player, siege, SiegeAccess.Action.USE) && siege.captureRefusal(player) != null) {
             return 0;
         }
         if (siege instanceof SiegeTowerEntity tower) {

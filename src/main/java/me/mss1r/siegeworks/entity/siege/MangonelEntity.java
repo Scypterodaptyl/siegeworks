@@ -260,7 +260,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     }
 
     public boolean requestRiderFire(ServerPlayer player) {
-        boolean allowedOperator = isOperator(player);
+        boolean allowedOperator = isOperator(player) && !isBeingCaptured();
         boolean allowedPayload = isLaunchPayload(player) && player.isCreative();
         return (allowedOperator || allowedPayload) && beginShot(player.serverLevel(), player);
     }

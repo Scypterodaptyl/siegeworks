@@ -56,6 +56,7 @@ import me.mss1r.siegeworks.registry.SiegeworksItems;
 import me.mss1r.siegeworks.gameplay.deployment.SiegeDeploymentLimits;
 import me.mss1r.siegeworks.gameplay.maintenance.SiegeMaintenanceData;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeCaptureController;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeRelation;
 import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.BlockPos;
@@ -236,12 +237,79 @@ public final class SiegeworksGameTests {
                 "A teammate of the owner was not recognised as friendly");
         helper.assertTrue(SiegeAccess.allows(teammate, ballista, SiegeAccess.Action.DISMANTLE),
                 "A teammate could not dismantle the owner's engine");
-        helper.assertTrue(!ballista.canAddPassenger(stranger), "A stranger could board an owned engine");
+        helper.assertTrue(!SiegeAccess.allows(stranger, ballista, SiegeAccess.Action.USE),
+                "A stranger could use an owned engine");
         helper.assertTrue(!ballista.canStartAutomatedDismantling(stranger),
                 "A stranger could start dismantling an owned engine");
         helper.assertTrue(!SiegeAccess.allows(stranger, ballista, SiegeAccess.Action.REPAIR),
                 "A stranger could repair an owned engine");
         level.players().remove(owner);
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 320)
+    public static void seatedCaptureRestartsWhenHurtAndThenTakesTheEngine(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        ArcballistaEntity ballista = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
+        helper.assertTrue(ballista != null, "Failed to create capture test ballista");
+        moveToRelative(helper, ballista, 6.0D, 1.0D, 6.0D);
+        helper.assertTrue(level.addFreshEntity(ballista), "Failed to add capture test ballista");
+
+        net.minecraft.server.level.ServerPlayer owner = SiegeGameTestPlayers.create(level);
+        level.players().add(owner);
+        ballista.setOwnerUuid(owner.getUUID());
+        Player enemy = SiegeGameTestPlayers.createRideable(level);
+        enemy.setPos(ballista.getX() + 1.0D, ballista.getY(), ballista.getZ());
+
+        ballista.interact(enemy, InteractionHand.MAIN_HAND);
+        helper.assertTrue(enemy.getVehicle() == ballista, "An enemy could not take the seat of an unmanned engine");
+
+        helper.runAfterDelay(5, () -> {
+            helper.assertTrue(ballista.isBeingCaptured(), "Taking the seat did not start a capture");
+            helper.assertTrue(!ballista.shouldPassengerControlRotation(enemy),
+                    "The capturer could aim the engine before capturing it");
+        });
+        helper.runAfterDelay(60, () -> enemy.hurt(level.damageSources().generic(), 1.0F));
+        helper.runAfterDelay(200, () -> helper.assertTrue(ballista.isOwnedBy(owner.getUUID()),
+                "The capture completed although the capturer was hurt halfway through"));
+        helper.runAfterDelay(260, () -> {
+            helper.assertTrue(ballista.isOwnedBy(enemy.getUUID()), "Holding the controls unhurt did not capture the engine");
+            helper.assertTrue(!ballista.isBeingCaptured() && ballista.shouldPassengerControlRotation(enemy),
+                    "The new owner did not get the controls after the capture");
+            level.players().remove(owner);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void captureNeedsAnEmptyEngineAndAnOnlineDefender(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        ArcballistaEntity ballista = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
+        helper.assertTrue(ballista != null, "Failed to create capture refusal ballista");
+        moveToRelative(helper, ballista, 6.0D, 1.0D, 6.0D);
+        helper.assertTrue(level.addFreshEntity(ballista), "Failed to add capture refusal ballista");
+
+        net.minecraft.server.level.ServerPlayer owner = SiegeGameTestPlayers.create(level);
+        level.players().add(owner);
+        Player defender = SiegeGameTestPlayers.createRideable(level);
+        Player enemy = SiegeGameTestPlayers.createRideable(level);
+        PlayerTeam team = level.getScoreboard().getPlayerTeam("siege_capture_test");
+        if (team == null) {
+            team = level.getScoreboard().addPlayerTeam("siege_capture_test");
+        }
+        level.getScoreboard().addPlayerToTeam(owner.getScoreboardName(), team);
+        level.getScoreboard().addPlayerToTeam(defender.getScoreboardName(), team);
+        ballista.setOwnerUuid(owner.getUUID());
+
+        helper.assertTrue(defender.startRiding(ballista), "The owner's teammate could not man the engine");
+        helper.assertTrue(ballista.captureRefusal(enemy) == SiegeCaptureController.Refusal.DEFENDED,
+                "An enemy could start capturing a manned engine");
+        helper.assertTrue(!ballista.canAddPassenger(enemy), "An enemy could board a manned engine");
+
+        defender.stopRiding();
+        level.players().remove(owner);
+        helper.assertTrue(ballista.captureRefusal(enemy) == SiegeCaptureController.Refusal.DEFENDERS_OFFLINE,
+                "An enemy could capture an engine while nobody on its side was online");
         helper.succeed();
     }
 

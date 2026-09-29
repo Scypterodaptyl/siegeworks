@@ -618,6 +618,11 @@ public class SiegeTowerEntity extends AbstractSiegeEntity
         super.remove(reason);
     }
 
+    @Override
+    protected InteractionResult boardForCapture(Player player) {
+        return isPlayerInDriverBoardingArea(player) ? boardDriver(player) : InteractionResult.PASS;
+    }
+
     private InteractionResult boardDriver(Player player) {
         if (player.getVehicle() == this) {
             return InteractionResult.SUCCESS;

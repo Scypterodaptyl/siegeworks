@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.gameplay.ownership;
 
 import me.mss1r.siegeworks.api.SiegeAllianceRegistry;
+import me.mss1r.siegeworks.config.SiegeworksServerConfig;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.event.SiegeAccessCheckEvent;
 import me.mss1r.siegeworks.event.SiegeAccessEvents;
@@ -27,12 +28,21 @@ public final class SiegeAccess {
         if (siege.level().isClientSide) {
             return true;
         }
-        boolean allowed = siege.getOwnerUuid() == null
+        boolean allowed = !SiegeworksServerConfig.isOwnershipEnforced()
+                || siege.getOwnerUuid() == null
                 || actor instanceof Player player && player.hasPermissions(2)
-                || relationOf(actor, siege) != SiegeRelation.HOSTILE;
+                || permits(relationOf(actor, siege), action);
         SiegeAccessCheckEvent event = new SiegeAccessCheckEvent(actor, siege, action, allowed);
         SiegeAccessEvents.CHECK.invoker().check(event);
         return event.allowed();
+    }
+
+    private static boolean permits(SiegeRelation relation, Action action) {
+        return switch (relation) {
+            case OWNER -> true;
+            case FRIENDLY -> action != Action.DISMANTLE || SiegeworksServerConfig.teammatesMayDismantle();
+            case HOSTILE -> false;
+        };
     }
 
     /** Uses the actor's own team, which a recruit keeps while the player commanding it is offline. */

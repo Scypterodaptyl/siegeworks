@@ -8,6 +8,7 @@ import me.mss1r.siegeworks.entity.siege.MantletEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeTowerEntity;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeCaptureController;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsSiegeCommandC2SPayload;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsTowerCrewC2SPayload;
 import me.mss1r.siegeworks.integration.recruits.RecruitsCompat;
@@ -61,9 +62,7 @@ final class RtsMachineActions {
                     Component.translatable("gui.siegeworks.rts.action.out_of_range.reason")));
         }
         if (!SiegeAccess.allows(commander, siege, SiegeAccess.Action.USE)) {
-            return List.of(MapObjectAction.blocked(FOREIGN,
-                    Component.translatable("gui.siegeworks.rts.action.foreign"), null,
-                    Component.translatable("message.siegeworks.access.denied")));
+            return foreign(commander, siege, members);
         }
 
         List<AbstractRecruitEntity> nearby = RecruitsCompat.commandRangeRecruits(commander);
@@ -171,6 +170,17 @@ final class RtsMachineActions {
                 : MapObjectAction.blockedOption(group, id, label, hint, selected, reason);
     }
 
+    private static List<MapObjectAction> foreign(ServerPlayer commander, AbstractSiegeEntity siege, List<UUID> members) {
+        SiegeCaptureController.Refusal refusal = siege.captureRefusal(commander);
+        if (refusal == null && RecruitsCompat.takesCrew(siege) && !(siege instanceof SiegeTowerEntity)) {
+            return List.of(row(CREW, "capture", !members.isEmpty(),
+                    Component.translatable("gui.siegeworks.rts.action.no_men")));
+        }
+        return List.of(MapObjectAction.blocked(FOREIGN,
+                Component.translatable("gui.siegeworks.rts.action.foreign"), null,
+                refusal == null ? SiegeCaptureController.Refusal.DISABLED.message() : refusal.message()));
+    }
+
     private static MapObjectAction row(String id, String key, boolean enabled, Component reason) {
         Component label = Component.translatable("gui.siegeworks.rts.action." + key);
         Component hint = Component.translatable("gui.siegeworks.rts.action." + key + ".hint");
@@ -197,11 +207,11 @@ final class RtsMachineActions {
                     Component.translatable("gui.siegeworks.rts.action.out_of_range.reason"), true);
             return;
         }
-        if (!SiegeAccess.allows(commander, siege, SiegeAccess.Action.USE)) {
-            commander.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
-            return;
-        }
         if (DRIVE.equals(actionId) || DRIVE_APPEND.equals(actionId)) {
+            if (!SiegeAccess.allows(commander, siege, SiegeAccess.Action.USE)) {
+                commander.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
+                return;
+            }
             boolean sent = target != null && (DRIVE_APPEND.equals(actionId)
                     ? RecruitsCompat.queueDrive(commander, siege, target, false)
                     : RecruitsCompat.driveMachine(commander, siege, target, false));
@@ -221,14 +231,14 @@ final class RtsMachineActions {
                     Component.translatable("gui.siegeworks.rts.action.out_of_range.reason"), true);
             return;
         }
-        if (!SiegeAccess.allows(commander, siege, SiegeAccess.Action.USE)) {
-            commander.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
-            return;
-        }
         if (CREW.equals(actionId)) {
             int placed = RecruitsCompat.crewMachine(commander, siege, chosen(commander, members));
             commander.displayClientMessage(Component.translatable(
                     "message.siegeworks.rts.crewed", placed, members.size()), true);
+            return;
+        }
+        if (!SiegeAccess.allows(commander, siege, SiegeAccess.Action.USE)) {
+            commander.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
             return;
         }
 

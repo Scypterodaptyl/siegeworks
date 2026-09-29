@@ -29,6 +29,7 @@ import me.mss1r.siegeworks.gameplay.construction.SiegeConstructionController;
 import me.mss1r.siegeworks.gameplay.maintenance.SiegeMaintenanceController;
 import me.mss1r.siegeworks.gameplay.damage.SiegeAttackPolicy;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeCaptureController;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeOperatorReference;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeOwnership;
 import me.mss1r.siegeworks.data.profile.ScattershotProfile;
@@ -120,6 +121,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     protected final Set<UUID> playersNotified = new HashSet<>();
     private final SiegeOperatorReference operator = new SiegeOperatorReference(this);
     private final SiegeOwnership ownership = new SiegeOwnership();
+    private final SiegeCaptureController capture = new SiegeCaptureController(this);
     private final SiegeDeploymentState deployment = new SiegeDeploymentState(this);
     private final SiegeAudioController audio = new SiegeAudioController(this);
     private final SiegeTransformInterpolator interpolation = new SiegeTransformInterpolator(this);
@@ -748,6 +750,33 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         return ownership.isOwnedBy(playerUuid);
     }
 
+    public boolean isBeingCaptured() {
+        return capture.isActive();
+    }
+
+    @Nullable
+    public SiegeCaptureController.Refusal captureRefusal(Entity entity) {
+        return capture.refusal(entity);
+    }
+
+    /** Whether an enemy may capture this engine; if not, it can only be destroyed. */
+    public boolean isCapturable() {
+        return true;
+    }
+
+    /** How an enemy player takes hold of the controls to capture this engine: by default, its seat. */
+    protected InteractionResult boardForCapture(Player player) {
+        if (!canAddPassenger(player) || !player.startRiding(this)) {
+            return InteractionResult.FAIL;
+        }
+        setOperator(player);
+        return InteractionResult.SUCCESS;
+    }
+
+    protected InteractionResult captureStanding(Player player) {
+        return capture.beginStanding(player) ? InteractionResult.SUCCESS : InteractionResult.FAIL;
+    }
+
     @Nullable
     private UUID legacyOwner() {
         if (getDeploymentOwnerUuid() != null) {
@@ -835,7 +864,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         if (isDraftMount(entity)) {
             return towing.canAddDraftMount(entity);
         }
-        if (!SiegeAccess.allows(entity, this, SiegeAccess.Action.USE)) {
+        if (!SiegeAccess.allows(entity, this, SiegeAccess.Action.USE) && capture.refusal(entity) != null) {
             return false;
         }
         if (!towing.operatorSlotAvailable() && !takesPassengersWhileTowed(entity)) {
@@ -902,11 +931,13 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     }
 
     public final boolean shouldPassengerControlRotation(Entity passenger) {
-        return towing.isDrivenDraftMount(passenger) || operatorControlsRotation(passenger);
+        return towing.isDrivenDraftMount(passenger)
+                || !capture.isCapturer(passenger) && operatorControlsRotation(passenger);
     }
 
     public final boolean shouldPassengerControlMovement(Entity passenger) {
-        return towing.isDrivenDraftMount(passenger) || operatorControlsMovement(passenger);
+        return towing.isDrivenDraftMount(passenger)
+                || !capture.isCapturer(passenger) && operatorControlsMovement(passenger);
     }
 
     public LivingEntity getReinsHolder() {
@@ -1136,6 +1167,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         }
 
         deployment.tick();
+        capture.tick(serverLevel);
 
         aiming.updateFromController();
         if (tickCount % UNSTICK_INTERVAL_TICKS == 0) {
@@ -1164,6 +1196,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     public void remove(RemovalReason reason) {
         StructureCollisionSystem.unregister(this);
         deployment.onRemoved(reason);
+        capture.stop();
         super.remove(reason);
     }
 
@@ -1480,8 +1513,16 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         }
 
         if (!SiegeAccess.allows(player, this, SiegeAccess.Action.USE)) {
-            player.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
-            return InteractionResult.FAIL;
+            if (!player.getItemInHand(hand).isEmpty() || player.isShiftKeyDown()) {
+                player.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
+                return InteractionResult.FAIL;
+            }
+            SiegeCaptureController.Refusal refusal = capture.refusal(player);
+            if (refusal != null) {
+                player.displayClientMessage(refusal.message(), true);
+                return InteractionResult.FAIL;
+            }
+            return boardForCapture(player);
         }
 
         InteractionResult horseResult = towing.interact(player, hand, serverLevel);

@@ -174,6 +174,11 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
     }
 
     @Override
+    protected InteractionResult boardForCapture(Player player) {
+        return captureStanding(player);
+    }
+
+    @Override
     public InteractionResult handleSiegeInteraction(Player player, InteractionHand hand, ServerLevel serverLevel) {
         if (continueLoadingAction(player)) return showLoadingProgress(player);
         if (getCooldown() > 0) return showCooldownProgress(player);

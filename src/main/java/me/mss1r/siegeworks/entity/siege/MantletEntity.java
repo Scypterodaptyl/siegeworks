@@ -8,6 +8,7 @@ import me.mss1r.axiomata.collision.StructureCollisionResolver;
 import me.mss1r.axiomata.collision.system.StructureMotionSystem;
 import me.mss1r.siegeworks.gameplay.collision.generated.GeneratedCollisionShapes;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.gameplay.audio.SiegeSoundProfile;
 import me.mss1r.siegeworks.gameplay.movement.SyncedFloatInterpolator;
 import me.mss1r.siegeworks.registry.SiegeworksSounds;
@@ -174,7 +175,8 @@ public class MantletEntity extends AbstractSiegeEntity implements GeoEntity, Pro
     }
 
     public void requestAction(ServerPlayer player, int action) {
-        if (player.getVehicle() != this || !isOperator(player)) {
+        if (player.getVehicle() != this || !isOperator(player)
+                || !SiegeAccess.allows(player, this, SiegeAccess.Action.USE)) {
             return;
         }
         switch (action) {

@@ -69,7 +69,8 @@ public final class SiegeworksRecruitController implements ISiegeController {
 
     @Override
     public void tick() {
-        if (engineer.level().isClientSide() || siege == null || !siege.isOperator(engineer)) {
+        if (engineer.level().isClientSide() || siege == null || !siege.isOperator(engineer)
+                || siege.isBeingCaptured()) {
             return;
         }
 

@@ -609,6 +609,11 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
     }
 
     @Override
+    public boolean isCapturable() {
+        return false;
+    }
+
+    @Override
     protected InteractionResult handleSiegeInteraction(Player player, InteractionHand hand, ServerLevel serverLevel) {
         if (!player.isShiftKeyDown() || !player.getItemInHand(hand).isEmpty()) {
             return InteractionResult.SUCCESS;

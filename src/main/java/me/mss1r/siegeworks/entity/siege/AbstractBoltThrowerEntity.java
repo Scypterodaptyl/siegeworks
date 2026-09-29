@@ -413,7 +413,7 @@ public abstract class AbstractBoltThrowerEntity extends AbstractSiegeEntity impl
     }
 
     public void requestRiderFire(Player player) {
-        if (!(level() instanceof ServerLevel serverLevel) || getFirstPassenger() != player) {
+        if (!(level() instanceof ServerLevel serverLevel) || getFirstPassenger() != player || isBeingCaptured()) {
             return;
         }
 

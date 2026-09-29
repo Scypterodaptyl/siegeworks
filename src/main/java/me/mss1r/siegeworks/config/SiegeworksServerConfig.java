@@ -17,6 +17,13 @@ public final class SiegeworksServerConfig {
     private static final SiegeworksConfigSpec.BooleanValue FLYING_BLOCK_DEBRIS_ENABLED;
     private static final SiegeworksConfigSpec.IntValue MAX_FLYING_BLOCK_DEBRIS_PER_TICK;
     private static final SiegeworksConfigSpec.IntValue RECRUIT_FIRE_ZONE_MAX_RADIUS;
+    private static final SiegeworksConfigSpec.BooleanValue OWNERSHIP_ENFORCED;
+    private static final SiegeworksConfigSpec.BooleanValue TEAMMATES_MAY_DISMANTLE;
+    private static final SiegeworksConfigSpec.BooleanValue CAPTURE_ALLOWED;
+    private static final SiegeworksConfigSpec.BooleanValue CAPTURE_REQUIRES_DEFENDER_ONLINE;
+    private static final SiegeworksConfigSpec.DoubleValue CAPTURE_SECONDS_PER_DISMANTLE_HIT;
+    private static final SiegeworksConfigSpec.IntValue MINIMUM_CAPTURE_SECONDS;
+    private static final SiegeworksConfigSpec.IntValue MAXIMUM_CAPTURE_SECONDS;
 
     static {
         SiegeworksConfigSpec.Builder builder = new SiegeworksConfigSpec.Builder();
@@ -78,6 +85,33 @@ public final class SiegeworksServerConfig {
         registerDeploymentLimit(builder, "siege_tower");
         registerDeploymentLimit(builder, "siege_ladder");
         registerDeploymentLimit(builder, "hwacha");
+        builder.pop();
+
+        builder.comment("Who may use, repair, dismantle and capture an owned siege engine.")
+                .push("ownership");
+        OWNERSHIP_ENFORCED = builder
+                .comment("Limit an owned engine to its owner, their scoreboard team and allied factions.",
+                        "Disabling this lets anyone use any engine.")
+                .define("enforceOwnership", true);
+        TEAMMATES_MAY_DISMANTLE = builder
+                .comment("Let the owner's team and allies dismantle the engine, not only the owner.")
+                .define("teammatesMayDismantle", true);
+        CAPTURE_ALLOWED = builder
+                .comment("Let an enemy take an engine left without its crew by holding its controls unhurt.",
+                        "Disabling this leaves enemies able only to destroy it.")
+                .define("allowCapture", true);
+        CAPTURE_REQUIRES_DEFENDER_ONLINE = builder
+                .comment("Allow capture only while the owner or a member of their team is online.")
+                .define("captureRequiresDefenderOnline", true);
+        CAPTURE_SECONDS_PER_DISMANTLE_HIT = builder
+                .comment("Capture time grows with the engine's size, measured by the hammer strikes needed to dismantle it.")
+                .defineInRange("captureSecondsPerDismantleHit", 0.5D, 0.0D, 10.0D);
+        MINIMUM_CAPTURE_SECONDS = builder
+                .comment("Shortest capture time, in seconds.")
+                .defineInRange("minimumCaptureSeconds", 8, 1, 600);
+        MAXIMUM_CAPTURE_SECONDS = builder
+                .comment("Longest capture time, in seconds.")
+                .defineInRange("maximumCaptureSeconds", 45, 1, 600);
         builder.pop(2);
 
         builder.push("movement");
@@ -185,6 +219,29 @@ public final class SiegeworksServerConfig {
         }
         SiegeworksConfigSpec.IntValue configured = settings.operation().loadingStages().get(stageKey);
         return configured == null ? 1 : configured.get();
+    }
+
+    public static boolean isOwnershipEnforced() {
+        return OWNERSHIP_ENFORCED.get();
+    }
+
+    public static boolean teammatesMayDismantle() {
+        return TEAMMATES_MAY_DISMANTLE.get();
+    }
+
+    public static boolean isCaptureAllowed() {
+        return CAPTURE_ALLOWED.get();
+    }
+
+    public static boolean captureRequiresDefenderOnline() {
+        return CAPTURE_REQUIRES_DEFENDER_ONLINE.get();
+    }
+
+    public static int getCaptureTicks(int dismantleHits) {
+        int minimum = MINIMUM_CAPTURE_SECONDS.get();
+        int maximum = Math.max(minimum, MAXIMUM_CAPTURE_SECONDS.get());
+        double seconds = Math.max(minimum, Math.min(maximum, dismantleHits * CAPTURE_SECONDS_PER_DISMANTLE_HIT.get()));
+        return (int) Math.round(seconds * 20.0D);
     }
 
     public static boolean isGeometryTerrainCollisionEnabled() {
