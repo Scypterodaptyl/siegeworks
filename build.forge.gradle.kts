@@ -165,6 +165,7 @@ legacyForge {
 mixin {
     add(sourceSets.main.get(), "$modId.refmap.json")
     config("$modId.mixins.json")
+    config("$modId.recruits.mixins.json")
 }
 
 sourceSets.main {
@@ -256,7 +257,7 @@ tasks.withType<Jar>().configureEach {
             "Implementation-Title" to modName,
             "Implementation-Version" to archiveVersion.get(),
             "Implementation-Vendor" to modAuthors,
-            "MixinConfigs" to "$modId.mixins.json"
+            "MixinConfigs" to "$modId.mixins.json,$modId.recruits.mixins.json"
         )
     }
 }
