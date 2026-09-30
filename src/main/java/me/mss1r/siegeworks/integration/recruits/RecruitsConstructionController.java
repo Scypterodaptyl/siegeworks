@@ -53,7 +53,7 @@ final class RecruitsConstructionController {
             engineer.siegeController = null;
         }
         engineer.shouldMount(false, null);
-        engineer.setFollowState(6);
+        RecruitsTaskOrders.beginTask(engineer);
         engineer.setTarget(null);
         RecruitsWalkOrders.stop(engineer);
     }
@@ -179,7 +179,7 @@ final class RecruitsConstructionController {
         engineer.getPersistentData().remove(SITE_POS_TAG);
         engineer.getPersistentData().remove(BLOCK_REASON_TAG);
         RecruitsWalkOrders.stop(engineer);
-        engineer.setFollowState(2);
+        RecruitsTaskOrders.endTask(engineer);
     }
 
     static boolean cancelTask(SiegeEngineerEntity engineer) {

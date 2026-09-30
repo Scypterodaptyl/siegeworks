@@ -54,7 +54,7 @@ final class RecruitsMaintenanceController {
             engineer.dismount = 180;
         }
         engineer.shouldMount(false, null);
-        engineer.setFollowState(6);
+        RecruitsTaskOrders.beginTask(engineer);
         engineer.setTarget(null);
         RecruitsWalkOrders.stop(engineer);
         return true;
@@ -183,7 +183,7 @@ final class RecruitsMaintenanceController {
         data.remove(ACTION_TAG);
         data.remove(PROGRESS_TAG);
         RecruitsWalkOrders.stop(engineer);
-        engineer.setFollowState(2);
+        RecruitsTaskOrders.endTask(engineer);
     }
 
     static boolean cancelTask(SiegeEngineerEntity engineer) {

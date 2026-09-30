@@ -252,7 +252,7 @@ final class RecruitsLadderRelocationController {
             engineer.siegeController = null;
         }
         recruit.shouldMount(false, null);
-        recruit.setFollowState(6);
+        RecruitsTaskOrders.beginTask(recruit);
         recruit.setTarget(null);
         RecruitsWalkOrders.stop(recruit);
     }
@@ -289,7 +289,7 @@ final class RecruitsLadderRelocationController {
         data.remove(YAW_TAG);
         data.remove(TASK_TICKS_TAG);
         RecruitsWalkOrders.stop(recruit);
-        recruit.setFollowState(2);
+        RecruitsTaskOrders.endTask(recruit);
     }
 
     private enum Action {
