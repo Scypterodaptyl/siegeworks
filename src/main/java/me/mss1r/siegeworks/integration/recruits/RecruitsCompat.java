@@ -51,12 +51,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.Team;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -1380,18 +1382,18 @@ public final class RecruitsCompat {
                 && player.serverLevel().hasChunkAt(targetPos);
     }
 
-    /** Mirrors Recruits' own container rule for claimed chunks. */
     private static boolean mayOpenInClaim(ServerPlayer player, BlockPos pos) {
+        return player.isCreative() && player.hasPermissions(2) || claimOpensContainerTo(pos, player.getTeam());
+    }
+
+    /** Mirrors Recruits' own container rule for claimed chunks. */
+    static boolean claimOpensContainerTo(BlockPos pos, @Nullable Team team) {
         if (ClaimEvents.recruitsClaimManager == null) {
             return true;
         }
         RecruitsClaim claim = ClaimEvents.recruitsClaimManager.getClaim(new ChunkPos(pos));
-        if (claim == null || claim.isBlockInteractionAllowed()
-                || player.isCreative() && player.hasPermissions(2)) {
-            return true;
-        }
-        return player.getTeam() != null
-                && player.getTeam().getName().equals(claim.getOwnerFactionStringID());
+        return claim == null || claim.isBlockInteractionAllowed()
+                || team != null && team.getName().equals(claim.getOwnerFactionStringID());
     }
 
     private static boolean isContainer(ServerPlayer player, BlockPos targetPos) {
