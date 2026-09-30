@@ -172,14 +172,22 @@ final class RtsMachineActions {
     }
 
     private static List<MapObjectAction> foreign(ServerPlayer commander, AbstractSiegeEntity siege, List<UUID> members) {
+        List<MapObjectAction> actions = new ArrayList<>(2);
         SiegeCaptureController.Refusal refusal = siege.captureRefusal(commander);
         if (refusal == null && RecruitsCompat.takesCrew(siege) && !(siege instanceof SiegeTowerEntity)) {
-            return List.of(row(CREW, "capture", !members.isEmpty(),
+            actions.add(row(CREW, "capture", !members.isEmpty(),
                     Component.translatable("gui.siegeworks.rts.action.no_men")));
+        } else {
+            actions.add(MapObjectAction.blocked(FOREIGN,
+                    Component.translatable("gui.siegeworks.rts.action.foreign"), null,
+                    refusal == null ? SiegeCaptureController.Refusal.DISABLED.message() : refusal.message()));
         }
-        return List.of(MapObjectAction.blocked(FOREIGN,
-                Component.translatable("gui.siegeworks.rts.action.foreign"), null,
-                refusal == null ? SiegeCaptureController.Refusal.DISABLED.message() : refusal.message()));
+        if (RecruitsCompat.leaveMachine(commander, siege, true) > 0) {
+            actions.add(MapObjectAction.of(LEAVE,
+                    Component.translatable("gui.siegeworks.rts.action.leave"),
+                    Component.translatable("gui.siegeworks.rts.action.leave.hint")));
+        }
+        return actions;
     }
 
     private static MapObjectAction row(String id, String key, boolean enabled, Component reason) {
@@ -238,6 +246,12 @@ final class RtsMachineActions {
                     "message.siegeworks.rts.crewed", placed, members.size()), true);
             return;
         }
+        if (LEAVE.equals(actionId)) {
+            int left = RecruitsCompat.leaveMachine(commander, siege, false);
+            commander.displayClientMessage(
+                    Component.translatable("message.siegeworks.rts.left", left), true);
+            return;
+        }
         if (!SiegeAccess.allows(commander, siege, SiegeAccess.Action.USE)) {
             commander.displayClientMessage(Component.translatable("message.siegeworks.access.denied"), true);
             return;
@@ -278,13 +292,6 @@ final class RtsMachineActions {
 
         if (HALT.equals(actionId)) {
             RecruitsCompat.haltMachine(commander, siege, false);
-            return;
-        }
-
-        if (LEAVE.equals(actionId)) {
-            int left = RecruitsCompat.leaveMachine(commander, siege, false);
-            commander.displayClientMessage(
-                    Component.translatable("message.siegeworks.rts.left", left), true);
             return;
         }
 
