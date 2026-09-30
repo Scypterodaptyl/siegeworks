@@ -34,6 +34,8 @@ public final class SiegeworksRecruitController implements ISiegeController {
     private static final int FIRE_ZONE_TARGET_SAMPLES = 16;
     private static final double MOVE_PROGRESS_STEP = 1.0D;
     private static final int MOVE_STALL_TICKS = 300;
+    private static final float MIN_AIM_STEERING = 0.15F;
+    private static final int TARGET_UNREACHABLE_PATIENCE_TICKS = 40;
 
     private final SiegeEngineerEntity engineer;
     private AbstractSiegeEntity siege;
@@ -49,6 +51,8 @@ public final class SiegeworksRecruitController implements ISiegeController {
     private Vec3 moveProgressTarget;
     private double closestMoveDistance;
     private int lastMoveProgressTick;
+    private LivingEntity committedTarget;
+    private int committedTargetUnreachableTicks;
     private Boolean attackOrderBeforeRam;
 
     /** A ram waits for an order to attack; the engineer's own setting comes back when he leaves it. */
@@ -198,6 +202,7 @@ public final class SiegeworksRecruitController implements ISiegeController {
     private boolean updateArtilleryAttacking(SiegeArtilleryControl artillery) {
         updateTarget();
         Vec3 aimTarget = resolveArtilleryAimTarget(artillery, targetPos);
+        noteTargetReach(aimTarget != null);
         if (aimTarget == null) {
             if (targetPos == null) {
                 trace("no target", "nothing to shoot at");
@@ -249,9 +254,6 @@ public final class SiegeworksRecruitController implements ISiegeController {
         if (result == SiegeActionResult.FIRED) {
             committedArtilleryAimTarget = aimTarget;
             advanceArtilleryAimAfterCooldown = true;
-            if (!engineer.getShouldStrategicFire()) {
-                targetPos = null;
-            }
         }
         return true;
     }
@@ -358,20 +360,39 @@ public final class SiegeworksRecruitController implements ISiegeController {
             return;
         }
 
-        LivingEntity target = engineer.getTarget();
-        if (target != null && target.isAlive()) {
-            targetPos = target.getEyePosition();
+        if (committedTarget != null && (!committedTarget.isAlive() || committedTarget.level() != engineer.level())) {
+            committedTarget = null;
+        }
+        if (committedTarget == null) {
+            LivingEntity candidate = engineer.getTarget();
+            if ((candidate == null || !candidate.isAlive()) && engineer.tickCount % 10 == 0) {
+                engineer.checkForPotentialEnemies();
+                candidate = engineer.getTarget();
+            }
+            if (candidate != null && candidate.isAlive()) {
+                commitTo(candidate);
+            }
+        }
+        targetPos = committedTarget == null ? null : committedTarget.getEyePosition();
+    }
+
+    /** An engine that turns slowly never fires if it chases whichever enemy is nearest each moment. */
+    private void commitTo(LivingEntity target) {
+        committedTarget = target;
+        committedTargetUnreachableTicks = 0;
+    }
+
+    private void noteTargetReach(boolean reachable) {
+        if (reachable || committedTarget == null) {
+            committedTargetUnreachableTicks = 0;
             return;
         }
-
-        if (targetPos == null || engineer.tickCount % 10 == 0) {
-            targetPos = null;
-            engineer.checkForPotentialEnemies();
-
-            LivingEntity acquiredTarget = engineer.getTarget();
-            if (acquiredTarget != null && acquiredTarget.isAlive()) {
-                targetPos = acquiredTarget.getEyePosition();
+        if (++committedTargetUnreachableTicks > TARGET_UNREACHABLE_PATIENCE_TICKS) {
+            if (engineer.getTarget() == committedTarget) {
+                engineer.setTarget(null);
             }
+            committedTarget = null;
+            committedTargetUnreachableTicks = 0;
         }
     }
 
@@ -520,13 +541,21 @@ public final class SiegeworksRecruitController implements ISiegeController {
         return dx * dx + dz * dz;
     }
 
+    /**
+     * Turns the whole engine. One that can pivot does it standing still, because driving scales its steering
+     * down with speed; steering eases off near the heading so it settles instead of swinging past it.
+     */
     private boolean steerTowardYaw(float yaw, float forward) {
         float error = Mth.wrapDegrees(yaw - siege.getYRot());
         if (Math.abs(error) <= YAW_TOLERANCE) {
             siege.setOperatorMovement(engineer, 0.0F, 0.0F);
             return true;
         }
-        siege.setOperatorMovement(engineer, forward, -Math.signum(error));
+        float steering = Mth.clamp(-error / STEERING_BAND, -1.0F, 1.0F);
+        if (Math.abs(steering) < MIN_AIM_STEERING) {
+            steering = Math.copySign(MIN_AIM_STEERING, steering);
+        }
+        siege.setOperatorMovement(engineer, siege.canPivotInPlace(engineer) ? 0.0F : forward, steering);
         return false;
     }
 
@@ -537,6 +566,8 @@ public final class SiegeworksRecruitController implements ISiegeController {
             siege.cancelPrimaryAction(engineer);
         }
         targetPos = null;
+        committedTarget = null;
+        committedTargetUnreachableTicks = 0;
         requestedYaw = null;
         deploymentOverride = null;
         temporaryDeployment = false;
@@ -562,6 +593,7 @@ public final class SiegeworksRecruitController implements ISiegeController {
         if (engineer.getFollowState() == 3 && commandedTarget != null && commandedTarget.isAlive()) {
             engineer.setShouldStrategicFire(false);
             engineer.setShouldRanged(true);
+            commitTo(commandedTarget);
             targetPos = commandedTarget.getEyePosition();
         }
     }
