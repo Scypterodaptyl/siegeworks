@@ -82,14 +82,16 @@ final class RecruitsLadderRelocationController {
         if (recruit.isPassenger()
                 || hasTask(recruit)
                 || ladderStack.isEmpty()
-                || !SiegeLadderDeploymentItem.canBePlacedBy(ladderStack, ownerUuid)) {
+                || !SiegeLadderDeploymentItem.canBePlacedBy(ladderStack, recruit)) {
             return false;
         }
 
-        SiegeLadderDeploymentItem.withRelocationOwner(ladderStack, ownerUuid);
-        if (recruit.level() instanceof ServerLevel serverLevel && ownerUuid != null) {
-            SiegeDeploymentLimits.writeToStack(
-                    ladderStack, SiegeDeploymentLimits.forOwner(serverLevel, ownerUuid));
+        if (SiegeLadderDeploymentItem.getRelocationOwner(ladderStack) == null && ownerUuid != null) {
+            SiegeLadderDeploymentItem.withRelocationOwner(ladderStack, ownerUuid);
+            if (recruit.level() instanceof ServerLevel serverLevel) {
+                SiegeDeploymentLimits.writeToStack(
+                        ladderStack, SiegeDeploymentLimits.forOwner(serverLevel, ownerUuid));
+            }
         }
         prepareForTask(recruit);
         CompoundTag data = recruit.getPersistentData();
@@ -187,7 +189,7 @@ final class RecruitsLadderRelocationController {
 
         ItemStack ladderStack = inventory.getItem(slot);
         UUID ownerUuid = recruit.getOwnerUUID();
-        if (!SiegeLadderDeploymentItem.canBePlacedBy(ladderStack, ownerUuid)) {
+        if (!SiegeLadderDeploymentItem.canBePlacedBy(ladderStack, recruit)) {
             clear(recruit);
             return false;
         }
@@ -207,7 +209,8 @@ final class RecruitsLadderRelocationController {
 
         float yaw = data.getFloat(YAW_TAG);
         ladder.setSections(SiegeLadderDeploymentItem.getSections(ladderStack));
-        ladder.setOwnerUuid(ownerUuid);
+        UUID storedOwner = SiegeLadderDeploymentItem.getRelocationOwner(ladderStack);
+        ladder.setOwnerUuid(storedOwner != null ? storedOwner : ownerUuid);
         if (deployment != null) {
             ladder.setDeploymentIdentity(deployment.ownerUuid(), deployment.groupKey());
         }

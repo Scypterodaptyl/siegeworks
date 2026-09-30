@@ -45,11 +45,23 @@ public final class SiegeAccess {
         };
     }
 
+    /** Whether the actor stands with an owner who holds something outside an engine, such as a carried ladder. */
+    public static boolean sameSide(Entity actor, @Nullable UUID ownerUuid) {
+        return ownerUuid == null
+                || !SiegeworksServerConfig.isOwnershipEnforced()
+                || actor instanceof Player player && player.hasPermissions(2)
+                || relationOf(actor, actor.level(), ownerUuid) != SiegeRelation.HOSTILE;
+    }
+
     /** Uses the actor's own team, which a recruit keeps while the player commanding it is offline. */
     public static SiegeRelation relationOf(@Nullable Entity actor, AbstractSiegeEntity siege) {
+        return relationOf(actor, siege.level(), siege.getOwnerUuid());
+    }
+
+    private static SiegeRelation relationOf(@Nullable Entity actor, Level level, @Nullable UUID ownerUuid) {
         Team actorTeam = actor == null ? null : actor.getTeam();
-        return relation(siege.level(), SiegeOwnership.playerOf(actor),
-                actorTeam == null ? null : actorTeam.getName(), siege.getOwnerUuid());
+        return relation(level, SiegeOwnership.playerOf(actor),
+                actorTeam == null ? null : actorTeam.getName(), ownerUuid);
     }
 
     public static SiegeRelation relationOf(@Nullable UUID playerUuid, AbstractSiegeEntity siege) {

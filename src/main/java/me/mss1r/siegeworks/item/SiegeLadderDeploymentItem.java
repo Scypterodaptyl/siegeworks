@@ -2,6 +2,8 @@ package me.mss1r.siegeworks.item;
 
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
+import me.mss1r.siegeworks.gameplay.ownership.SiegeOwnership;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -81,20 +83,17 @@ public class SiegeLadderDeploymentItem extends SiegeDeploymentItem {
         return stack;
     }
 
-    public static boolean canBePlacedBy(ItemStack stack, UUID ownerUuid) {
-        UUID storedOwner = getRelocationOwner(stack);
-        return ownerUuid != null && (storedOwner == null || storedOwner.equals(ownerUuid));
+    public static boolean canBePlacedBy(ItemStack stack, Entity placer) {
+        return SiegeOwnership.playerOf(placer) != null && SiegeAccess.sameSide(placer, getRelocationOwner(stack));
     }
 
     @Override
     protected InteractionResult validatePlacement(ServerLevel level, UseOnContext context,
                                                   EntityType<?> type) {
         Player player = context.getPlayer();
-        UUID storedOwner = getRelocationOwner(context.getItemInHand());
         if (player != null
                 && !me.mss1r.siegeworks.platform.MinecraftVersionCompat.isFakePlayer(player)
-                && storedOwner != null
-                && !storedOwner.equals(player.getUUID())) {
+                && !SiegeAccess.sameSide(player, getRelocationOwner(context.getItemInHand()))) {
             player.displayClientMessage(Component.translatable("message.siegeworks.ladder.not_owner"), true);
             return InteractionResult.FAIL;
         }

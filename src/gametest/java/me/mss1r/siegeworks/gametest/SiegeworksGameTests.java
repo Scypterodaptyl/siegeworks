@@ -53,6 +53,7 @@ import me.mss1r.axiomata.collision.StructureCollisionResolver;
 import me.mss1r.siegeworks.gameplay.movement.SiegeMovementPhysics;
 import me.mss1r.siegeworks.item.SiegeAmmo;
 import me.mss1r.siegeworks.registry.SiegeworksItems;
+import me.mss1r.siegeworks.item.SiegeLadderDeploymentItem;
 import me.mss1r.siegeworks.gameplay.deployment.SiegeDeploymentLimits;
 import me.mss1r.siegeworks.gameplay.maintenance.SiegeMaintenanceData;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
@@ -343,6 +344,30 @@ public final class SiegeworksGameTests {
         level.getScoreboard().removePlayerFromTeam("SiegeAbandonMate", team);
         helper.assertTrue(ballista.releaseIfAbandoned(level, now) && ballista.getOwnerUuid() == null,
                 "An engine of a side gone for a month was not released");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void carriedLadderCanBeSetUpByItsOwnersSide(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        net.minecraft.server.level.ServerPlayer owner = SiegeGameTestPlayers.create(level);
+        level.players().add(owner);
+        Player teammate = SiegeGameTestPlayers.createRideable(level);
+        Player stranger = SiegeGameTestPlayers.createRideable(level);
+        PlayerTeam team = level.getScoreboard().getPlayerTeam("siege_ladder_side_test");
+        if (team == null) {
+            team = level.getScoreboard().addPlayerTeam("siege_ladder_side_test");
+        }
+        level.getScoreboard().addPlayerToTeam(owner.getScoreboardName(), team);
+        level.getScoreboard().addPlayerToTeam(teammate.getScoreboardName(), team);
+
+        ItemStack ladder = SiegeLadderDeploymentItem.withRelocationOwner(
+                new ItemStack(SiegeworksItems.SIEGE_LADDER_SPAWNER.get()), owner.getUUID());
+        helper.assertTrue(SiegeLadderDeploymentItem.canBePlacedBy(ladder, teammate),
+                "A teammate could not set up a ladder carried from the owner's side");
+        helper.assertTrue(!SiegeLadderDeploymentItem.canBePlacedBy(ladder, stranger),
+                "A stranger could set up a ladder that belongs to another side");
+        level.players().remove(owner);
         helper.succeed();
     }
 
