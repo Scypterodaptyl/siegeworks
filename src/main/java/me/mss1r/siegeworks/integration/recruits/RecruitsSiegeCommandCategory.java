@@ -218,7 +218,16 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
                 layout.addSelected("flap_close", hasActiveGroup, groups, type,
                         RecruitsSiegeCommandC2SPayload.ACTION_FLAP_CLOSE, null);
             }
-            case MACHINE, LADDER -> {
+            case RAM -> {
+                layout.add("fire_position", hasActiveGroup && screen.rayBlockPos != null, () ->
+                        sendSelectedCommand(groups, type, RecruitsSiegeCommandC2SPayload.ACTION_FIRE_POSITION,
+                                screen.rayBlockPos));
+                layout.addSelected("attack_at_will", hasActiveGroup, groups, type,
+                        RecruitsSiegeCommandC2SPayload.ACTION_FIRE_AT_WILL, null);
+                layout.addSelected("stop_attack", hasActiveGroup, groups, type,
+                        RecruitsSiegeCommandC2SPayload.ACTION_HOLD_FIRE, null);
+            }
+            case LADDER -> {
             }
         }
     }

@@ -49,10 +49,16 @@ public final class SiegeworksRecruitController implements ISiegeController {
     private Vec3 moveProgressTarget;
     private double closestMoveDistance;
     private int lastMoveProgressTick;
+    private Boolean attackOrderBeforeRam;
 
+    /** A ram waits for an order to attack; the engineer's own setting comes back when he leaves it. */
     public SiegeworksRecruitController(SiegeEngineerEntity engineer, AbstractSiegeEntity siege) {
         this.engineer = engineer;
         this.siege = siege;
+        if (siege instanceof SiegeMeleeControl) {
+            attackOrderBeforeRam = engineer.getShouldRanged();
+            engineer.setShouldRanged(false);
+        }
     }
 
     public boolean controls(Entity entity) {
@@ -506,6 +512,10 @@ public final class SiegeworksRecruitController implements ISiegeController {
         committedArtilleryAimTarget = null;
         advanceArtilleryAimAfterCooldown = false;
         moveProgressTarget = null;
+        if (attackOrderBeforeRam != null) {
+            engineer.setShouldRanged(attackOrderBeforeRam);
+            attackOrderBeforeRam = null;
+        }
     }
 
     @Override

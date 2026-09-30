@@ -34,7 +34,7 @@ enum SiegeCommandType {
             Kind.ARTILLERY, SiegeAmmunitionMode.AUTO, SiegeAmmunitionMode.STANDARD,
             SiegeAmmunitionMode.EXPLOSIVE),
     BATTERING_RAM(SiegeworksEntities.BATTERING_RAM_ENTITY, SiegeworksItems.BATTERING_RAM_SPAWNER,
-            Kind.MACHINE),
+            Kind.RAM),
     MANTLET(SiegeworksEntities.MANTLET_ENTITY, SiegeworksItems.MANTLET_SPAWNER,
             Kind.MANTLET),
     SIEGE_LADDER(SiegeworksEntities.SIEGE_LADDER_ENTITY, SiegeworksItems.SIEGE_LADDER_SPAWNER,
@@ -44,7 +44,7 @@ enum SiegeCommandType {
 
     enum Kind {
         ARTILLERY,
-        MACHINE,
+        RAM,
         MANTLET,
         LADDER,
         TOWER

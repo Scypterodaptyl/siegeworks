@@ -99,13 +99,14 @@ final class RtsMachineActions {
                     Component.translatable("gui.siegeworks.rts.action." + key + ".hint")));
         }
 
-        if (RecruitsCompat.shoots(siege)) {
+        boolean shoots = RecruitsCompat.shoots(siege);
+        if (shoots || RecruitsCompat.rams(siege)) {
             Component noLayer = Component.translatable("gui.siegeworks.rts.action.no_layer");
             Boolean firing = RecruitsCompat.firesAtWill(commander, siege);
             boolean manned = firing != null;
-            actions.add(option(GROUP_FIRE, FIRE_AT_WILL, "fire_at_will",
+            actions.add(option(GROUP_FIRE, FIRE_AT_WILL, shoots ? "fire_at_will" : "attack_at_will",
                     Boolean.TRUE.equals(firing), manned, noLayer));
-            actions.add(option(GROUP_FIRE, HOLD_FIRE, "hold_fire",
+            actions.add(option(GROUP_FIRE, HOLD_FIRE, shoots ? "hold_fire" : "hold_attack",
                     Boolean.FALSE.equals(firing), manned, noLayer));
 
             SiegeAmmunitionMode loaded = RecruitsCompat.ammunitionSetting(siege);

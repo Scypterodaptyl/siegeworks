@@ -1147,6 +1147,10 @@ public final class RecruitsCompat {
         return siege instanceof SiegeArtilleryControl;
     }
 
+    public static boolean rams(AbstractSiegeEntity siege) {
+        return siege instanceof SiegeMeleeControl;
+    }
+
     public static boolean choosesAmmunition(AbstractSiegeEntity siege, SiegeAmmunitionMode mode) {
         return siege instanceof SiegeAmmunitionControl ammunition
                 && ammunition.supportsAmmunitionMode(mode);
