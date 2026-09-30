@@ -697,7 +697,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
             return applyRootAngle(getLoadOffsetForAuthoredAngle(getCurrentArmAngle()), getCurrentRootAngle())
                     .add(0.0D, MangonelPassengerProjectile.PASSENGER_Y_OFFSET, 0.0D);
         }
-        return new Vec3(0.0D, 0.0D, 2.625D);
+        return new Vec3(0.0D, 0.0D, 2.5D);
     }
 
     @Override

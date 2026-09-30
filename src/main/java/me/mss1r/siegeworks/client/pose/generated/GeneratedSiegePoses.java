@@ -185,8 +185,8 @@ public final class GeneratedSiegePoses {
             rotation(30.0F, 0.0F, 0.0F),
             rotation(-30.0F, 0.0F, 0.0F),
             rotation(0.0F, 0.0F, 0.0F),
-            rotation(-107.5F, 0.0F, 0.0F),
-            rotation(-107.5F, 0.0F, 0.0F),
+            rotation(-111.12F, -8.07F, 2.96F),
+            rotation(-111.12F, 8.07F, -2.96F),
             rotation(0.0F, 0.0F, 0.0F),
             rotation(0.0F, 0.0F, 0.0F)
     );
