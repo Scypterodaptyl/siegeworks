@@ -18,6 +18,11 @@ public record SiegePoseRotation(float x, float y, float z) {
         return new SiegePoseRotation(x + other.x, y + other.y, z + other.z);
     }
 
+    /** A part turned by {@code child} inside a parent turned by this, as the single set of angles a model part takes. */
+    public SiegePoseRotation composedWith(SiegePoseRotation child) {
+        return matrix().times(child.matrix()).toRotation();
+    }
+
     public void apply(ModelPart part) {
         part.setRotation(x, y, z);
     }
@@ -62,5 +67,27 @@ public record SiegePoseRotation(float x, float y, float z) {
             );
         }
 
+        private Matrix times(Matrix o) {
+            return new Matrix(
+                    m00 * o.m00 + m01 * o.m10 + m02 * o.m20,
+                    m00 * o.m01 + m01 * o.m11 + m02 * o.m21,
+                    m00 * o.m02 + m01 * o.m12 + m02 * o.m22,
+                    m10 * o.m00 + m11 * o.m10 + m12 * o.m20,
+                    m10 * o.m01 + m11 * o.m11 + m12 * o.m21,
+                    m10 * o.m02 + m11 * o.m12 + m12 * o.m22,
+                    m20 * o.m00 + m21 * o.m10 + m22 * o.m20,
+                    m20 * o.m01 + m21 * o.m11 + m22 * o.m21,
+                    m20 * o.m02 + m21 * o.m12 + m22 * o.m22
+            );
+        }
+
+        /** Reads Z * Y * X angles back, the order a model part applies them in. */
+        private SiegePoseRotation toRotation() {
+            float y = (float) Math.asin(Mth.clamp(-m20, -1.0F, 1.0F));
+            if (Math.abs(Mth.cos(y)) > 1.0E-6F) {
+                return new SiegePoseRotation((float) Math.atan2(m21, m22), y, (float) Math.atan2(m10, m00));
+            }
+            return new SiegePoseRotation((float) Math.atan2(-m12, m11), y, 0.0F);
+        }
     }
 }

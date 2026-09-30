@@ -94,7 +94,7 @@ public final class SiegePoseApplicator {
                 vanilla.z - hip.z
         );
         part.setPos(position.x() + hip.x, position.y() + hip.y, position.z() + hip.z);
-        upperBody.plus(local).apply(part);
+        upperBody.composedWith(local).apply(part);
     }
 
     private static void applyVanillaPivotPart(ModelPart part, SiegePoseRotation rotation) {
