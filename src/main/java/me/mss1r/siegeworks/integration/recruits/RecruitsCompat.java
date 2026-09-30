@@ -348,7 +348,7 @@ public final class RecruitsCompat {
                 recruit -> isSelectedAndCommandable(player, recruit, selectedGroups));
         switch (refusal) {
             case NONE -> sendCommandFeedback(player, 1);
-            case NO_HAND, OCCUPIED -> player.displayClientMessage(refusal.message(), true);
+            case NO_HAND, OCCUPIED, FOREIGN -> player.displayClientMessage(refusal.message(), true);
             default -> sendCommandFeedback(player, 0);
         }
     }
