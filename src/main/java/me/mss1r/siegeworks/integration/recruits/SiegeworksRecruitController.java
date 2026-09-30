@@ -32,6 +32,8 @@ public final class SiegeworksRecruitController implements ISiegeController {
     private static final float FIRE_PITCH_TOLERANCE = 2.0F;
     private static final float AIM_LIMIT_EPSILON = 0.01F;
     private static final int FIRE_ZONE_TARGET_SAMPLES = 16;
+    private static final double MOVE_PROGRESS_STEP = 1.0D;
+    private static final int MOVE_STALL_TICKS = 300;
 
     private final SiegeEngineerEntity engineer;
     private AbstractSiegeEntity siege;
@@ -44,6 +46,9 @@ public final class SiegeworksRecruitController implements ISiegeController {
     private int artilleryShotSequence;
     private Vec3 committedArtilleryAimTarget;
     private boolean advanceArtilleryAimAfterCooldown;
+    private Vec3 moveProgressTarget;
+    private double closestMoveDistance;
+    private int lastMoveProgressTick;
 
     public SiegeworksRecruitController(SiegeEngineerEntity engineer, AbstractSiegeEntity siege) {
         this.engineer = engineer;
@@ -90,14 +95,18 @@ public final class SiegeworksRecruitController implements ISiegeController {
         }
 
         Vec3 destination = getMovementTarget();
-        if (RecruitsDriveOrders.any(siege)) {
-            if (hasFartherToGo(destination)) {
+        if (destination != null && followsMoveOrder()) {
+            if (hasFartherToGo(destination) && !stalledOn(destination)) {
                 moveToward(destination);
                 return;
             }
             if (advanceMarch(destination)) {
                 return;
             }
+            finishMoveOrder();
+            destination = getMovementTarget();
+        } else {
+            moveProgressTarget = null;
         }
 
         if (updateAttacking()) {
@@ -105,6 +114,30 @@ public final class SiegeworksRecruitController implements ISiegeController {
         }
 
         moveToward(destination);
+    }
+
+    /** An order to go somewhere outranks fighting; following or holding a position does not. */
+    private boolean followsMoveOrder() {
+        return RecruitsDriveOrders.any(siege)
+                || engineer.getFollowState() == 0 && engineer.getShouldMovePos() && engineer.getMovePos() != null;
+    }
+
+    private boolean stalledOn(Vec3 destination) {
+        double distance = Math.sqrt(horizontalDistanceSqr(siege.position(), destination));
+        if (moveProgressTarget == null || moveProgressTarget.distanceToSqr(destination) > 1.0D
+                || distance < closestMoveDistance - MOVE_PROGRESS_STEP) {
+            moveProgressTarget = destination;
+            closestMoveDistance = distance;
+            lastMoveProgressTick = engineer.tickCount;
+            return false;
+        }
+        return engineer.tickCount - lastMoveProgressTick > MOVE_STALL_TICKS;
+    }
+
+    private void finishMoveOrder() {
+        engineer.setShouldMovePos(false);
+        RecruitsDriveOrders.forget(siege);
+        moveProgressTarget = null;
     }
 
     private boolean faceRequestedYaw() {
@@ -472,6 +505,7 @@ public final class SiegeworksRecruitController implements ISiegeController {
         artilleryShotSequence = 0;
         committedArtilleryAimTarget = null;
         advanceArtilleryAimAfterCooldown = false;
+        moveProgressTarget = null;
     }
 
     @Override
