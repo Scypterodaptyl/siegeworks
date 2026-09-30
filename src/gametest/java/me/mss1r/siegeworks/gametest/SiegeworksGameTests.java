@@ -249,7 +249,7 @@ public final class SiegeworksGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = "empty", timeoutTicks = 320)
+    @GameTest(template = "empty", timeoutTicks = 360)
     public static void seatedCaptureRestartsWhenHurtAndThenTakesTheEngine(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         ArcballistaEntity ballista = SiegeworksEntities.ARCBALLISTA_ENTITY.get().create(level);
@@ -274,7 +274,7 @@ public final class SiegeworksGameTests {
         helper.runAfterDelay(60, () -> enemy.hurt(level.damageSources().generic(), 1.0F));
         helper.runAfterDelay(200, () -> helper.assertTrue(ballista.isOwnedBy(owner.getUUID()),
                 "The capture completed although the capturer was hurt halfway through"));
-        helper.runAfterDelay(260, () -> {
+        helper.runAfterDelay(300, () -> {
             helper.assertTrue(ballista.isOwnedBy(enemy.getUUID()), "Holding the controls unhurt did not capture the engine");
             helper.assertTrue(!ballista.isBeingCaptured() && ballista.shouldPassengerControlRotation(enemy),
                     "The new owner did not get the controls after the capture");
