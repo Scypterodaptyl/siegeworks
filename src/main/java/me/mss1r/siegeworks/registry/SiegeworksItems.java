@@ -33,7 +33,7 @@ public interface SiegeworksItems {
     RegistrySupplier<Item> HWACHA_SPAWNER = ITEMS.register("hwacha_spawner", () ->
             new SiegeDeploymentItem(SiegeworksEntities.HWACHA_ENTITY, new Item.Properties()));
     RegistrySupplier<Item> TOWER_CROSSBOW_BOLT = ITEMS.register("tower_crossbow_bolt", () ->
-            new Item(new Item.Properties().stacksTo(8)));
+            new Item(new Item.Properties().stacksTo(16)));
     RegistrySupplier<Item> ARCBALLISTA_BOLT = ITEMS.register("arcballista_bolt", () ->
             new Item(new Item.Properties().stacksTo(16)));
     RegistrySupplier<Item> SINGIJEON = ITEMS.register("singijeon", () ->
