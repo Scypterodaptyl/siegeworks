@@ -27,6 +27,7 @@ import java.util.UUID;
 
 final class RtsMapObjects {
     private static final double COLLECT_RADIUS = 512.0D;
+    private static final double SCOUTING_RANGE_SQR = 64.0D * 64.0D;
 
     private static final float MACHINE_ICON_SCALE = 1.5F;
 
@@ -83,11 +84,40 @@ final class RtsMapObjects {
         AABB around = player.getBoundingBox().inflate(COLLECT_RADIUS);
 
         List<MapObjectSnapshot> objects = new ArrayList<>();
+        List<AbstractRecruitEntity> scouts = null;
         for (AbstractSiegeEntity siege : level.getEntitiesOfClass(AbstractSiegeEntity.class, around,
                 AbstractSiegeEntity::isAlive)) {
+            if (!ours(player, siege)) {
+                if (scouts == null) {
+                    scouts = level.getEntitiesOfClass(AbstractRecruitEntity.class, around,
+                            recruit -> player.getUUID().equals(recruit.getOwnerUUID()));
+                }
+                if (!scouted(player, siege, scouts)) {
+                    continue;
+                }
+            }
             objects.add(describe(player, siege));
         }
         return objects;
+    }
+
+    private static boolean ours(ServerPlayer player, AbstractSiegeEntity siege) {
+        return RecruitsCompat.commanderOf(siege) != null
+                && SiegeAccess.relationOf(player.getUUID(), siege) != SiegeRelation.HOSTILE;
+    }
+
+    /** Other sides' engines appear only where the player or one of their recruits can see them. */
+    private static boolean scouted(ServerPlayer player, AbstractSiegeEntity siege,
+                                   List<AbstractRecruitEntity> scouts) {
+        if (player.distanceToSqr(siege) <= SCOUTING_RANGE_SQR) {
+            return true;
+        }
+        for (AbstractRecruitEntity scout : scouts) {
+            if (scout.distanceToSqr(siege) <= SCOUTING_RANGE_SQR) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static MapIcon iconFor(AbstractSiegeEntity siege) {
@@ -108,18 +138,17 @@ final class RtsMapObjects {
 
     private static MapObjectSnapshot describe(ServerPlayer player, AbstractSiegeEntity siege) {
         UUID ownerId = RecruitsCompat.commanderOf(siege);
-        boolean ours = ownerId != null
-                && SiegeAccess.relationOf(player.getUUID(), siege) != SiegeRelation.HOSTILE;
+        boolean ours = ours(player, siege);
         LivingEntity crew = siege.getControllingPassenger();
 
         List<Component> lines = new ArrayList<>(4);
         lines.add(siege.getType().getDescription());
-        lines.add(crewLine(crew));
         if (ours) {
+            lines.add(crewLine(crew));
             Component carried = carriedLine(siege);
             if (carried != null) lines.add(carried);
+            lines.add(stateLine(siege));
         }
-        if (ours) lines.add(stateLine(siege));
 
         return new MapObjectSnapshot(
                 siege.getUUID(),
