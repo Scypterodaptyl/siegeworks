@@ -102,13 +102,17 @@ public final class SiegeworksRecruitController implements ISiegeController {
 
         Vec3 destination = getMovementTarget();
         if (destination != null && followsMoveOrder()) {
-            if (hasFartherToGo(destination) && !stalledOn(destination)) {
+            boolean fartherToGo = hasFartherToGo(destination);
+            if (fartherToGo && !stalledOn(destination)) {
+                trace("driving to an order", "%.1f blocks left", distanceTo(destination));
                 moveToward(destination);
                 return;
             }
             if (advanceMarch(destination)) {
                 return;
             }
+            trace(fartherToGo ? "dropped a move order it could not follow" : "arrived", "%.1f blocks left",
+                    distanceTo(destination));
             finishMoveOrder();
             destination = getMovementTarget();
         } else {
@@ -119,7 +123,22 @@ public final class SiegeworksRecruitController implements ISiegeController {
             return;
         }
 
+        if (destination == null) {
+            trace("standing", "no place to be");
+        } else {
+            trace("returning to its post", "%.1f blocks away", distanceTo(destination));
+        }
         moveToward(destination);
+    }
+
+    private double distanceTo(Vec3 destination) {
+        return Math.sqrt(horizontalDistanceSqr(siege.position(), destination));
+    }
+
+    private void trace(String decision, String details, Object... args) {
+        if (RecruitsDebug.enabled()) {
+            RecruitsDebug.engine(engineer, decision, args.length == 0 ? details : String.format(details, args));
+        }
     }
 
     /** An order to go somewhere outranks fighting; following or holding a position does not. */
@@ -159,6 +178,7 @@ public final class SiegeworksRecruitController implements ISiegeController {
     @Override
     public boolean updateAttacking() {
         if (!engineer.getShouldRanged()) {
+            trace("holding fire", "not ordered to attack");
             siege.cancelPrimaryAction(engineer);
             if (siege instanceof SiegeArtilleryControl artillery) {
                 levelAim(artillery);
@@ -179,6 +199,12 @@ public final class SiegeworksRecruitController implements ISiegeController {
         updateTarget();
         Vec3 aimTarget = resolveArtilleryAimTarget(artillery, targetPos);
         if (aimTarget == null) {
+            if (targetPos == null) {
+                trace("no target", "nothing to shoot at");
+            } else {
+                trace("target out of reach", "target %.1f blocks away at %s",
+                        distanceTo(targetPos), BlockPos.containing(targetPos));
+            }
             siege.cancelPrimaryAction(engineer);
             levelAim(artillery);
             return false;
@@ -201,18 +227,25 @@ public final class SiegeworksRecruitController implements ISiegeController {
 
         Container actionInventory = getActionInventory();
         if (!artillery.isReadyToFire()) {
-            siege.advancePrimaryAction(engineer, actionInventory);
+            SiegeActionResult loading = siege.advancePrimaryAction(engineer, actionInventory);
+            trace("loading", "%s, state %s, yaw off %.1f, pitch off %.1f, turning the whole engine %s",
+                    loading, siege.getOperationState(), yawError, pitchError, !siege.usesIndependentAim());
             return true;
         }
 
         boolean pitchReachable = aim.pitch() >= siege.getMinAimPitch() - AIM_LIMIT_EPSILON
                 && aim.pitch() <= siege.getMaxAimPitch() + AIM_LIMIT_EPSILON;
-        if (!yawAligned || pitchError > FIRE_PITCH_TOLERANCE || !pitchReachable
-                || !artillery.canReachAutomatedTarget(aimTarget)) {
+        boolean reachable = artillery.canReachAutomatedTarget(aimTarget);
+        if (!yawAligned || pitchError > FIRE_PITCH_TOLERANCE || !pitchReachable || !reachable) {
+            trace("aiming", "yaw off %.1f (want %.1f, at %.1f), pitch off %.1f (want %.1f), pitch in range %s,"
+                            + " reachable %s, %.1f blocks to target",
+                    yawError, aim.yaw(), currentYaw, pitchError, requestedPitch, pitchReachable, reachable,
+                    distanceTo(aimTarget));
             return true;
         }
 
         SiegeActionResult result = siege.advancePrimaryAction(engineer, actionInventory);
+        trace("firing", "%s at %.1f blocks", result, distanceTo(aimTarget));
         if (result == SiegeActionResult.FIRED) {
             committedArtilleryAimTarget = aimTarget;
             advanceArtilleryAimAfterCooldown = true;
