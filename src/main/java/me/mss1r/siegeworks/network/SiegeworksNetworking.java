@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.network;
 
 import dev.architectury.networking.NetworkManager;
+import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
 import dev.architectury.utils.EnvExecutor;
 import io.netty.buffer.Unpooled;
@@ -23,6 +24,7 @@ public final class SiegeworksNetworking {
     private static final ResourceLocation MANTLET_ACTION = id("mantlet_action");
     private static final ResourceLocation MAINTENANCE_ACTION = id("maintenance_action");
     private static final ResourceLocation OPEN_MAINTENANCE = id("open_maintenance");
+    private static final ResourceLocation PROJECTILE_PROFILES = id("projectile_profiles");
 
     private SiegeworksNetworking() {
     }
@@ -54,6 +56,13 @@ public final class SiegeworksNetworking {
                 MantletActionC2SPayload.STREAM_CODEC, MantletActionC2SPayload::handle);
         NetworkManager.registerReceiver(NetworkManager.c2s(), MaintenanceActionC2SPayload.TYPE,
                 MaintenanceActionC2SPayload.STREAM_CODEC, MaintenanceActionC2SPayload::handle);
+        // A client learns client-bound types from its receivers; a dedicated server has to be told.
+        if (Platform.getEnvironment() == Env.SERVER) {
+            NetworkManager.registerS2CPayloadType(OpenMaintenanceS2CPayload.TYPE,
+                    OpenMaintenanceS2CPayload.STREAM_CODEC);
+            NetworkManager.registerS2CPayloadType(ProjectileProfilesS2CPayload.TYPE,
+                    ProjectileProfilesS2CPayload.STREAM_CODEC);
+        }
         //?}
         EnvExecutor.runInEnv(Env.CLIENT, () -> SiegeworksNetworking::registerClientReceivers);
     }
@@ -63,9 +72,13 @@ public final class SiegeworksNetworking {
         /*
         register(NetworkManager.s2c(), OPEN_MAINTENANCE,
                 OpenMaintenanceS2CPayload::decode, OpenMaintenanceS2CPayload::handle);
+        register(NetworkManager.s2c(), PROJECTILE_PROFILES,
+                ProjectileProfilesS2CPayload::decode, ProjectileProfilesS2CPayload::handle);
         *///?} else {
         NetworkManager.registerReceiver(NetworkManager.s2c(), OpenMaintenanceS2CPayload.TYPE,
                 OpenMaintenanceS2CPayload.STREAM_CODEC, OpenMaintenanceS2CPayload::handle);
+        NetworkManager.registerReceiver(NetworkManager.s2c(), ProjectileProfilesS2CPayload.TYPE,
+                ProjectileProfilesS2CPayload.STREAM_CODEC, ProjectileProfilesS2CPayload::handle);
         //?}
     }
 
@@ -119,6 +132,9 @@ public final class SiegeworksNetworking {
         if (packet instanceof OpenMaintenanceS2CPayload value) {
             OpenMaintenanceS2CPayload.encode(value, buffer);
             id = OPEN_MAINTENANCE;
+        } else if (packet instanceof ProjectileProfilesS2CPayload value) {
+            ProjectileProfilesS2CPayload.encode(value, buffer);
+            id = PROJECTILE_PROFILES;
         } else {
             throw new IllegalArgumentException("Unsupported server packet: " + packet.getClass().getName());
         }

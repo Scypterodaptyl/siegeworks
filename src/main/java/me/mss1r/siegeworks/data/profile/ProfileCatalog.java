@@ -4,14 +4,18 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class ProfileCatalog<T> {
     private final T fallback;
     private final AtomicReference<Map<ResourceLocation, T>> snapshot =
             new AtomicReference<>(Map.of());
+    private final List<Runnable> publishListeners = new CopyOnWriteArrayList<>();
+    private volatile boolean published;
 
     public ProfileCatalog(T fallback) {
         this.fallback = Objects.requireNonNull(fallback, "fallback");
@@ -33,7 +37,27 @@ public final class ProfileCatalog<T> {
         return snapshot.get();
     }
 
+    public boolean hasSnapshot() {
+        return published;
+    }
+
+    public void reset() {
+        snapshot.set(Map.of());
+        published = false;
+    }
+
+    public void onPublish(Runnable listener) {
+        publishListeners.add(listener);
+    }
+
     void publish(Map<ResourceLocation, T> profiles) {
+        snapshot.set(Map.copyOf(profiles));
+        published = true;
+        publishListeners.forEach(Runnable::run);
+    }
+
+    /** Takes the server's profiles on a client. Publish listeners are left out, since they serve the server. */
+    public void acceptFromServer(Map<ResourceLocation, T> profiles) {
         snapshot.set(Map.copyOf(profiles));
     }
 }
