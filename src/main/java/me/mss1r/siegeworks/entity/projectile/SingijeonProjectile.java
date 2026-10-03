@@ -1,8 +1,12 @@
 package me.mss1r.siegeworks.entity.projectile;
 
-import me.mss1r.siegeworks.gameplay.ballistics.SiegeBlockBreaker;
+import me.mss1r.siegeworks.api.SiegeBallistics;
+import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
+import me.mss1r.siegeworks.data.profile.ProjectileVariants;
+import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
+import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileBlastResolver;
-import me.mss1r.siegeworks.gameplay.ballistics.ProjectileBlockImpact;
+import me.mss1r.siegeworks.gameplay.ballistics.ProjectileImpacts;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectilePhysics;
 import me.mss1r.siegeworks.entity.base.SiegeProjectile;
 import me.mss1r.siegeworks.particle.SiegeParticleEffects;
@@ -22,7 +26,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -30,9 +33,8 @@ import net.minecraft.world.phys.Vec3;
 public class SingijeonProjectile extends SiegeProjectile {
     private static final int EMBEDDED_LIFETIME_TICKS = 20 * 90;
     private static final int MAX_FLIGHT_LIFETIME_TICKS = 20 * 12;
-    private static final int MOTOR_BURN_TICKS = 20;
-    private static final double INITIAL_SPEED_FACTOR = 0.58D;
-    private static final double MOTOR_THRUST_FACTOR = 0.037D;
+    /** How far, in blocks, the motor drives a rocket along its rack before it flies free. */
+    private static final double RACK_LENGTH = 1.0D;
     private static final String TAG_EXPLOSIVE = "Explosive";
     private static final String TAG_EMBEDDED_AGE = "EmbeddedAge";
     private static final String TAG_EMBEDDED_BLOCK = "EmbeddedBlock";
@@ -87,15 +89,48 @@ public class SingijeonProjectile extends SiegeProjectile {
 
     public void setExplosive(boolean explosive) {
         entityData.set(EXPLOSIVE, explosive);
+        if (explosive) {
+            setPhysicsProfile(ProjectileVariants.EXPLOSIVE_SINGIJEON);
+        }
     }
 
-    public void launchWithMotor(Vec3 direction, double cruiseSpeed) {
+    /** The profile a plain or an explosive rocket flies by. */
+    public static ProjectilePhysicsProfile physics(boolean explosive) {
+        return explosive
+                ? SiegeProfileCatalogs.PROJECTILES.get(ProjectileVariants.EXPLOSIVE_SINGIJEON)
+                : SiegeProfileCatalogs.PROJECTILES.forEntity(SiegeworksEntities.SINGIJEON_PROJECTILE.get());
+    }
+
+    /** How a rocket launched by {@link #launchWithMotor} flies once off its rack, for aiming. */
+    public static SiegeBallistics.Flight flight(ProjectilePhysicsProfile physics) {
+        double diameter = physics.diameterOf(SiegeworksEntities.SINGIJEON_PROJECTILE.get());
+        return new SiegeBallistics.Flight(SiegeBallistics.GRAVITY, physics.airDrag(diameter),
+                motorAcceleration(physics), motorBurnTicks(physics));
+    }
+
+    /** How fast, in blocks per tick, a rocket leaves its rack: its motor has driven it the rack's length. */
+    public static double launchSpeed(ProjectilePhysicsProfile physics) {
+        return Math.sqrt(2.0D * motorAcceleration(physics) * RACK_LENGTH);
+    }
+
+    /** What the motor adds to its speed each tick, in blocks per tick: thrust over mass. */
+    private static double motorAcceleration(ProjectilePhysicsProfile physics) {
+        return physics.motor().map(motor -> motor.thrust() / physics.mass() / 400.0D).orElse(0.0D);
+    }
+
+    private static int motorBurnTicks(ProjectilePhysicsProfile physics) {
+        return physics.motor().map(motor -> (int) Math.round(motor.burnTime() * 20.0D)).orElse(0);
+    }
+
+    /** Fires it off its rack along {@code direction}, its motor pushing {@code thrustScale} as hard as usual. */
+    public void launchWithMotor(Vec3 direction, double thrustScale) {
+        ProjectilePhysicsProfile physics = getPhysicsProfile();
         Vec3 normalizedDirection = direction.normalize();
         motorDirection = normalizedDirection;
-        motorTicks = MOTOR_BURN_TICKS;
-        motorThrust = Math.max(0.0D, cruiseSpeed) * MOTOR_THRUST_FACTOR;
-        entityData.set(MOTOR_BURNING, true);
-        setDeltaMovement(normalizedDirection.scale(cruiseSpeed * INITIAL_SPEED_FACTOR));
+        motorTicks = motorBurnTicks(physics);
+        motorThrust = Math.max(0.0D, thrustScale) * motorAcceleration(physics);
+        entityData.set(MOTOR_BURNING, motorTicks > 0);
+        setDeltaMovement(normalizedDirection.scale(Math.sqrt(2.0D * motorThrust * RACK_LENGTH)));
         alignToMovement(normalizedDirection);
     }
 
@@ -117,7 +152,9 @@ public class SingijeonProjectile extends SiegeProjectile {
         }
 
         if (!level().isClientSide() && motorTicks > 0) {
-            setDeltaMovement(getDeltaMovement().add(motorDirection.scale(motorThrust)));
+            Vec3 movement = getDeltaMovement();
+            Vec3 heading = movement.lengthSqr() > 1.0E-7D ? movement.normalize() : motorDirection;
+            setDeltaMovement(movement.add(heading.scale(motorThrust)));
             motorTicks--;
             if (motorTicks == 0) {
                 entityData.set(MOTOR_BURNING, false);
@@ -173,7 +210,7 @@ public class SingijeonProjectile extends SiegeProjectile {
             if (directDamageApplied) {
                 applyBlastEffects(directTarget, hit.getLocation());
             }
-            explode(hit.getLocation(), null, directDamageApplied ? directTarget : null);
+            explode(hit.getLocation(), directDamageApplied ? directTarget : null);
         } else {
             playNormalImpact(hit.getLocation());
             discard();
@@ -182,14 +219,18 @@ public class SingijeonProjectile extends SiegeProjectile {
 
     @Override
     protected void onHitBlock(BlockHitResult hit) {
-        if (level().isClientSide()) {
+        if (!(level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        ProjectileImpacts.Drive drive = driveInto(serverLevel, hit);
+        if (drive.passedThrough()) {
             return;
         }
         if (isExplosive()) {
-            explode(hit.getLocation(), hit.getBlockPos().relative(hit.getDirection()), null);
+            explode(drive.position(), null);
         } else {
-            playNormalImpact(hit.getLocation());
-            embedInBlock(hit);
+            playNormalImpact(drive.position());
+            embedInBlock(new BlockHitResult(drive.position(), hit.getDirection(), drive.block(), false));
         }
     }
 
@@ -273,9 +314,9 @@ public class SingijeonProjectile extends SiegeProjectile {
                 3, 0.08D, 0.08D, 0.08D, 0.02D);
     }
 
-    private void explode(Vec3 center, BlockPos fireOrigin, LivingEntity excludedTarget) {
+    private void explode(Vec3 center, LivingEntity excludedTarget) {
         if (level() instanceof ServerLevel serverLevel) {
-            var physics = getPhysicsProfile();
+            double speed = getDeltaMovement().length();
             float explosionPitch = 0.92F + random.nextFloat() * 0.2F;
             float fireworkPitch = 0.78F + random.nextFloat() * 0.28F;
             serverLevel.playSound(null, center.x, center.y, center.z,
@@ -291,13 +332,9 @@ public class SingijeonProjectile extends SiegeProjectile {
                         0.55F, 0.9F + random.nextFloat() * 0.25F);
             }
             SiegeParticleEffects.rocketExplosion(serverLevel, center);
-            ProjectileBlockImpact.damageBlocksInSphere(serverLevel, center, 1.35D, 0.5F,
-                    SiegeBlockBreaker.responsiblePlayer(getOwner()));
-            ProjectileBlastResolver.applyImpactShockDamageAndCollect(serverLevel, center, this, getOwner(),
-                            physics, excludedTarget, physics.shockRadius(),
-                            (float) Math.max(5.0D, getBaseDamage() * physics.shockDamageMultiplier()))
+            arrive(serverLevel, center, speed);
+            ProjectileBlastResolver.applyShock(serverLevel, center, this, getPhysicsProfile(), excludedTarget, speed)
                     .forEach(target -> applyBlastEffects(target, center));
-            igniteImpactArea(serverLevel, fireOrigin != null ? fireOrigin : BlockPos.containing(center));
         }
         discard();
     }
@@ -314,28 +351,6 @@ public class SingijeonProjectile extends SiegeProjectile {
             horizontal = horizontal.normalize().scale(0.38D);
             target.push(horizontal.x, 0.16D, horizontal.z);
             target.hurtMarked = true;
-        }
-    }
-
-    private void igniteImpactArea(ServerLevel serverLevel, BlockPos fireOrigin) {
-        if (fireOrigin == null) {
-            return;
-        }
-        tryPlaceFire(serverLevel, fireOrigin);
-        for (int attempt = 0; attempt < 5; attempt++) {
-            BlockPos candidate = fireOrigin.offset(
-                    random.nextInt(5) - 2,
-                    random.nextInt(3) - 1,
-                    random.nextInt(5) - 2);
-            if (random.nextFloat() < 0.55F) {
-                tryPlaceFire(serverLevel, candidate);
-            }
-        }
-    }
-
-    private static void tryPlaceFire(ServerLevel serverLevel, BlockPos pos) {
-        if (serverLevel.isEmptyBlock(pos) && Blocks.FIRE.defaultBlockState().canSurvive(serverLevel, pos)) {
-            serverLevel.setBlockAndUpdate(pos, Blocks.FIRE.defaultBlockState());
         }
     }
 

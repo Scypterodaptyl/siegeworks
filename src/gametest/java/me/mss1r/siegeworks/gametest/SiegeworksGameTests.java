@@ -17,6 +17,7 @@ import me.mss1r.siegeworks.api.MountedSiegeItemControl;
 import me.mss1r.siegeworks.api.SiegeOperationState;
 import me.mss1r.siegeworks.api.SiegeOperatorRegistry;
 import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
+import me.mss1r.siegeworks.data.profile.ProjectileVariants;
 import me.mss1r.siegeworks.data.profile.SiegeEngineProfile;
 import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
@@ -130,7 +131,7 @@ public final class SiegeworksGameTests {
     public static void gameplayProfilesAreLoadedAsCompleteCatalogs(GameTestHelper helper) {
         helper.assertTrue(SiegeProfileCatalogs.ENGINES.snapshot().size() == 12,
                 "Expected the complete siege-engine profile catalog");
-        helper.assertTrue(SiegeProfileCatalogs.PROJECTILES.snapshot().size() == 8,
+        helper.assertTrue(SiegeProfileCatalogs.PROJECTILES.snapshot().size() == 13,
                 "Expected the complete projectile-physics profile catalog");
 
         SiegeEngineProfile culverin = SiegeProfileCatalogs.ENGINES.forEntity(
@@ -142,8 +143,11 @@ public final class SiegeworksGameTests {
 
         ProjectilePhysicsProfile cannonBall = SiegeProfileCatalogs.PROJECTILES.forEntity(
                 SiegeworksEntities.CANNON_BALL.get());
-        helper.assertTrue(Math.abs(cannonBall.mass() - 52.0D) < 1.0E-6D,
+        helper.assertTrue(Math.abs(cannonBall.mass() - 8.0D) < 1.0E-6D,
                 "Cannon ball did not receive its data-pack physics profile");
+        helper.assertTrue(SiegeProfileCatalogs.PROJECTILES.get(ProjectileVariants.EXPLOSIVE_SINGIJEON)
+                        .blast().energy() > 0.0D,
+                "The explosive singijeon did not receive its own profile");
         helper.succeed();
     }
 
@@ -564,30 +568,24 @@ public final class SiegeworksGameTests {
         ServerLevel level = helper.getLevel();
         MonsMegEntity monsMeg = SiegeworksEntities.MONS_MEG_ENTITY.get().create(level);
         Horse first = EntityType.HORSE.create(level);
-        Horse second = EntityType.HORSE.create(level);
         Horse extra = EntityType.HORSE.create(level);
-        helper.assertTrue(monsMeg != null && first != null && second != null && extra != null,
+        helper.assertTrue(monsMeg != null && first != null && extra != null,
                 "Failed to create Mons Meg towing test entities");
 
         BlockPos origin = helper.absolutePos(BlockPos.ZERO);
         monsMeg.setPos(origin.getX() + 8.0D, origin.getY() + 4.0D, origin.getZ() + 8.0D);
         helper.assertTrue(first.startRiding(monsMeg, true),
                 "Mons Meg rejected its first draft mount");
-        double oneMountSpeed = monsMeg.getVelocity(first);
-        float oneMountTurn = monsMeg.getSteeringSpeedDegrees(first);
-        helper.assertTrue(monsMeg.getPassengerOffset(first).x > 0.0D,
-                "Mons Meg assigned its first mount to the wrong side");
-
-        helper.assertTrue(second.startRiding(monsMeg, true),
-                "Mons Meg rejected its second draft mount");
-        helper.assertTrue(monsMeg.getPassengerOffset(second).x < 0.0D,
-                "Mons Meg assigned its second mount to the wrong side");
-        helper.assertTrue(Math.abs(monsMeg.getVelocity(first) - oneMountSpeed * 2.0D) < 1.0E-8D,
-                "Mons Meg's second mount did not double the available draft speed");
-        helper.assertTrue(Math.abs(monsMeg.getSteeringSpeedDegrees(first) - oneMountTurn * 2.0F) < 1.0E-6F,
-                "Mons Meg's second mount did not double the available steering power");
+        Vec3 offset = monsMeg.getPassengerOffset(first);
+        helper.assertTrue(Math.abs(offset.x) < 1.0E-8D,
+                "Mons Meg's draft mount is not centered");
+        helper.assertTrue(Math.abs(offset.z + 4.15D) < 1.0E-8D,
+                "Mons Meg's draft mount lost its towing distance");
+        helper.assertTrue(monsMeg.getVelocity(first) > 0.0D
+                        && monsMeg.getSteeringSpeedDegrees(first) > 0.0F,
+                "Mons Meg's draft mount provides no movement or steering");
         helper.assertTrue(!monsMeg.canAddPassenger(extra),
-                "Mons Meg accepted more than two draft mounts");
+                "Mons Meg accepted a second draft mount");
         Vec3 collisionOrigin = monsMeg.collisionTransform().toWorld(Vec3.ZERO);
         helper.assertTrue(collisionOrigin.distanceToSqr(monsMeg.position()) < 1.0E-8D,
                 "Mons Meg towing shifted its model collision away from the entity origin");
@@ -869,7 +867,7 @@ public final class SiegeworksGameTests {
                 "Mangonel rejected stone grapeshot");
         helper.assertTrue(trebuchet.handleSiegeInteraction(operator, InteractionHand.MAIN_HAND, level).consumesAction(),
                 "Trebuchet rejected stone grapeshot");
-        helper.assertTrue(SiegeAmmo.stoneBlockState(SiegeAmmo.AMMO_GRAPESHOT)
+        helper.assertTrue(SiegeAmmo.projectileBlockState(SiegeAmmo.AMMO_GRAPESHOT)
                         .is(SiegeworksBlocks.GRAPESHOT.get()),
                 "Loaded grapeshot does not use its centred block model");
         helper.succeed();
@@ -889,8 +887,9 @@ public final class SiegeworksGameTests {
         helper.assertTrue(pellets.size() == 8, "Scattershot volley did not create eight pellets");
         helper.assertTrue(pellets.stream().allMatch(ScattershotProjectile::isStonePellet),
                 "Stone grapeshot created an iron-textured pellet");
-        helper.assertTrue(pellets.stream().allMatch(CannonProjectile::shouldBreakBlocks),
-                "Scattershot pellets cannot apply their reduced structural damage");
+        ProjectilePhysicsProfile stonePellet = SiegeProfileCatalogs.PROJECTILES.get(ProjectileVariants.STONE_SCATTERSHOT);
+        helper.assertTrue(pellets.stream().allMatch(pellet -> pellet.getPhysicsProfile() == stonePellet),
+                "Stone grapeshot pellets did not strike by the stone pellet profile");
         int splitPellets = ScattershotVolley.rollPelletCount(level.random, 16, 2, 3);
         helper.assertTrue(splitPellets >= 32 && splitPellets <= 48,
                 "Sixteen iron nuggets produced a pellet count outside the configured 32-48 range");

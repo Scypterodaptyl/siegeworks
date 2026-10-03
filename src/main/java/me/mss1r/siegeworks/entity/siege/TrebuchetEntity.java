@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks.entity.siege;
 
+import me.mss1r.siegeworks.data.profile.ProjectileVariants;
 import me.mss1r.siegeworks.api.SiegeActionResult;
 import me.mss1r.siegeworks.api.SiegeAmmunitionControl;
 import me.mss1r.siegeworks.api.SiegeAmmunitionMode;
@@ -19,7 +20,6 @@ import me.mss1r.siegeworks.item.SiegeAmmo;
 import me.mss1r.siegeworks.gameplay.loading.AutomatedLoadingSession;
 import me.mss1r.siegeworks.gameplay.loading.LoadingRequirement;
 import me.mss1r.siegeworks.gameplay.audio.SiegeSoundProfile;
-import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
 import me.mss1r.siegeworks.registry.SiegeworksItems;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -88,7 +88,6 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
     private static final double LOADED_ARM_ANGLE = -22.5D;
     private static final double LOADED_COUNTERWEIGHT_ANGLE = 22.5D;
     private static final double LAUNCH_SLOPE = 1.0D;
-    private static final double PROJECTILE_GRAVITY = 0.05D;
     private static final float OPERATOR_VIEW_LIMIT = 45.0F;
     private static final Vec3 OPERATOR_OFFSET = new Vec3(36.0D / 16.0D, 0.0D, 67.0D / 16.0D);
     private static final Vec3 PROJECTILE_RELEASE_OFFSET = new Vec3(0.0D, 25.65D, 10.83D);
@@ -386,7 +385,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
     private void fireTrebuchet(ServerLevel serverLevel) {
         Vec3 releasePosition = position().add(rotateModelOffset(PROJECTILE_RELEASE_OFFSET));
 
-        double blocksPerTick = getProjectileSpeed() / 20.0;
+        double blocksPerTick = getLaunchSpeed();
         float accuracyDegrees = getAccuracyMultiplier();
         float yawOffset = (random.nextFloat() - 0.5f) * 4 * accuracyDegrees;
         float adjustedYaw = getTrackedYaw() + yawOffset;
@@ -414,10 +413,9 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
 
         String ammo = getAmmoLoaded();
         if (SiegeAmmo.isStoneAmmoKey(ammo)) {
-            projectile.setImpactMode(TrebuchetProjectile.ImpactMode.BREAK_BLOCKS);
             projectile.setTextureName(ammo);
         } else if (SiegeAmmo.isFireAmmoKey(ammo)) {
-            projectile.setImpactMode(TrebuchetProjectile.ImpactMode.SPREAD_FIRE);
+            projectile.setPhysicsProfile(ProjectileVariants.TREBUCHET_FIRE_PROJECTILE);
             projectile.setTextureName(SiegeAmmo.AMMO_FIRE);
         }
 
@@ -585,8 +583,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
 
     private double getRequiredShotPower(Vec3 target) {
         return SiegeBallistics.calculateFixedArcPower(getAutomatedAimOrigin(), target,
-                getProjectileSpeed() / 20.0D, LAUNCH_SLOPE, PROJECTILE_GRAVITY,
-                SiegeProfileCatalogs.PROJECTILES.forEntity(SiegeworksEntities.TREBUCHET_PROJECTILE.get()).drag(),
+                getLaunchSpeed(), LAUNCH_SLOPE, ballisticFlight(SiegeworksEntities.TREBUCHET_PROJECTILE.get()),
                 getMinShotPower(), getMaxShotPower());
     }
 

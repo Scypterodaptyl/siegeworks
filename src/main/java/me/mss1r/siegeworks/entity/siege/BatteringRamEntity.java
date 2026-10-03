@@ -391,8 +391,8 @@ public class BatteringRamEntity extends AbstractSiegeEntity implements GeoEntity
             entity.hurtMarked = true;
         });
 
-        Explosion probe = SiegeBlockBreaker.damageProbe(
-                serverLevel, impactBox.getCenter(), SiegeBlockBreaker.responsiblePlayer(getOperator()));
+        Player breaker = SiegeBlockBreaker.responsiblePlayer(this);
+        Explosion probe = SiegeBlockBreaker.damageProbe(serverLevel, impactBox.getCenter(), breaker);
         int minX = (int) Math.floor(impactBox.minX);
         int minY = (int) Math.floor(impactBox.minY);
         int minZ = (int) Math.floor(impactBox.minZ);
@@ -406,10 +406,12 @@ public class BatteringRamEntity extends AbstractSiegeEntity implements GeoEntity
                 continue;
             }
 
+            if (!SiegeBlockBreaker.mayDamage(serverLevel, pos, state, breaker)) {
+                continue;
+            }
             if (StructuralDamageSystem.applyImpact(serverLevel, pos, baseDamage / 40.0F, hardness)
                     == StructuralDamageSystem.ImpactResult.BREAK_BLOCK
-                    && !SiegeBlockBreaker.breakBlock(
-                            serverLevel, pos, SiegeBlockBreaker.responsiblePlayer(getOperator()))) {
+                    && !SiegeBlockBreaker.breakBlock(serverLevel, pos, breaker)) {
                 break;
             }
         }

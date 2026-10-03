@@ -168,13 +168,13 @@ public class ArcballistaEntity extends AbstractBoltThrowerEntity {
     }
 
     @Override
-    protected ArcballistaBoltProjectile createBolt(ServerLevel serverLevel) {
-        return new ArcballistaBoltProjectile(SiegeworksEntities.ARCBALLISTA_BOLT_PROJECTILE.get(), this, serverLevel);
+    protected EntityType<ArcballistaBoltProjectile> getBoltType() {
+        return SiegeworksEntities.ARCBALLISTA_BOLT_PROJECTILE.get();
     }
 
     @Override
-    protected double getAutomatedAimGravity() {
-        return 0.026D;
+    protected ArcballistaBoltProjectile createBolt(ServerLevel serverLevel) {
+        return new ArcballistaBoltProjectile(getBoltType(), this, serverLevel);
     }
 
     @Override

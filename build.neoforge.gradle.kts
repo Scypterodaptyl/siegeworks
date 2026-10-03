@@ -172,12 +172,6 @@ tasks.named<ProcessResources>("processResources") {
             }
         }
     }
-    filesMatching("data/siegeworks/tags/blocks/arcballista_bolt_penetrable.json") {
-        filter { line ->
-            line.replace("#forge:glass_panes", "#c:glass_panes")
-                .replace("#forge:glass", "#c:glass_blocks")
-        }
-    }
     exclude("META-INF/mods.toml")
     includeEmptyDirs = false
     eachFile {

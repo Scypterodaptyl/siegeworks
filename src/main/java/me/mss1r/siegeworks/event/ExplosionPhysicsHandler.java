@@ -2,6 +2,7 @@ package me.mss1r.siegeworks.event;
 
 import dev.architectury.event.events.common.ExplosionEvent;
 import me.mss1r.siegeworks.gameplay.ballistics.ExplosionPhysics;
+import me.mss1r.siegeworks.gameplay.ballistics.SiegeBlockBreaker;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -37,6 +38,10 @@ public final class ExplosionPhysicsHandler {
         for (BlockPos pos : affectedBlocks) {
             radius = Math.max(radius, (float) Vec3.atCenterOf(pos).distanceTo(center));
         }
-        ExplosionPhysics.scatterAffectedBlocks(serverLevel, center, radius, affectedBlocks);
+        var breaker = SiegeBlockBreaker.responsiblePlayer(explosion.getDirectSourceEntity());
+        if (breaker == null) {
+            breaker = SiegeBlockBreaker.responsiblePlayer(explosion.getIndirectSourceEntity());
+        }
+        ExplosionPhysics.scatterAffectedBlocks(serverLevel, center, radius, affectedBlocks, breaker);
     }
 }

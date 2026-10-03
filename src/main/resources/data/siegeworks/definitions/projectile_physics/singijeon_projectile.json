@@ -1,15 +1,9 @@
 {
-  "mass": 1.2,
-  "penetration": 0.08,
-  "drag": 0.0015,
-  "impactFuse": false,
-  "blockCostMultiplier": 1.0,
-  "blockDamageMultiplier": 0.0,
-  "energyLossMultiplier": 1.0,
-  "armorPiercing": 0.35,
-  "entityDamageMultiplier": 1.1,
-  "shockRadius": 3.2,
-  "shockDamageMultiplier": 0.78,
-  "baseExplosionPower": 0.0,
-  "speedExplosionScale": 0.0
+  "formatVersion": 2,
+  "mass": 0.1,
+  "dragCoefficient": 1.5,
+  "diameter": 0.02,
+  "hardness": 1.0,
+  "motor": { "thrust": 4.0, "burnTime": 1.0 },
+  "entity": { "damage": 1.1, "armorPiercing": 0.35, "structure": 0.1 }
 }

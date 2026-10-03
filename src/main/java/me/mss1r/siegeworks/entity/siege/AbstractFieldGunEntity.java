@@ -25,7 +25,6 @@ import me.mss1r.siegeworks.registry.SiegeworksItems;
 import me.mss1r.siegeworks.registry.SiegeworksSounds;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
@@ -398,7 +397,7 @@ public abstract class AbstractFieldGunEntity extends AbstractSiegeEntity
         triggerAnimation("shoot");
         Vec3 direction = projectileDirection();
         Vec3 muzzle = muzzlePosition();
-        Vec3 velocity = direction.scale(getProjectileSpeed() / 20.0D);
+        Vec3 velocity = direction.scale(getLaunchSpeed());
         if (SiegeAmmo.isIronScattershotAmmoKey(getAmmoLoaded())) {
             int loadedItems = getScattershotCount() > 0
                     ? Math.min(getScattershotCount(), getScattershotCapacity())
@@ -500,7 +499,7 @@ public abstract class AbstractFieldGunEntity extends AbstractSiegeEntity
     @Override
     public float calculateAutomatedAimPitch(Vec3 target) {
         return SiegeBallistics.calculateLowAnglePitch(getAutomatedAimOrigin(), target,
-                getProjectileSpeed() / 20.0D, 0.05D);
+                getLaunchSpeed(), ballisticFlight(SiegeworksEntities.CANNON_BALL.get()));
     }
 
     private void playReport(ServerLevel serverLevel, Vec3 position) {

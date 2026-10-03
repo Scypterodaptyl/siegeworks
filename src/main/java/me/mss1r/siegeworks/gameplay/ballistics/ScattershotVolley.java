@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks.gameplay.ballistics;
 
+import me.mss1r.siegeworks.data.profile.ProjectileVariants;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import me.mss1r.siegeworks.entity.projectile.ScattershotProjectile;
 import net.minecraft.server.level.ServerLevel;
@@ -71,6 +72,9 @@ public final class ScattershotVolley {
             pellet.setDeltaMovement(direction.scale(speed * speedScale));
             pellet.setBaseDamage(damagePerPellet);
             pellet.setStonePellet(stonePellets);
+            if (stonePellets) {
+                pellet.setPhysicsProfile(ProjectileVariants.STONE_SCATTERSHOT);
+            }
             pellet.setReportImpact(index < impactReporters);
             pellet.setOwner(shooter);
             level.addFreshEntity(pellet);

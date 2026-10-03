@@ -1,0 +1,7 @@
+{
+  "formatVersion": 2,
+  "mass": 0.15,
+  "diameter": 0.05,
+  "hardness": 6.0,
+  "entity": { "damage": 0.9, "armorPiercing": 0.08, "structure": 0.1 }
+}

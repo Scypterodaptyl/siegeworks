@@ -1,23 +1,38 @@
 package me.mss1r.siegeworks.gameplay.damage;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.MinecraftServer;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.saveddata.SavedData;
+//? if neoforge {
+import net.minecraft.core.HolderLookup;
+import net.minecraft.util.datafix.DataFixTypes;
+//?}
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.WeakHashMap;
 
+/**
+ * Cracks blows have left in blocks short of breaking them. Damage does not heal: a crack stays, saved with its
+ * dimension, until the block breaks or is replaced.
+ */
 public final class StructuralDamageSystem {
-    private static final int OVERLAY_REFRESH_TICKS = 12;
-    private static final int DAMAGE_TTL_TICKS = 20 * 35;
-    private static final Map<MinecraftServer, ServerDamageState> SERVERS = new WeakHashMap<>();
+    /** How often the cracks are shown again; a client forgets one after twenty seconds without word. */
+    private static final int OVERLAY_REFRESH_TICKS = 200;
 
     private StructuralDamageSystem() {
+    }
+
+    /** How far toward breaking {@code state} at {@code pos} already is, from zero to one. */
+    public static float progress(ServerLevel level, BlockPos pos, BlockState state) {
+        Crack crack = Cracks.of(level).cracks.get(pos);
+        return crack != null && crack.matches(state) ? crack.progress() : 0.0F;
     }
 
     public static ImpactResult applyImpact(ServerLevel level, BlockPos pos,
@@ -27,69 +42,46 @@ public final class StructuralDamageSystem {
             return ImpactResult.IGNORED;
         }
 
-        Map<BlockPos, DamageEntry> entries = stateFor(level).entries(level.dimension());
+        Cracks cracks = Cracks.of(level);
         BlockPos key = pos.immutable();
-        DamageEntry previous = entries.get(key);
+        Crack previous = cracks.cracks.get(key);
         float previousProgress = previous != null && previous.matches(blockState)
                 ? previous.progress()
                 : 0.0F;
         float progress = hardness == 0.0F
                 ? 1.0F
                 : previousProgress + impact / hardness;
+        cracks.setDirty();
 
         if (progress >= 1.0F) {
-            entries.remove(key);
+            cracks.cracks.remove(key);
             BlockCrackOverlay.clear(level, key);
             return ImpactResult.BREAK_BLOCK;
         }
 
-        entries.put(key, new DamageEntry(blockState, progress, 0, 0));
+        cracks.cracks.put(key, new Crack(blockState, progress));
         BlockCrackOverlay.show(level, key, progress);
         return ImpactResult.ACCUMULATED;
     }
 
     public static void tick(ServerLevel level) {
-        ServerDamageState serverState = SERVERS.get(level.getServer());
-        if (serverState == null) {
-            return;
-        }
-
-        Map<BlockPos, DamageEntry> entries = serverState.forDimension(level.dimension());
-        if (entries == null) {
-            return;
-        }
-
-        Iterator<Map.Entry<BlockPos, DamageEntry>> iterator = entries.entrySet().iterator();
+        Cracks cracks = Cracks.of(level);
+        boolean refresh = level.getGameTime() % OVERLAY_REFRESH_TICKS == 0L;
+        Iterator<Map.Entry<BlockPos, Crack>> iterator = cracks.cracks.entrySet().iterator();
         while (iterator.hasNext()) {
-            Map.Entry<BlockPos, DamageEntry> tracked = iterator.next();
+            Map.Entry<BlockPos, Crack> tracked = iterator.next();
             BlockPos pos = tracked.getKey();
-            DamageEntry current = tracked.getValue();
-            BlockState blockState = level.getBlockState(pos);
-
-            if (!current.matches(blockState) || current.ageTicks() >= DAMAGE_TTL_TICKS) {
-                BlockCrackOverlay.clear(level, pos);
-                iterator.remove();
+            if (!level.isLoaded(pos)) {
                 continue;
             }
-
-            DamageEntry aged = current.age();
-            if (aged.overlayRefreshTicks() >= OVERLAY_REFRESH_TICKS) {
-                BlockCrackOverlay.show(level, pos, aged.progress());
-                aged = aged.afterOverlayRefresh();
-            }
-            tracked.setValue(aged);
-        }
-
-        if (entries.isEmpty()) {
-            serverState.remove(level.dimension());
-            if (serverState.isEmpty()) {
-                SERVERS.remove(level.getServer());
+            if (!tracked.getValue().matches(level.getBlockState(pos))) {
+                BlockCrackOverlay.clear(level, pos);
+                iterator.remove();
+                cracks.setDirty();
+            } else if (refresh) {
+                BlockCrackOverlay.show(level, pos, tracked.getValue().progress());
             }
         }
-    }
-
-    private static ServerDamageState stateFor(ServerLevel level) {
-        return SERVERS.computeIfAbsent(level.getServer(), ignored -> new ServerDamageState());
     }
 
     public enum ImpactResult {
@@ -98,38 +90,67 @@ public final class StructuralDamageSystem {
         BREAK_BLOCK
     }
 
-    private record DamageEntry(BlockState blockState, float progress,
-                               int ageTicks, int overlayRefreshTicks) {
+    private record Crack(BlockState blockState, float progress) {
         boolean matches(BlockState current) {
             return !current.isAir() && blockState.equals(current);
         }
-
-        DamageEntry age() {
-            return new DamageEntry(blockState, progress, ageTicks + 1, overlayRefreshTicks + 1);
-        }
-
-        DamageEntry afterOverlayRefresh() {
-            return new DamageEntry(blockState, progress, ageTicks, 0);
-        }
     }
 
-    private static final class ServerDamageState {
-        private final Map<ResourceKey<Level>, Map<BlockPos, DamageEntry>> dimensions = new HashMap<>();
+    /** The cracks of one dimension, kept in its saved data. */
+    private static final class Cracks extends SavedData {
+        private static final String DATA_NAME = "siegeworks_cracks";
+        private static final String TAG_CRACKS = "Cracks";
+        private static final String TAG_POS = "Pos";
+        private static final String TAG_STATE = "State";
+        private static final String TAG_PROGRESS = "Progress";
 
-        Map<BlockPos, DamageEntry> entries(ResourceKey<Level> dimension) {
-            return dimensions.computeIfAbsent(dimension, ignored -> new HashMap<>());
+        private final Map<BlockPos, Crack> cracks = new HashMap<>();
+
+        static Cracks of(ServerLevel level) {
+            //? if forge {
+            /*
+            return level.getDataStorage().computeIfAbsent(Cracks::load, Cracks::new, DATA_NAME);
+            *///?} else {
+            return level.getDataStorage().computeIfAbsent(
+                    new SavedData.Factory<>(Cracks::new, Cracks::load, DataFixTypes.SAVED_DATA_COMMAND_STORAGE),
+                    DATA_NAME);
+            //?}
         }
 
-        Map<BlockPos, DamageEntry> forDimension(ResourceKey<Level> dimension) {
-            return dimensions.get(dimension);
+        //? if forge {
+        /*private static Cracks load(CompoundTag tag) {
+        *///?} else {
+        private static Cracks load(CompoundTag tag, HolderLookup.Provider registries) {
+        //?}
+            Cracks data = new Cracks();
+            for (Tag value : tag.getList(TAG_CRACKS, Tag.TAG_COMPOUND)) {
+                CompoundTag entry = (CompoundTag) value;
+                BlockState state = NbtUtils.readBlockState(BuiltInRegistries.BLOCK.asLookup(),
+                        entry.getCompound(TAG_STATE));
+                if (!state.isAir()) {
+                    data.cracks.put(BlockPos.of(entry.getLong(TAG_POS)),
+                            new Crack(state, entry.getFloat(TAG_PROGRESS)));
+                }
+            }
+            return data;
         }
 
-        void remove(ResourceKey<Level> dimension) {
-            dimensions.remove(dimension);
-        }
-
-        boolean isEmpty() {
-            return dimensions.isEmpty();
+        @Override
+        //? if forge {
+        /*public CompoundTag save(CompoundTag tag) {
+        *///?} else {
+        public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+        //?}
+            ListTag entries = new ListTag();
+            cracks.forEach((pos, crack) -> {
+                CompoundTag entry = new CompoundTag();
+                entry.putLong(TAG_POS, pos.asLong());
+                entry.put(TAG_STATE, NbtUtils.writeBlockState(crack.blockState()));
+                entry.putFloat(TAG_PROGRESS, crack.progress());
+                entries.add(entry);
+            });
+            tag.put(TAG_CRACKS, entries);
+            return tag;
         }
     }
 }

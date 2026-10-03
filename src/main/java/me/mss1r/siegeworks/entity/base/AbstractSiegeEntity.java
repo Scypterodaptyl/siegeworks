@@ -3,6 +3,7 @@ package me.mss1r.siegeworks.entity.base;
 import java.util.Set;
 import me.mss1r.siegeworks.api.SiegeEngineControl;
 import me.mss1r.siegeworks.api.SiegeAmmunitionMode;
+import me.mss1r.siegeworks.api.SiegeBallistics;
 import me.mss1r.siegeworks.api.SiegeOperationState;
 import me.mss1r.axiomata.blueprint.api.BlueprintTags;
 import me.mss1r.siegeworks.config.SiegeworksServerConfig;
@@ -34,8 +35,8 @@ import me.mss1r.siegeworks.gameplay.ownership.SiegeCaptureController;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeOperatorReference;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeOwnerActivity;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeOwnership;
+import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
 import me.mss1r.siegeworks.data.profile.ScattershotProfile;
-import me.mss1r.siegeworks.data.profile.SiegeEngineProfile;
 import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -53,6 +54,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -65,7 +68,6 @@ import me.mss1r.siegeworks.gameplay.weapon.SiegeWeaponState;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.AABB;
-import me.mss1r.siegeworks.network.SiegeworksNetworking;
 import me.mss1r.siegeworks.registry.SiegeworksSounds;
 
 import java.util.*;
@@ -1256,6 +1258,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
             return;
         }
 
+        followProfileHealth();
         deployment.tick();
         capture.tick(serverLevel);
         if (tickCount % ABANDONMENT_CHECK_INTERVAL_TICKS == 0) {
@@ -1781,11 +1784,30 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         return SiegeworksServerConfig.getLoadingRequirementTicks(getType(), stageKey);
     }
 
-    public float getProjectileSpeed() {
-        return SiegeProfileCatalogs.ENGINES.forEntity(this.getType()).projectileSpeed();
+    /** Launch speed in blocks per tick, converted from the profile's metres per second. */
+    public double getLaunchSpeed() {
+        return SiegeProfileCatalogs.ENGINES.forEntity(this.getType()).muzzleVelocity() / 20.0D;
     }
 
     public float getAccuracyMultiplier() {
         return SiegeProfileCatalogs.ENGINES.forEntity(this.getType()).accuracyMultiplier();
+    }
+
+    /** Takes the profile's health, keeping the share of it the engine had, so a half-broken one stays half. */
+    private void followProfileHealth() {
+        SiegeProfileCatalogs.ENGINES.forEntity(getType()).maxHealth().ifPresent(wanted -> {
+            AttributeInstance maxHealth = getAttribute(Attributes.MAX_HEALTH);
+            if (maxHealth == null || Math.abs(maxHealth.getBaseValue() - wanted) < 1.0E-4D) {
+                return;
+            }
+            float share = getMaxHealth() > 0.0F ? getHealth() / getMaxHealth() : 1.0F;
+            maxHealth.setBaseValue(wanted);
+            setHealth(getMaxHealth() * share);
+        });
+    }
+
+    protected static SiegeBallistics.Flight ballisticFlight(EntityType<?> projectile) {
+        ProjectilePhysicsProfile physics = SiegeProfileCatalogs.PROJECTILES.forEntity(projectile);
+        return SiegeBallistics.Flight.ballistic(physics.airDrag(physics.diameterOf(projectile)));
     }
 }

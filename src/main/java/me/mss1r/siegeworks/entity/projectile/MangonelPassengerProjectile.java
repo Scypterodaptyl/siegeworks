@@ -91,7 +91,7 @@ public final class MangonelPassengerProjectile extends SiegeProjectile {
     }
 
     @Override
-    protected ProjectilePhysicsProfile getPhysicsProfile() {
+    public ProjectilePhysicsProfile getPhysicsProfile() {
         return SiegeProfileCatalogs.PROJECTILES.forEntity(SiegeworksEntities.MANGONEL_PROJECTILE.get());
     }
 }

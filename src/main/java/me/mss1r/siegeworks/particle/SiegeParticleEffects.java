@@ -165,22 +165,6 @@ public final class SiegeParticleEffects {
                 stonePellet ? 0.09D : 0.065D, 160.0D);
     }
 
-    public static void gunpowderBurst(ServerLevel level, Vec3 center, int fragments) {
-        int visualFragments = Math.min(64, Math.max(16, fragments));
-        sendLongRange(level, ParticleTypes.FLASH, center, 1, Vec3.ZERO, 0.0D, 220.0D);
-        sendLongRange(level, ParticleTypes.EXPLOSION, center, 2,
-                new Vec3(0.12D, 0.08D, 0.12D), 0.0D, 220.0D);
-        radialDust(level, center, Math.min(36, Math.max(18, fragments / 3)), 1.35D, 220.0D);
-        sendLongRange(level, SiegeworksParticles.HEAVY_SIEGE_SMOKE.get(),
-                center.add(0.0D, 0.16D, 0.0D),
-                Math.min(42, Math.max(22, fragments / 2)),
-                new Vec3(0.48D, 0.28D, 0.48D), 0.035D, 220.0D);
-        sendLongRange(level, ParticleTypes.FLAME, center.add(0.0D, 0.08D, 0.0D),
-                Math.min(28, Math.max(12, fragments / 4)),
-                new Vec3(0.52D, 0.28D, 0.52D), 0.08D, 220.0D);
-        blockDebris(level, center, visualFragments, 0.65D, 220.0D);
-    }
-
     public static void rocketExplosion(ServerLevel level, Vec3 center) {
         sendLongRange(level, ParticleTypes.FLASH, center, 1, Vec3.ZERO, 0.0D, 150.0D);
         sendLongRange(level, ParticleTypes.EXPLOSION, center, 1,

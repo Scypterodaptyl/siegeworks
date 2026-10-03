@@ -564,6 +564,8 @@ public abstract class AbstractBoltThrowerEntity extends AbstractSiegeEntity impl
 
     protected abstract Item getBoltItem();
 
+    protected abstract EntityType<? extends AbstractBoltProjectile> getBoltType();
+
     protected abstract AbstractBoltProjectile createBolt(ServerLevel serverLevel);
 
     protected abstract String getFireHintTranslationKey();
@@ -576,7 +578,7 @@ public abstract class AbstractBoltThrowerEntity extends AbstractSiegeEntity impl
         Vec3 mouthPos = getMouthOffset();
         Vec3 direction = calculateProjectileDirection();
         projectile.setPos(mouthPos.x, mouthPos.y, mouthPos.z);
-        projectile.setDeltaMovement(direction.scale(getProjectileSpeed() / 20.0D * getShotPower()));
+        projectile.setDeltaMovement(direction.scale(getLaunchSpeed() * getShotPower()));
         projectile.alignRenderToDirection(direction);
         projectile.setBaseDamage(getBaseDamage());
         projectile.setOwner(this);
@@ -611,13 +613,9 @@ public abstract class AbstractBoltThrowerEntity extends AbstractSiegeEntity impl
     }
 
     public float calculateAutomatedAimPitch(Vec3 target) {
-        double speed = getProjectileSpeed() / 20.0D * getShotPower();
+        double speed = getLaunchSpeed() * getShotPower();
         return SiegeBallistics.calculateLowAnglePitch(getAutomatedAimOrigin(), target, speed,
-                getAutomatedAimGravity());
-    }
-
-    protected double getAutomatedAimGravity() {
-        return 0.032D;
+                ballisticFlight(getBoltType()));
     }
 
     @Override

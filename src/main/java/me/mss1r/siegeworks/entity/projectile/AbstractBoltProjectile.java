@@ -1,6 +1,6 @@
 package me.mss1r.siegeworks.entity.projectile;
 
-import me.mss1r.siegeworks.gameplay.ballistics.SiegeBlockBreaker;
+import me.mss1r.siegeworks.gameplay.ballistics.ProjectileImpacts;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectilePhysics;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileImpactEffects;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileSweep;
@@ -13,7 +13,6 @@ import me.mss1r.axiomata.collision.CollisionGroup;
 import me.mss1r.axiomata.collision.CollisionPart;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.tags.TagKey;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -28,7 +27,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
@@ -251,10 +249,6 @@ public abstract class AbstractBoltProjectile extends SiegeProjectile {
         pinning.load(tag);
     }
 
-    protected double getDefaultGravity() {
-        return 0.032D;
-    }
-
     @Override
     protected SoundEvent getImpactSound() {
         return SiegeworksSounds.BOLT_IMPACT.get();
@@ -349,12 +343,30 @@ public abstract class AbstractBoltProjectile extends SiegeProjectile {
     protected void onHitBlock(BlockHitResult blockHitResult) {
         Vec3 movement = lastFlightMovement.lengthSqr() > 1.0E-6D ? lastFlightMovement : getDeltaMovement();
         Vec3 direction = movement.lengthSqr() > 1.0E-6D ? movement.normalize() : new Vec3(0.0D, 0.0D, 1.0D);
-        if (tryKineticBlockPenetration(blockHitResult, movement, direction)) {
-            return;
+        Vec3 impact = blockHitResult.getLocation();
+        BlockPos embeddedIn = blockHitResult.getBlockPos();
+        if (level() instanceof ServerLevel serverLevel) {
+            if (getDeltaMovement().lengthSqr() < 1.0E-6D) {
+                setDeltaMovement(movement);
+            }
+            ProjectileImpacts.Drive drive = driveInto(serverLevel, blockHitResult);
+            if (!drive.block().equals(blockHitResult.getBlockPos()) || drive.passedThrough()) {
+                playPenetration(serverLevel, impact);
+            }
+            if (drive.passedThrough()) {
+                clearEmbeddedBlockPos();
+                inGround = false;
+                setNoGravity(false);
+                lastFlightMovement = getDeltaMovement();
+                alignRenderToDirection(direction);
+                return;
+            }
+            impact = drive.position();
+            embeddedIn = drive.block();
+            arrive(serverLevel, impact, drive.speed());
         }
 
-        Vec3 impact = blockHitResult.getLocation();
-        embedBolt(impact, direction, blockHitResult.getBlockPos());
+        embedBolt(impact, direction, embeddedIn);
 
         if (!(level() instanceof ServerLevel serverLevel)) {
             return;
@@ -367,32 +379,7 @@ public abstract class AbstractBoltProjectile extends SiegeProjectile {
                 8, 0.08D, 0.08D, 0.08D, 0.025D);
     }
 
-    private boolean tryKineticBlockPenetration(BlockHitResult hit, Vec3 movement, Vec3 direction) {
-        if (!(level() instanceof ServerLevel serverLevel) || movement.lengthSqr() < 1.0E-6D) {
-            return false;
-        }
-
-        ProjectilePhysicsProfile physics = getPhysicsProfile();
-        double speed = movement.length();
-        BlockPos blockPos = hit.getBlockPos();
-        BlockState state = serverLevel.getBlockState(blockPos);
-        if (!state.is(getPenetrableBlockTag())) {
-            return false;
-        }
-        double pathLength = ProjectilePhysics.blockPathLength(hit.getLocation(), direction, blockPos);
-        double thicknessMultiplier = Mth.clamp(pathLength, 0.08D, 1.75D);
-        double nextSpeed = ProjectilePhysics.remainingBlockPenetrationSpeed(
-                serverLevel, blockPos, state, physics, speed, thicknessMultiplier);
-        if (nextSpeed <= 0.0D) {
-            return false;
-        }
-
-        state.onProjectileHit(serverLevel, state, hit, this);
-        if (!serverLevel.getBlockState(blockPos).isAir()) {
-            SiegeBlockBreaker.breakBlock(serverLevel, blockPos, SiegeBlockBreaker.responsiblePlayer(getOwner()));
-        }
-
-        Vec3 impact = hit.getLocation();
+    private void playPenetration(ServerLevel serverLevel, Vec3 impact) {
         ProjectileImpactEffects.playPenetrationReport(serverLevel, impact, 1.35F, 1.25F);
         serverLevel.sendParticles(ParticleTypes.CRIT,
                 impact.x, impact.y, impact.z,
@@ -400,23 +387,7 @@ public abstract class AbstractBoltProjectile extends SiegeProjectile {
         serverLevel.sendParticles(ParticleTypes.POOF,
                 impact.x, impact.y, impact.z,
                 6, 0.08D, 0.08D, 0.08D, 0.025D);
-
-        Vec3 exit = ProjectilePhysics.blockExitPoint(hit.getLocation(), direction, blockPos)
-                .add(direction.scale(0.18D));
-        double retainedDamage = Math.max(1.0D, getBaseDamage() * (nextSpeed / speed));
-        clearEmbeddedBlockPos();
-        inGround = false;
-        setNoGravity(false);
-        setPos(exit.x, exit.y, exit.z);
-        setDeltaMovement(direction.scale(nextSpeed));
-        setBaseDamage(retainedDamage);
-        lastFlightMovement = direction.scale(nextSpeed);
-        alignRenderToDirection(direction);
-        hasImpulse = true;
-        return true;
     }
-
-    protected abstract TagKey<Block> getPenetrableBlockTag();
 
     @Override
     protected void onHitEntity(EntityHitResult entityHitResult) {
@@ -467,7 +438,7 @@ public abstract class AbstractBoltProjectile extends SiegeProjectile {
 
     private void continueAfterLethalHit(LivingEntity target, ProjectilePhysicsProfile physics,
                                         double speed, Vec3 direction) {
-        double remainingSpeed = ProjectilePhysics.remainingEntityPenetrationSpeed(physics, target, speed);
+        double remainingSpeed = ProjectilePhysics.remainingEntityPenetrationSpeed(this, target, speed);
         if (remainingSpeed <= 0.0D || hitTargetCount() >= getMaxEntityPierces()) {
             discard();
             return;

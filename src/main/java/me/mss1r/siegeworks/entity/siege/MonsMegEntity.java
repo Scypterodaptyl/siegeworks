@@ -438,7 +438,7 @@ public class MonsMegEntity extends AbstractSiegeEntity implements GeoEntity, Sie
 
         Vec3 mouthPos = getMouthOffset(firingPitch);
         Vec3 direction = calculateProjectileDirection(firingPitch);
-        Vec3 velocity = direction.scale(getProjectileSpeed() / 20.0D);
+        Vec3 velocity = direction.scale(getLaunchSpeed());
         if (SiegeAmmo.isIronScattershotAmmoKey(getAmmoLoaded())) {
             int loadedItems = getScattershotCount() > 0
                     ? Math.min(getScattershotCount(), getScattershotProfile().capacity())
@@ -599,7 +599,7 @@ public class MonsMegEntity extends AbstractSiegeEntity implements GeoEntity, Sie
     @Override
     public float calculateAutomatedAimPitch(Vec3 target) {
         return SiegeBallistics.calculateLowAnglePitch(getAutomatedAimOrigin(), target,
-                getProjectileSpeed() / 20.0D, 0.05D);
+                getLaunchSpeed(), ballisticFlight(SiegeworksEntities.GIANT_CANNON_BALL_PROJECTILE.get()));
     }
 
     private void playMonsMegReport(ServerLevel serverLevel, Vec3 soundPos) {

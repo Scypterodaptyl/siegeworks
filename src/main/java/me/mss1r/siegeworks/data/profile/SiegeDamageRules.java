@@ -30,11 +30,7 @@ public record SiegeDamageRules(Map<String, Boolean> entities,
                     "explosion", true,
                     "*", false
             ),
-            Map.of(
-                    "siegeworks:tower_crossbow_bolt_projectile", 0.45D,
-                    "siegeworks:arcballista_bolt_projectile", 0.45D,
-                    "*", 1.0D
-            )
+            Map.of("*", 1.0D)
     );
 
     public static final Codec<SiegeDamageRules> CODEC = RecordCodecBuilder.create(instance -> instance.group(

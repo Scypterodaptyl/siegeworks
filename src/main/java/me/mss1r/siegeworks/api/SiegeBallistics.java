@@ -4,33 +4,74 @@ import net.minecraft.world.phys.Vec3;
 
 /** A few aiming helpers shared by siege engines and integrations. */
 public final class SiegeBallistics {
-    private static final double VANILLA_AIR_RETENTION = 0.99D;
+    /** Earth's 9.81 m/s² in blocks per tick per tick, a block being a metre. */
+    public static final double GRAVITY = 9.81D / 400.0D;
     private static final int MAX_FLIGHT_TICKS = 600;
+    private static final double LOWEST_ELEVATION = -60.0D;
+    private static final double HIGHEST_ELEVATION = 60.0D;
+    private static final double ELEVATION_SCAN_STEP = 2.0D;
+    private static final int SEARCH_STEPS = 32;
 
     private SiegeBallistics() {
     }
 
+    /**
+     * Matches the projectile tick order: motor thrust, movement, quadratic air drag, then gravity.
+     * Velocity is in blocks/tick; gravity and thrust are in blocks/tick².
+     */
+    public record Flight(double gravity, double airDrag, double thrust, int thrustTicks) {
+        /** A shot thrown through the air under the earth's gravity. */
+        public static Flight ballistic(double airDrag) {
+            return new Flight(GRAVITY, airDrag, 0.0D, 0);
+        }
+
+        /** The velocity a shot flying at {@code velocity} has a tick later, once it has moved. */
+        public Vec3 afterMove(Vec3 velocity) {
+            double kept = Math.max(0.0D, 1.0D - airDrag * velocity.length());
+            return new Vec3(velocity.x * kept, velocity.y * kept - gravity, velocity.z * kept);
+        }
+    }
+
     /** Returns Minecraft pitch for the lower firing solution, or {@link Float#NaN} if it cannot reach. */
     public static float calculateLowAnglePitch(Vec3 origin, Vec3 target, double speed, double gravity) {
-        double dx = target.x - origin.x;
-        double dy = target.y - origin.y;
-        double dz = target.z - origin.z;
-        double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
-        if (horizontalDistance < 1.0E-4D) {
-            return (float) -Math.toDegrees(Math.atan2(dy, horizontalDistance));
-        }
+        return calculateLowAnglePitch(origin, target, speed, new Flight(gravity, 0.0D, 0.0D, 0));
+    }
 
-        double speedSquared = speed * speed;
-        double discriminant = speedSquared * speedSquared
-                - gravity * (gravity * horizontalDistance * horizontalDistance + 2.0D * dy * speedSquared);
-        if (speed <= 0.0D || discriminant < 0.0D) {
+    /** Returns Minecraft pitch for the lower firing solution, or {@link Float#NaN} if it cannot reach. */
+    public static float calculateLowAnglePitch(Vec3 origin, Vec3 target, double speed, Flight flight) {
+        double horizontalDistance = horizontalDistance(origin, target);
+        double targetHeight = target.y - origin.y;
+        if (horizontalDistance < 1.0E-4D) {
+            return (float) -Math.toDegrees(Math.atan2(targetHeight, horizontalDistance));
+        }
+        if (speed <= 0.0D) {
             return Float.NaN;
         }
-        double angle = gravity <= 0.0D
-                ? Math.atan2(dy, horizontalDistance)
-                : Math.atan((speedSquared - Math.sqrt(discriminant)) / (gravity * horizontalDistance));
 
-        return (float) -Math.toDegrees(angle);
+        double previous = LOWEST_ELEVATION;
+        double previousError = elevationHeightError(horizontalDistance, targetHeight, speed, previous, flight);
+        if (previousError >= 0.0D) {
+            return (float) -previous;
+        }
+        for (double elevation = LOWEST_ELEVATION + ELEVATION_SCAN_STEP; elevation <= HIGHEST_ELEVATION;
+             elevation += ELEVATION_SCAN_STEP) {
+            double error = elevationHeightError(horizontalDistance, targetHeight, speed, elevation, flight);
+            if (error >= 0.0D) {
+                double low = previous;
+                double high = elevation;
+                for (int i = 0; i < SEARCH_STEPS; i++) {
+                    double middle = (low + high) * 0.5D;
+                    if (elevationHeightError(horizontalDistance, targetHeight, speed, middle, flight) >= 0.0D) {
+                        high = middle;
+                    } else {
+                        low = middle;
+                    }
+                }
+                return (float) -((low + high) * 0.5D);
+            }
+            previous = elevation;
+        }
+        return Float.NaN;
     }
 
     /** Returns the power multiplier for a fixed launch slope, without drag, or NaN if unreachable. */
@@ -51,36 +92,84 @@ public final class SiegeBallistics {
         return requiredSpeedSquared <= 0.0D ? Double.NaN : Math.sqrt(requiredSpeedSquared) / baseSpeed;
     }
 
-    /** Returns a bounded power multiplier using per-tick drag, or NaN if the range has no solution. */
+    /** Returns a bounded power multiplier with air drag, or NaN if the range has no solution. */
     public static double calculateFixedArcPower(Vec3 origin, Vec3 target, double baseSpeed,
-                                                double launchSlope, double gravity, double projectileDrag,
+                                                double launchSlope, double gravity, double airDrag,
                                                 double minPower, double maxPower) {
-        if (baseSpeed <= 0.0D || gravity <= 0.0D || minPower <= 0.0D || maxPower < minPower) {
+        return calculateFixedArcPower(origin, target, baseSpeed, launchSlope,
+                new Flight(gravity, airDrag, 0.0D, 0), minPower, maxPower);
+    }
+
+    /**
+     * How far a shot leaving at {@code speed} blocks per tick and {@code elevationDegrees} above the horizon
+     * flies before it comes down {@code drop} blocks below where it left, or {@code 0} if it never does.
+     */
+    public static double range(double speed, double elevationDegrees, double drop, Flight flight) {
+        double elevation = Math.toRadians(elevationDegrees);
+        double horizontalVelocity = Math.cos(elevation) * speed;
+        double verticalVelocity = Math.sin(elevation) * speed;
+        double horizontalPosition = 0.0D;
+        double verticalPosition = 0.0D;
+        for (int tick = 0; tick < MAX_FLIGHT_TICKS; tick++) {
+            if (tick < flight.thrustTicks()) {
+                double[] pushed = thrust(horizontalVelocity, verticalVelocity, elevation, flight.thrust());
+                horizontalVelocity = pushed[0];
+                verticalVelocity = pushed[1];
+            }
+            double previousHorizontal = horizontalPosition;
+            double previousVertical = verticalPosition;
+            horizontalPosition += horizontalVelocity;
+            verticalPosition += verticalVelocity;
+            if (verticalPosition <= -drop) {
+                double segment = previousVertical - verticalPosition;
+                double progress = segment <= 1.0E-8D ? 1.0D : (previousVertical + drop) / segment;
+                return previousHorizontal + (horizontalPosition - previousHorizontal) * progress;
+            }
+            Vec3 next = flight.afterMove(new Vec3(horizontalVelocity, verticalVelocity, 0.0D));
+            horizontalVelocity = next.x;
+            verticalVelocity = next.y;
+        }
+        return 0.0D;
+    }
+
+    /** A motor's push along the way the shot is going, or along its launch line while it is still. */
+    private static double[] thrust(double horizontalVelocity, double verticalVelocity, double elevation,
+                                   double thrust) {
+        double speed = Math.sqrt(horizontalVelocity * horizontalVelocity + verticalVelocity * verticalVelocity);
+        double horizontal = speed > 1.0E-9D ? horizontalVelocity / speed : Math.cos(elevation);
+        double vertical = speed > 1.0E-9D ? verticalVelocity / speed : Math.sin(elevation);
+        return new double[]{horizontalVelocity + horizontal * thrust, verticalVelocity + vertical * thrust};
+    }
+
+    /** Returns a bounded power multiplier for a fixed launch slope, or NaN if the range has no solution. */
+    public static double calculateFixedArcPower(Vec3 origin, Vec3 target, double baseSpeed,
+                                                double launchSlope, Flight flight,
+                                                double minPower, double maxPower) {
+        if (baseSpeed <= 0.0D || flight.gravity() <= 0.0D || minPower <= 0.0D || maxPower < minPower) {
             return Double.NaN;
         }
 
-        double dx = target.x - origin.x;
-        double dz = target.z - origin.z;
-        double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+        double horizontalDistance = horizontalDistance(origin, target);
         double targetHeight = target.y - origin.y;
         if (horizontalDistance < 1.0E-4D) {
             return Double.NaN;
         }
 
-        double lowError = fixedArcHeightError(horizontalDistance, targetHeight, baseSpeed * minPower,
-                launchSlope, gravity, projectileDrag);
-        double highError = fixedArcHeightError(horizontalDistance, targetHeight, baseSpeed * maxPower,
-                launchSlope, gravity, projectileDrag);
+        double elevation = Math.toDegrees(Math.atan(launchSlope));
+        double lowError = elevationHeightError(horizontalDistance, targetHeight, baseSpeed * minPower,
+                elevation, flight);
+        double highError = elevationHeightError(horizontalDistance, targetHeight, baseSpeed * maxPower,
+                elevation, flight);
         if (!Double.isFinite(highError) || lowError > 0.0D || highError < 0.0D) {
             return Double.NaN;
         }
 
         double low = minPower;
         double high = maxPower;
-        for (int i = 0; i < 32; i++) {
+        for (int i = 0; i < SEARCH_STEPS; i++) {
             double middle = (low + high) * 0.5D;
-            double error = fixedArcHeightError(horizontalDistance, targetHeight, baseSpeed * middle,
-                    launchSlope, gravity, projectileDrag);
+            double error = elevationHeightError(horizontalDistance, targetHeight, baseSpeed * middle,
+                    elevation, flight);
             if (!Double.isFinite(error) || error < 0.0D) {
                 low = middle;
             } else {
@@ -90,18 +179,29 @@ public final class SiegeBallistics {
         return (low + high) * 0.5D;
     }
 
-    private static double fixedArcHeightError(double horizontalDistance, double targetHeight, double speed,
-                                               double launchSlope, double gravity, double projectileDrag) {
-        double directionLength = Math.sqrt(1.0D + launchSlope * launchSlope);
-        double horizontalVelocity = speed / directionLength;
-        double verticalVelocity = horizontalVelocity * launchSlope;
+    private static double horizontalDistance(Vec3 origin, Vec3 target) {
+        double dx = target.x - origin.x;
+        double dz = target.z - origin.z;
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** How far above the target height a shot passes the target's distance, or -infinity if it falls short. */
+    private static double elevationHeightError(double horizontalDistance, double targetHeight, double speed,
+                                               double elevationDegrees, Flight flight) {
+        double elevation = Math.toRadians(elevationDegrees);
+        double directionHorizontal = Math.cos(elevation);
+        double directionVertical = Math.sin(elevation);
+        double horizontalVelocity = directionHorizontal * speed;
+        double verticalVelocity = directionVertical * speed;
         double horizontalPosition = 0.0D;
         double verticalPosition = 0.0D;
-        double customRetention = Math.max(0.0D, 1.0D - projectileDrag);
-        double retention = VANILLA_AIR_RETENTION * customRetention;
-        double gravityAfterDrag = gravity * customRetention;
 
         for (int tick = 0; tick < MAX_FLIGHT_TICKS; tick++) {
+            if (tick < flight.thrustTicks()) {
+                double[] pushed = thrust(horizontalVelocity, verticalVelocity, elevation, flight.thrust());
+                horizontalVelocity = pushed[0];
+                verticalVelocity = pushed[1];
+            }
             double previousHorizontal = horizontalPosition;
             double previousVertical = verticalPosition;
             horizontalPosition += horizontalVelocity;
@@ -111,13 +211,12 @@ public final class SiegeBallistics {
                 double progress = segment <= 1.0E-8D
                         ? 1.0D
                         : (horizontalDistance - previousHorizontal) / segment;
-                double heightAtTarget = previousVertical
-                        + (verticalPosition - previousVertical) * progress;
-                return heightAtTarget - targetHeight;
+                return previousVertical + (verticalPosition - previousVertical) * progress - targetHeight;
             }
 
-            horizontalVelocity *= retention;
-            verticalVelocity = verticalVelocity * retention - gravityAfterDrag;
+            Vec3 next = flight.afterMove(new Vec3(horizontalVelocity, verticalVelocity, 0.0D));
+            horizontalVelocity = next.x;
+            verticalVelocity = next.y;
             if (horizontalVelocity <= 1.0E-6D) {
                 break;
             }

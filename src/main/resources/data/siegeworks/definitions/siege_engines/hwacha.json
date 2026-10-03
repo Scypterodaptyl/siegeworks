@@ -1,6 +1,7 @@
 {
+  "formatVersion": 2,
+  "maxHealth": 80.0,
   "baseDamage": 45.0,
-  "projectileSpeed": 44.0,
   "accuracyMultiplier": 1.15,
   "damageConfig": {
     "entityDamageSources": {

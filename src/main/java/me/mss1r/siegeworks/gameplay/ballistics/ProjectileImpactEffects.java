@@ -1,32 +1,21 @@
 package me.mss1r.siegeworks.gameplay.ballistics;
 
 import me.mss1r.siegeworks.particle.SiegeParticleEffects;
-import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import me.mss1r.siegeworks.registry.SiegeworksSounds;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.Nullable;
 
 public final class ProjectileImpactEffects {
     public enum Style {
         STANDARD,
         HEAVY,
-        TREBUCHET,
-        GUNPOWDER
+        TREBUCHET
     }
 
     private ProjectileImpactEffects() {
-    }
-
-    public static Vec3 outwardDirection(@Nullable Entity directSource) {
-        if (directSource == null || directSource.getDeltaMovement().lengthSqr() < 1.0E-8D) {
-            return new Vec3(0.0D, 1.0D, 0.0D);
-        }
-        return directSource.getDeltaMovement().normalize().reverse();
     }
 
     public static void playPenetrationReport(ServerLevel level, Vec3 impact, float volume, float pitch) {
@@ -45,7 +34,6 @@ public final class ProjectileImpactEffects {
         switch (style) {
             case HEAVY -> playHeavyReport(level, impact, volume, pitch, outwardNormal);
             case TREBUCHET -> playTrebuchetReport(level, impact, volume, pitch, outwardNormal);
-            case GUNPOWDER -> playGunpowderReport(level, impact, volume, pitch);
             case STANDARD -> playStandardReport(level, impact, volume, pitch, outwardNormal);
         }
     }
@@ -66,10 +54,6 @@ public final class ProjectileImpactEffects {
     public static void spawnPenetrationParticles(ServerLevel level, Vec3 center,
                                                  double radius, Vec3 outwardNormal) {
         SiegeParticleEffects.penetrationImpact(level, center, radius, outwardNormal);
-    }
-
-    public static void spawnGunpowderBurst(ServerLevel level, Vec3 center, int fragments) {
-        SiegeParticleEffects.gunpowderBurst(level, center, fragments);
     }
 
     private static void playStandardReport(ServerLevel level, Vec3 impact, float volume, float pitch,
@@ -110,15 +94,5 @@ public final class ProjectileImpactEffects {
                                   net.minecraft.sounds.SoundEvent sound, float volume, float pitch) {
         level.playSound(null, impact.x, impact.y, impact.z,
                 sound, SoundSource.BLOCKS, volume, Mth.clamp(pitch, 0.8F, 1.2F));
-    }
-
-    private static void playGunpowderReport(ServerLevel level, Vec3 impact, float volume, float pitch) {
-        level.playSound(null, impact.x, impact.y, impact.z,
-                SiegeworksSounds.PROJECTILE_IMPACT.get(), SoundSource.BLOCKS, volume, pitch);
-        level.playSound(null, impact.x, impact.y, impact.z,
-                SoundEvents.ZOMBIE_BREAK_WOODEN_DOOR, SoundSource.BLOCKS, volume * 0.6F, pitch * 0.95F);
-        level.playSound(null, impact.x, impact.y, impact.z,
-                MinecraftVersionCompat.genericExplodeSound(),
-                SoundSource.BLOCKS, volume * 0.9F, pitch * 0.9F);
     }
 }

@@ -1,6 +1,8 @@
 {
+  "formatVersion": 2,
+  "maxHealth": 70.0,
   "baseDamage": 78.0,
-  "projectileSpeed": 145.0,
+  "muzzleVelocity": 300.0,
   "accuracyMultiplier": 0.07,
   "scattershot": {
     "capacity": 12,

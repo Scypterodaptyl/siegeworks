@@ -5,7 +5,10 @@ import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
+/** Shows block cracks to the players near enough to see them. */
 final class BlockCrackOverlay {
+    private static final double RANGE = 64.0D;
+
     private BlockCrackOverlay() {
     }
 
@@ -21,7 +24,9 @@ final class BlockCrackOverlay {
         ClientboundBlockDestructionPacket packet =
                 new ClientboundBlockDestructionPacket(Long.hashCode(pos.asLong()), pos, stage);
         for (ServerPlayer player : level.players()) {
-            player.connection.send(packet);
+            if (player.blockPosition().closerThan(pos, RANGE)) {
+                player.connection.send(packet);
+            }
         }
     }
 }

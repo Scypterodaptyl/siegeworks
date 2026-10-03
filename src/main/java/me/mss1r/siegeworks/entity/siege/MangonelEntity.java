@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks.entity.siege;
 
+import me.mss1r.siegeworks.data.profile.ProjectileVariants;
 import me.mss1r.siegeworks.gameplay.towing.TowingProfile;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.api.SiegeActionResult;
@@ -23,7 +24,6 @@ import me.mss1r.siegeworks.item.SiegeAmmo;
 import me.mss1r.siegeworks.gameplay.loading.AutomatedLoadingSession;
 import me.mss1r.siegeworks.gameplay.loading.LoadingRequirement;
 import me.mss1r.siegeworks.gameplay.audio.SiegeSoundProfile;
-import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
 import me.mss1r.siegeworks.registry.SiegeworksItems;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.registries.Registries;
@@ -92,7 +92,6 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         MountedSiegeItemControl {
     private static final String TAG_LAUNCH_PAYLOAD = "LaunchPayload";
     private static final String TAG_SHOOT_ANIMATION_TICK = "ShootAnimationTick";
-    private static final int PROJECTILE_RELEASE_TICK = 3;
     private static final int SHOOT_ANIMATION_TICKS = 18;
     private static final float RELOAD_ANIMATION_TICKS = 100.0F;
     private static final float OPERATOR_VIEW_LIMIT = 35.0F;
@@ -105,7 +104,6 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     private static final Vec3 LOAD_CENTER = new Vec3(0.0D, 44.0D / 16.0D, -6.0D / 16.0D);
     private static final Vec3 ROOT_COLLISION_PIVOT = new Vec3(0.0D, 6.0D / 16.0D, 0.0D);
     private static final double LAUNCH_SLOPE = 0.60D;
-    private static final double PROJECTILE_GRAVITY = 0.05D;
     private static final Set<SiegeAmmunitionMode> AUTOMATED_AMMUNITION_MODES = Set.of(
             SiegeAmmunitionMode.AUTO, SiegeAmmunitionMode.STANDARD, SiegeAmmunitionMode.INCENDIARY);
     private static final SiegeSoundProfile SOUND_PROFILE = SiegeSoundProfile.defaults()
@@ -140,6 +138,13 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
             key(4.166F, -1.0D, ScalarAnimationCurve.Interpolation.EASE_IN_ELASTIC),
             key(5.834F, 0.0D, ScalarAnimationCurve.Interpolation.LINEAR),
             key(17.5F, 0.0D, ScalarAnimationCurve.Interpolation.LINEAR));
+    /**
+     * When in its swing the cup lets its load go, in shoot animation ticks: where the cup's path runs along the
+     * launch line, as a load leaves a throwing arm along the way it is going. The load is spawned on the next
+     * whole tick, as far along as it has flown since.
+     */
+    private static final float RELEASE_SHOOT_TICK = releaseShootTick();
+    private static final int PROJECTILE_RELEASE_TICK = Mth.ceil(RELEASE_SHOOT_TICK);
 
     private final AnimatableInstanceCache animatableInstanceCache = GeckoLibUtil.createInstanceCache(this);
     private final AutomatedLoadingSession automatedLoading = new AutomatedLoadingSession();
@@ -476,7 +481,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
             return;
         }
 
-        Vec3 releasePosition = position().add(rotateModelOffset(getLoadOffsetAtShootTick(PROJECTILE_RELEASE_TICK)));
+        Vec3 releasePosition = releasedLoadPosition(launchVelocity);
         if (SiegeAmmo.isGrapeshotAmmoKey(getAmmoLoaded())) {
             var scattershot = getScattershotProfile();
             int pelletCount = scattershot.minPellets()
@@ -496,10 +501,9 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
 
         String ammo = getAmmoLoaded();
         if (SiegeAmmo.isStoneAmmoKey(ammo)) {
-            projectile.setImpactMode(TrebuchetProjectile.ImpactMode.BREAK_BLOCKS);
             projectile.setTextureName(ammo);
         } else if (SiegeAmmo.isFireAmmoKey(ammo)) {
-            projectile.setImpactMode(TrebuchetProjectile.ImpactMode.SPREAD_FIRE);
+            projectile.setPhysicsProfile(ProjectileVariants.MANGONEL_FIRE_PROJECTILE);
             projectile.setTextureName(SiegeAmmo.AMMO_FIRE);
         }
 
@@ -510,7 +514,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     private void launchPassenger(ServerLevel serverLevel, LivingEntity passenger, Vec3 launchVelocity) {
         MangonelPassengerProjectile carrier = new MangonelPassengerProjectile(
                 SiegeworksEntities.MANGONEL_PASSENGER_PROJECTILE.get(), this, serverLevel);
-        Vec3 releasePosition = position().add(rotateModelOffset(getLoadOffsetAtShootTick(PROJECTILE_RELEASE_TICK)));
+        Vec3 releasePosition = releasedLoadPosition(launchVelocity);
         carrier.setPos(releasePosition.x, releasePosition.y, releasePosition.z);
         carrier.setDeltaMovement(launchVelocity);
         carrier.setOwner(this);
@@ -530,7 +534,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     }
 
     private Vec3 createLaunchVelocity() {
-        double blocksPerTick = getProjectileSpeed() / 20.0D;
+        double blocksPerTick = getLaunchSpeed();
         float yawOffset = (random.nextFloat() - 0.5F) * 4.0F * getAccuracyMultiplier();
         float yawRad = (getVisualRotationYInDegrees() + yawOffset) * Mth.DEG_TO_RAD;
         Vec3 direction = new Vec3(-Mth.sin(yawRad), LAUNCH_SLOPE, Mth.cos(yawRad)).normalize();
@@ -546,7 +550,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
 
     @Override
     public Vec3 getAutomatedAimOrigin() {
-        return position().add(rotateModelOffset(getLoadOffsetAtShootTick(PROJECTILE_RELEASE_TICK)));
+        return getReleasePoint();
     }
 
     @Override
@@ -570,8 +574,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
 
     private double getRequiredShotPower(Vec3 target) {
         return SiegeBallistics.calculateFixedArcPower(getAutomatedAimOrigin(), target,
-                getProjectileSpeed() / 20.0D, LAUNCH_SLOPE, PROJECTILE_GRAVITY,
-                SiegeProfileCatalogs.PROJECTILES.forEntity(SiegeworksEntities.MANGONEL_PROJECTILE.get()).drag(),
+                getLaunchSpeed(), LAUNCH_SLOPE, ballisticFlight(SiegeworksEntities.MANGONEL_PROJECTILE.get()),
                 getMinShotPower(), getMaxShotPower());
     }
 
@@ -790,6 +793,37 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
 
     private static Vec3 getLoadOffsetAtShootTick(float tick) {
         return applyRootAngle(getLoadOffsetForAuthoredAngle(getShootArmAngle(tick)), SHOOT_ROOT.sample(tick));
+    }
+
+    /** How steeply the cup is climbing at {@code tick} of the swing, in degrees above level, the way it throws. */
+    private static double cupClimbAt(float tick) {
+        Vec3 path = getLoadOffsetAtShootTick(tick + 0.01F).subtract(getLoadOffsetAtShootTick(tick - 0.01F));
+        // The model faces its own negative z.
+        return Math.toDegrees(Math.atan2(path.y, -path.z));
+    }
+
+    private static float releaseShootTick() {
+        double launch = Math.toDegrees(Math.atan(LAUNCH_SLOPE));
+        float early = 0.01F;
+        float late = 5.0F;
+        for (int i = 0; i < 40; i++) {
+            float middle = (early + late) * 0.5F;
+            if (cupClimbAt(middle) > launch) {
+                early = middle;
+            } else {
+                late = middle;
+            }
+        }
+        return (early + late) * 0.5F;
+    }
+
+    /** Where the load is when it is spawned: where it left the cup, flown on since at {@code velocity}. */
+    private Vec3 releasedLoadPosition(Vec3 velocity) {
+        return getReleasePoint().add(velocity.scale(PROJECTILE_RELEASE_TICK - RELEASE_SHOOT_TICK));
+    }
+
+    private Vec3 getReleasePoint() {
+        return position().add(rotateModelOffset(getLoadOffsetAtShootTick(RELEASE_SHOOT_TICK)));
     }
 
     private static Vec3 applyRootAngle(Vec3 offset, double rootAngleDegrees) {

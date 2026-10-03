@@ -2,12 +2,18 @@ package me.mss1r.siegeworks.gameplay.ballistics;
 
 import me.mss1r.siegeworks.config.SiegeworksServerConfig;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
 import java.util.List;
@@ -15,12 +21,19 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 public final class ExplosionPhysics {
+    public static final String TAG_DEBRIS = "siegeworks:debris";
+    private static final String TAG_PLAYER = "siegeworks:debris_player";
     private static final Map<ServerLevel, DebrisQuota> DEBRIS_QUOTAS = new WeakHashMap<>();
+    /** How far above the struck face, in blocks, ejecta leave a crater from. */
+    private static final double MOUTH_CLEARANCE = 0.6D;
+    /** Half-block steps of open space an ejected block needs ahead of it to clear its crater. */
+    private static final int EJECTA_CLEARANCE_STEPS = 5;
 
     private ExplosionPhysics() {
     }
 
-    public static void scatterAffectedBlocks(ServerLevel level, Vec3 center, float radius, List<BlockPos> affectedBlocks) {
+    public static void scatterAffectedBlocks(ServerLevel level, Vec3 center, float radius, List<BlockPos> affectedBlocks,
+                                              @Nullable Player breaker) {
         if (radius <= 0.0F || affectedBlocks.isEmpty() || !SiegeworksServerConfig.isFlyingBlockDebrisEnabled()) {
             return;
         }
@@ -35,20 +48,30 @@ public final class ExplosionPhysics {
             }
 
             BlockState state = level.getBlockState(pos);
-            spawnDebris(level, center, radius, pos, state);
+            spawnDebris(level, radius, pos, state, Vec3.atCenterOf(pos), calculateMotion(level, center, pos, radius), breaker);
             iterator.remove();
         }
     }
 
-    public static boolean launchDestroyedBlock(ServerLevel level, BlockPos pos, Vec3 center, float blastPower) {
+    /**
+     * Throws a block a crater broke out of it, along {@code outward} and spread about it so it clears the rim.
+     * A block buried too deep to get out stays behind as crushed rubble, which the caller clears, and is not
+     * thrown only to fall back into the hole.
+     */
+    public static boolean launchDestroyedBlock(ServerLevel level, BlockPos pos, Vec3 center, Vec3 outward,
+                                               float blastPower, @Nullable Player breaker) {
         BlockState state = level.getBlockState(pos);
-        if (!SiegeworksServerConfig.isFlyingBlockDebrisEnabled()
-                || !canBecomeDebris(level, pos, state)
-                || !claimDebrisSlot(level)) {
+        if (!SiegeworksServerConfig.isFlyingBlockDebrisEnabled() || !canBecomeDebris(level, pos, state)) {
             return false;
         }
 
-        spawnDebris(level, center, Math.max(2.0F, blastPower), pos, state);
+        float power = Math.max(2.0F, blastPower);
+        Vec3 motion = ejectaMotion(level, center, pos, outward, power);
+        Vec3 from = craterMouth(level, center, pos, outward);
+        if (!canEscape(level, pos, from, motion) || !claimDebrisSlot(level)) {
+            return false;
+        }
+        spawnDebris(level, power, pos, state, from, motion, breaker);
         return true;
     }
 
@@ -73,13 +96,96 @@ public final class ExplosionPhysics {
         return !state.getFluidState().isSource();
     }
 
-    private static void spawnDebris(ServerLevel level, Vec3 center, float blastPower, BlockPos pos, BlockState state) {
-        FallingBlockEntity debris = FallingBlockEntity.fall(level, pos, state);
+    /**
+     * Where a broken block leaves its crater: out of the mouth, just above the struck face across from where it
+     * broke, as a crater throws its ejecta out over its rim. A block buried where the mouth is closed leaves
+     * from where it was.
+     */
+    private static Vec3 craterMouth(ServerLevel level, Vec3 center, BlockPos pos, Vec3 outward) {
+        if (outward.lengthSqr() < 1.0E-8D) {
+            return Vec3.atCenterOf(pos);
+        }
+        Vec3 axis = outward.normalize();
+        Vec3 offset = Vec3.atCenterOf(pos).subtract(center);
+        Vec3 across = offset.subtract(axis.scale(offset.dot(axis)));
+        if (across.lengthSqr() > 1.0D) {
+            across = across.normalize();
+        }
+        Vec3 mouth = center.add(across).add(axis.scale(MOUTH_CLEARANCE));
+        BlockPos at = BlockPos.containing(mouth);
+        return !at.equals(pos) && !level.getBlockState(at).getCollisionShape(level, at).isEmpty()
+                ? Vec3.atCenterOf(pos)
+                : mouth;
+    }
+
+    private static void spawnDebris(ServerLevel level, float blastPower, BlockPos pos, BlockState state,
+                                    Vec3 from, Vec3 motion, @Nullable Player breaker) {
+        // Set up wholly before it enters the world, so the first anyone sees of it is where it flies out from.
+        FallingBlockEntity debris = EntityType.FALLING_BLOCK.create(level);
+        if (debris == null) {
+            return;
+        }
+        CompoundTag saved = new CompoundTag();
+        saved.put("BlockState", NbtUtils.writeBlockState(state.hasProperty(BlockStateProperties.WATERLOGGED)
+                ? state.setValue(BlockStateProperties.WATERLOGGED, false)
+                : state));
+        debris.load(saved);
+        debris.getPersistentData().putBoolean(TAG_DEBRIS, true);
+        if (breaker != null) {
+            debris.getPersistentData().putUUID(TAG_PLAYER, breaker.getUUID());
+        }
+        debris.setPos(from.x, from.y - 0.5D, from.z);
+        debris.setOldPosAndRot();
+        debris.setStartPos(pos);
         debris.dropItem = false;
         debris.setHurtsEntities(Math.max(1.0F, blastPower * 0.45F), Math.max(3, Mth.ceil(blastPower * 2.0F)));
-        debris.setDeltaMovement(calculateMotion(level, center, pos, blastPower));
-        debris.hasImpulse = true;
-        debris.hurtMarked = true;
+        debris.setDeltaMovement(motion);
+        level.setBlock(pos, state.getFluidState().createLegacyBlock(), 3);
+        level.addFreshEntity(debris);
+    }
+
+    public static boolean placeDebris(ServerLevel level, FallingBlockEntity debris, BlockPos pos, BlockState state) {
+        var data = debris.getPersistentData();
+        Player breaker = data.hasUUID(TAG_PLAYER) ? SiegeBlockBreaker.playerFor(level, data.getUUID(TAG_PLAYER)) : null;
+        boolean placed = SiegeBlockBreaker.placeBlock(level, pos, state, breaker);
+        if (!placed) {
+            debris.discard();
+        }
+        return placed;
+    }
+
+    /**
+     * Ejecta leave a crater through its mouth in a cone about {@code outward}, the way the blow came in, so
+     * they land beyond the rim instead of back in the hole.
+     */
+    private static Vec3 ejectaMotion(ServerLevel level, Vec3 center, BlockPos pos, Vec3 outward, float power) {
+        Vec3 axis = outward.lengthSqr() > 1.0E-8D ? outward.normalize() : new Vec3(0.0D, 1.0D, 0.0D);
+        Vec3 offset = Vec3.atCenterOf(pos).subtract(center);
+        Vec3 spread = offset.subtract(axis.scale(offset.dot(axis)));
+        if (spread.lengthSqr() < 1.0E-4D) {
+            spread = axis.cross(new Vec3(level.random.nextDouble() - 0.5D, level.random.nextDouble() - 0.5D,
+                    level.random.nextDouble() - 0.5D));
+        }
+        if (spread.lengthSqr() < 1.0E-8D) {
+            spread = axis.cross(new Vec3(1.0D, 0.0D, 0.0D));
+        }
+        double speed = Mth.clamp(0.35D + power * 0.06D, 0.4D, 1.0D) * (0.85D + level.random.nextDouble() * 0.3D);
+        Vec3 motion = axis.add(spread.normalize()).normalize().scale(speed);
+        // Ejecta fly up out of a crater, never down into the ground below it.
+        return new Vec3(motion.x, Math.abs(motion.y) + 0.15D, motion.z);
+    }
+
+    private static boolean canEscape(ServerLevel level, BlockPos pos, Vec3 from, Vec3 motion) {
+        Vec3 step = motion.normalize().scale(0.5D);
+        Vec3 point = from;
+        for (int i = 0; i < EJECTA_CLEARANCE_STEPS; i++) {
+            point = point.add(step);
+            BlockPos at = BlockPos.containing(point);
+            if (!at.equals(pos) && !level.getBlockState(at).getCollisionShape(level, at).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static Vec3 calculateMotion(ServerLevel level, Vec3 center, BlockPos pos, float radius) {

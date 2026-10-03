@@ -3,110 +3,156 @@ package me.mss1r.siegeworks.data.profile;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 
+/**
+ * Flight and impact settings: mass in kilograms, diameter in metres, blast energy in joules.
+ *
+ * @param dragCoefficient dimensionless air resistance, applied over the projectile's cross-section
+ * @param diameter the width it flies and strikes with; the entity's own width when absent
+ * @param motor the rocket motor that drives it, if it has one
+ * @param hardness maximum block resistance the projectile can penetrate; also controls shattering
+ */
 public record ProjectilePhysicsProfile(
         double mass,
-        double penetration,
-        double drag,
-        boolean impactFuse,
-        double blockCostMultiplier,
-        double blockDamageMultiplier,
-        double energyLossMultiplier,
-        double armorPiercing,
-        double entityDamageMultiplier,
-        double shockRadius,
-        double shockDamageMultiplier,
-        float baseExplosionPower,
-        float speedExplosionScale,
-        int shrapnelFragments,
-        double shrapnelRadius,
-        float shrapnelDamage
+        double dragCoefficient,
+        Optional<Double> diameter,
+        double hardness,
+        Optional<Motor> motor,
+        EntityHit entity,
+        Shock shock,
+        Blast blast,
+        Fire fire
 ) {
+    /** Air at sea level, in kg/m³. */
+    private static final double AIR_DENSITY = 1.225D;
+
     public static final ProjectilePhysicsProfile DEFAULT = new ProjectilePhysicsProfile(
-            40.0D, 0.65D, 0.0015D, false, 1.0D, 1.0D, 2.0D, 0.0D,
-            1.0D, 3.0D, 0.75D, 0.0F, 0.15F, 0, 0.0D, 0.0F
+            1.0D, 0.47D, Optional.empty(), 6.0D, Optional.empty(),
+            EntityHit.DEFAULT, Shock.NONE, Blast.NONE, Fire.NONE
     );
 
     public static final Codec<ProjectilePhysicsProfile> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.DOUBLE.optionalFieldOf("mass", DEFAULT.mass()).forGetter(ProjectilePhysicsProfile::mass),
-            Codec.DOUBLE.optionalFieldOf("penetration", DEFAULT.penetration()).forGetter(ProjectilePhysicsProfile::penetration),
-            Codec.DOUBLE.optionalFieldOf("drag", DEFAULT.drag()).forGetter(ProjectilePhysicsProfile::drag),
-            Codec.BOOL.optionalFieldOf("impactFuse", DEFAULT.impactFuse()).forGetter(ProjectilePhysicsProfile::impactFuse),
-            Codec.DOUBLE.optionalFieldOf("blockCostMultiplier", DEFAULT.blockCostMultiplier()).forGetter(ProjectilePhysicsProfile::blockCostMultiplier),
-            Codec.DOUBLE.optionalFieldOf("blockDamageMultiplier", DEFAULT.blockDamageMultiplier()).forGetter(ProjectilePhysicsProfile::blockDamageMultiplier),
-            Codec.DOUBLE.optionalFieldOf("energyLossMultiplier", DEFAULT.energyLossMultiplier()).forGetter(ProjectilePhysicsProfile::energyLossMultiplier),
-            Codec.DOUBLE.optionalFieldOf("armorPiercing", DEFAULT.armorPiercing()).forGetter(ProjectilePhysicsProfile::armorPiercing),
-            Codec.DOUBLE.optionalFieldOf("entityDamageMultiplier", DEFAULT.entityDamageMultiplier()).forGetter(ProjectilePhysicsProfile::entityDamageMultiplier),
-            Codec.DOUBLE.optionalFieldOf("shockRadius", DEFAULT.shockRadius()).forGetter(ProjectilePhysicsProfile::shockRadius),
-            Codec.DOUBLE.optionalFieldOf("shockDamageMultiplier", DEFAULT.shockDamageMultiplier()).forGetter(ProjectilePhysicsProfile::shockDamageMultiplier),
-            Codec.FLOAT.optionalFieldOf("baseExplosionPower", DEFAULT.baseExplosionPower()).forGetter(ProjectilePhysicsProfile::baseExplosionPower),
-            Codec.FLOAT.optionalFieldOf("speedExplosionScale", DEFAULT.speedExplosionScale()).forGetter(ProjectilePhysicsProfile::speedExplosionScale),
-            Codec.INT.optionalFieldOf("shrapnelFragments", DEFAULT.shrapnelFragments()).forGetter(ProjectilePhysicsProfile::shrapnelFragments),
-            Codec.DOUBLE.optionalFieldOf("shrapnelRadius", DEFAULT.shrapnelRadius()).forGetter(ProjectilePhysicsProfile::shrapnelRadius),
-            Codec.FLOAT.optionalFieldOf("shrapnelDamage", DEFAULT.shrapnelDamage()).forGetter(ProjectilePhysicsProfile::shrapnelDamage)
+            Codec.DOUBLE.optionalFieldOf("dragCoefficient", DEFAULT.dragCoefficient())
+                    .forGetter(ProjectilePhysicsProfile::dragCoefficient),
+            Codec.DOUBLE.optionalFieldOf("diameter").forGetter(ProjectilePhysicsProfile::diameter),
+            Codec.DOUBLE.optionalFieldOf("hardness", DEFAULT.hardness()).forGetter(ProjectilePhysicsProfile::hardness),
+            Motor.CODEC.optionalFieldOf("motor").forGetter(ProjectilePhysicsProfile::motor),
+            EntityHit.CODEC.optionalFieldOf("entity", EntityHit.DEFAULT).forGetter(ProjectilePhysicsProfile::entity),
+            Shock.CODEC.optionalFieldOf("shock", Shock.NONE).forGetter(ProjectilePhysicsProfile::shock),
+            Blast.CODEC.optionalFieldOf("blast", Blast.NONE).forGetter(ProjectilePhysicsProfile::blast),
+            Fire.CODEC.optionalFieldOf("fire", Fire.NONE).forGetter(ProjectilePhysicsProfile::fire)
     ).apply(instance, ProjectilePhysicsProfile::new));
 
     public Optional<String> validationError() {
-        Optional<String> error = ProfileValidation.nonNegative("mass", mass);
-        if (mass == 0.0D) {
+        if (!(mass > 0.0D) || !Double.isFinite(mass)) {
             return Optional.of("mass must be greater than zero");
         }
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("penetration", penetration);
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("drag", drag);
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("blockCostMultiplier", blockCostMultiplier);
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("blockDamageMultiplier", blockDamageMultiplier);
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("energyLossMultiplier", energyLossMultiplier);
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("armorPiercing", armorPiercing);
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("entityDamageMultiplier", entityDamageMultiplier);
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("shockRadius", shockRadius);
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("shockDamageMultiplier", shockDamageMultiplier);
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("baseExplosionPower", baseExplosionPower);
-        if (error.isPresent()) return error;
-        error = ProfileValidation.nonNegative("speedExplosionScale", speedExplosionScale);
-        if (error.isPresent()) return error;
-        if (shrapnelFragments < 0) return Optional.of("shrapnelFragments must not be negative");
-        error = ProfileValidation.nonNegative("shrapnelRadius", shrapnelRadius);
-        return error.isPresent() ? error : ProfileValidation.nonNegative("shrapnelDamage", shrapnelDamage);
-    }
-
-    public double kineticEnergy(double speed) {
-        return 0.5D * Math.max(0.01D, mass) * speed * speed;
-    }
-
-    public double penetrationPower(double speed) {
-        return kineticEnergy(speed) * Math.max(0.0D, penetration);
-    }
-
-    public float scaledExplosionPower(double speed) {
-        if (baseExplosionPower <= 0.0F) {
-            return 0.0F;
+        if (diameter.isPresent() && (!(diameter.get() > 0.0D) || !Double.isFinite(diameter.get()))) {
+            return Optional.of("diameter must be greater than zero");
         }
-        float speedFactor = 0.7F + (float) Math.log1p(Math.max(0.0D, speed)) * speedExplosionScale;
-        return baseExplosionPower * Mth.clamp(speedFactor, 0.65F, 1.75F);
+        if (motor.isPresent() && (!(motor.get().thrust() > 0.0D && motor.get().burnTime() > 0.0D)
+                || !Double.isFinite(motor.get().thrust()) || !Double.isFinite(motor.get().burnTime()))) {
+            return Optional.of("motor thrust and burnTime must be greater than zero");
+        }
+        if (entity.armorPiercing() > 1.0D || fire.chance() > 1.0D) {
+            return Optional.of("entity.armorPiercing and fire.chance must not exceed one");
+        }
+        return Stream.of(
+                        ProfileValidation.nonNegative("dragCoefficient", dragCoefficient),
+                        ProfileValidation.nonNegative("hardness", hardness),
+                        ProfileValidation.nonNegative("entity.damage", entity.damage()),
+                        ProfileValidation.nonNegative("entity.armorPiercing", entity.armorPiercing()),
+                        ProfileValidation.nonNegative("entity.structure", entity.structure()),
+                        ProfileValidation.nonNegative("shock.radius", shock.radius()),
+                        ProfileValidation.nonNegative("shock.damage", shock.damage()),
+                        ProfileValidation.nonNegative("blast.energy", blast.energy()),
+                        ProfileValidation.nonNegative("fire.radius", fire.radius()),
+                        ProfileValidation.nonNegative("fire.chance", fire.chance()))
+                .flatMap(Optional::stream)
+                .findFirst();
     }
 
-    public double minContinueSpeed() {
-        return 1.2D;
+    /** Energy in joules at {@code speed} metres per second. */
+    public double kineticEnergy(double speed) {
+        return 0.5D * mass * speed * speed;
     }
 
-    public double scaledShockRadius(double speed) {
-        return shockRadius * Mth.clamp(0.85D + Math.log1p(Math.max(0.0D, speed)) * 0.18D, 0.75D, 1.45D);
+    public double diameterOf(Entity projectile) {
+        return diameter.orElseGet(() -> (double) projectile.getBbWidth());
     }
 
-    public float scaledShockDamageMultiplier(double speed) {
-        return (float) (shockDamageMultiplier
-                * Mth.clamp(0.85D + Math.log1p(Math.max(0.0D, speed)) * 0.2D, 0.75D, 1.55D));
+    public double diameterOf(EntityType<?> projectile) {
+        return diameter.orElseGet(() -> (double) projectile.getWidth());
+    }
+
+    /**
+     * The share of its speed the air takes from it for each block it flies at a block a tick: quadratic drag,
+     * {@code ρ·Cd·A / 2m} per metre, a block being a metre.
+     */
+    public double airDrag(double diameter) {
+        double area = Math.PI * diameter * diameter / 4.0D;
+        return AIR_DENSITY * dragCoefficient * area / (2.0D * mass);
+    }
+
+    /** A rocket motor: its thrust in newtons, and how long it burns in seconds. */
+    public record Motor(double thrust, double burnTime) {
+        public static final Codec<Motor> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.DOUBLE.fieldOf("thrust").forGetter(Motor::thrust),
+                Codec.DOUBLE.fieldOf("burnTime").forGetter(Motor::burnTime)
+        ).apply(instance, Motor::new));
+    }
+
+    /**
+     * Multiplier on the engine's base damage for a direct hit, how much of armor it ignores, and the share of
+     * that damage a siege engine takes.
+     */
+    public record EntityHit(double damage, double armorPiercing, double structure) {
+        public static final EntityHit DEFAULT = new EntityHit(1.0D, 0.0D, 0.7D);
+        public static final Codec<EntityHit> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.DOUBLE.optionalFieldOf("damage", DEFAULT.damage()).forGetter(EntityHit::damage),
+                Codec.DOUBLE.optionalFieldOf("armorPiercing", DEFAULT.armorPiercing())
+                        .forGetter(EntityHit::armorPiercing),
+                Codec.DOUBLE.optionalFieldOf("structure", DEFAULT.structure()).forGetter(EntityHit::structure)
+        ).apply(instance, EntityHit::new));
+    }
+
+    /** Damage to creatures around the impact, as a share of the engine's base damage. */
+    public record Shock(double radius, double damage) {
+        public static final Shock NONE = new Shock(0.0D, 0.0D);
+        public static final Codec<Shock> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.DOUBLE.optionalFieldOf("radius", 0.0D).forGetter(Shock::radius),
+                Codec.DOUBLE.optionalFieldOf("damage", 0.0D).forGetter(Shock::damage)
+        ).apply(instance, Shock::new));
+
+        public double radiusAt(double speed) {
+            return radius * Mth.clamp(0.85D + Math.log1p(Math.max(0.0D, speed)) * 0.18D, 0.75D, 1.45D);
+        }
+
+        public double damageAt(double speed) {
+            return damage * Mth.clamp(0.85D + Math.log1p(Math.max(0.0D, speed)) * 0.2D, 0.75D, 1.55D);
+        }
+    }
+
+    /** Chemical energy an explosive charge adds where the projectile stops. */
+    public record Blast(double energy) {
+        public static final Blast NONE = new Blast(0.0D);
+        public static final Codec<Blast> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.DOUBLE.optionalFieldOf("energy", 0.0D).forGetter(Blast::energy)
+        ).apply(instance, Blast::new));
+    }
+
+    /** Fire an incendiary sets around where it stops: how far, and the chance near the centre. */
+    public record Fire(double radius, double chance) {
+        public static final Fire NONE = new Fire(0.0D, 0.0D);
+        public static final Codec<Fire> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.DOUBLE.optionalFieldOf("radius", 0.0D).forGetter(Fire::radius),
+                Codec.DOUBLE.optionalFieldOf("chance", 0.0D).forGetter(Fire::chance)
+        ).apply(instance, Fire::new));
     }
 }

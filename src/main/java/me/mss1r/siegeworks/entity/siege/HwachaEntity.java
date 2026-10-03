@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks.entity.siege;
 
+import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
 import me.mss1r.siegeworks.gameplay.towing.TowingProfile;
 import me.mss1r.siegeworks.api.SiegeActionResult;
 import me.mss1r.siegeworks.api.MountedSiegeItemControl;
@@ -498,6 +499,19 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
         setOperator(operator);
     }
 
+    @Override
+    protected boolean debugInstantFire(ServerLevel serverLevel, Player operator) {
+        if (isFiring()) {
+            return false;
+        }
+        if (getLoadedCount() == 0) {
+            setLoadedCount(CAPACITY);
+        }
+        playIgnitionSound(serverLevel);
+        startVolley(operator);
+        return true;
+    }
+
     private void tickVolley(ServerLevel serverLevel) {
         if (nextShotTicks-- > 0) {
             return;
@@ -525,8 +539,7 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
                 SiegeworksEntities.SINGIJEON_PROJECTILE.get(), this, serverLevel);
         projectile.setExplosive(explosive);
         projectile.setPos(mouth.x, mouth.y, mouth.z);
-        projectile.launchWithMotor(direction,
-                getProjectileSpeed() / 20.0D * trajectory.speedMultiplier());
+        projectile.launchWithMotor(direction, trajectory.speedMultiplier());
         projectile.setBaseDamage(getBaseDamage());
         projectile.setOwner(this);
         serverLevel.addFreshEntity(projectile);
@@ -838,8 +851,9 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
 
     @Override
     public float calculateAutomatedAimPitch(Vec3 target) {
+        ProjectilePhysicsProfile rocket = SingijeonProjectile.physics(isExplosive(Math.max(0, getLoadedCount() / 2)));
         return SiegeBallistics.calculateLowAnglePitch(getAutomatedAimOrigin(), target,
-                getProjectileSpeed() / 20.0D, 0.03D);
+                SingijeonProjectile.launchSpeed(rocket), SingijeonProjectile.flight(rocket));
     }
 
     @Override

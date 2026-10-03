@@ -1,0 +1,115 @@
+package me.mss1r.siegeworks.data.profile;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+/** Checks the JSON before codecs can discard old or misspelled fields. */
+public final class ProfileFormat {
+    public static final int VERSION = 2;
+    private static final Set<String> OLD_PROJECTILE_FIELDS = Set.of(
+            "penetration", "drag", "impactFuse", "blockCostMultiplier", "blockDamageMultiplier",
+            "energyLossMultiplier", "armorPiercing", "entityDamageMultiplier", "shockRadius",
+            "shockDamageMultiplier", "baseExplosionPower", "speedExplosionScale", "shrapnelFragments",
+            "shrapnelRadius", "shrapnelDamage");
+    private static final Set<String> ENGINE_FIELDS = Set.of(
+            "formatVersion", "maxHealth", "baseDamage", "muzzleVelocity", "accuracyMultiplier",
+            "damageConfig", "scattershot");
+    private static final Set<String> PROJECTILE_FIELDS = Set.of(
+            "formatVersion", "mass", "dragCoefficient", "diameter", "hardness", "motor", "entity",
+            "shock", "blast", "fire");
+    private static final Map<String, Set<String>> PROJECTILE_PARTS = Map.of(
+            "motor", Set.of("thrust", "burnTime"),
+            "entity", Set.of("damage", "armorPiercing", "structure"),
+            "shock", Set.of("radius", "damage"),
+            "blast", Set.of("energy"),
+            "fire", Set.of("radius", "chance"));
+
+    private ProfileFormat() {
+    }
+
+    public static Optional<String> engine(JsonElement json) {
+        return check(json, ENGINE_FIELDS, Set.of("projectileSpeed"), Map.of(
+                "damageConfig", Set.of("entityDamageSources", "itemDamageSources", "damageTypeSources",
+                        "entityDamageMultipliers"),
+                "scattershot", Set.of("capacity", "minPellets", "maxPellets", "pelletsPerLoadedItemMin",
+                        "pelletsPerLoadedItemMax", "spreadDegrees", "baseDamagePerPellet")));
+    }
+
+    public static Optional<String> projectile(JsonElement json) {
+        return check(json, PROJECTILE_FIELDS, OLD_PROJECTILE_FIELDS, PROJECTILE_PARTS);
+    }
+
+    public static Optional<String> blockMaterial(JsonElement json) {
+        Optional<String> error = check(json, Set.of("formatVersion", "block", "tag", "priority",
+                "strength", "drag", "fractureEnergy", "projectileResistance"), Set.of(), Map.of());
+        if (error.isEmpty() && json.getAsJsonObject().has("tag") && !json.getAsJsonObject().has("priority")) {
+            return Optional.of("tag materials need an explicit priority");
+        }
+        return error;
+    }
+
+    private static Optional<String> check(JsonElement json, Set<String> fields, Set<String> oldFields,
+                                           Map<String, Set<String>> parts) {
+        if (!json.isJsonObject()) {
+            return Optional.of("expected a profile object");
+        }
+        JsonObject object = json.getAsJsonObject();
+        var old = object.keySet().stream().filter(oldFields::contains).sorted().toList();
+        if (!old.isEmpty()) {
+            return Optional.of("beta.5 profile fields " + old
+                    + " are not supported by format 2; see "
+                    + "https://github.com/mess1re/siegeworks/wiki/Data-Pack-Reference");
+        }
+        if (object.has("formatVersion")) {
+            JsonElement version = object.get("formatVersion");
+            if (!version.isJsonPrimitive() || !version.getAsJsonPrimitive().isNumber()
+                    || version.getAsDouble() != VERSION) {
+                return Optional.of("unsupported formatVersion " + version + "; expected " + VERSION);
+            }
+        }
+        Optional<String> error = unknown(object, fields, "");
+        if (error.isPresent()) {
+            return error;
+        }
+        for (String key : object.keySet()) {
+            if (key.equals("formatVersion") || parts.containsKey(key)) continue;
+            JsonElement value = object.get(key);
+            boolean id = key.equals("block") || key.equals("tag");
+            if (!value.isJsonPrimitive() || (id ? !value.getAsJsonPrimitive().isString()
+                    : !value.getAsJsonPrimitive().isNumber())) {
+                return Optional.of(key + " must be " + (id ? "a resource ID" : "a number"));
+            }
+            if (key.equals("priority") && value.getAsDouble() != value.getAsInt()) {
+                return Optional.of("priority must be an integer");
+            }
+        }
+        for (var part : parts.entrySet()) {
+            if (object.has(part.getKey())) {
+                if (!object.get(part.getKey()).isJsonObject()) {
+                    return Optional.of(part.getKey() + " must be an object");
+                }
+                error = unknown(object.getAsJsonObject(part.getKey()), part.getValue(), part.getKey() + ".");
+                if (error.isPresent()) {
+                    return error;
+                }
+                if (!part.getKey().equals("damageConfig")) {
+                    for (var field : object.getAsJsonObject(part.getKey()).entrySet()) {
+                        if (!field.getValue().isJsonPrimitive() || !field.getValue().getAsJsonPrimitive().isNumber()) {
+                            return Optional.of(part.getKey() + "." + field.getKey() + " must be a number");
+                        }
+                    }
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<String> unknown(JsonObject object, Set<String> fields, String prefix) {
+        return object.keySet().stream().filter(key -> !fields.contains(key)).sorted().findFirst()
+                .map(key -> "unknown field " + prefix + key);
+    }
+}

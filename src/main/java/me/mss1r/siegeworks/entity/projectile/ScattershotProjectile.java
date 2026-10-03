@@ -11,13 +11,11 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 public final class ScattershotProjectile extends CannonProjectile {
     private static final String TAG_STONE = "StonePellet";
     private static final String TAG_REPORT_IMPACT = "ReportImpact";
-    private static final float STONE_BLOCK_DAMAGE_SCALE = 4.0F;
     private static final EntityDataAccessor<Boolean> STONE =
             SynchedEntityData.defineId(ScattershotProjectile.class, EntityDataSerializers.BOOLEAN);
     private boolean reportImpact = true;
@@ -68,18 +66,11 @@ public final class ScattershotProjectile extends CannonProjectile {
         super.readAdditionalSaveData(tag);
         setStonePellet(tag.getBoolean(TAG_STONE));
         reportImpact = !tag.contains(TAG_REPORT_IMPACT) || tag.getBoolean(TAG_REPORT_IMPACT);
-        setShouldBreakBlocks(true);
     }
 
     @Override
     protected double getSupplementalEntitySweepPadding() {
         return 0.08D;
-    }
-
-    @Override
-    protected boolean damageImpactBlocks(BlockHitResult blockHitResult, float damageScale) {
-        float pelletScale = isStonePellet() ? STONE_BLOCK_DAMAGE_SCALE : 1.0F;
-        return super.damageImpactBlocks(blockHitResult, damageScale * pelletScale);
     }
 
     @Override

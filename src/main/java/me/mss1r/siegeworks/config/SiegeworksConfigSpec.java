@@ -87,6 +87,11 @@ public final class SiegeworksConfigSpec {
             return new DoubleValue(value::get, value::set);
         }
 
+        public <E extends Enum<E>> EnumValue<E> defineEnum(String path, E defaultValue) {
+            var value = delegate.defineEnum(path, defaultValue);
+            return new EnumValue<>(value::get, value::set);
+        }
+
         public SiegeworksConfigSpec build() {
             return new SiegeworksConfigSpec(delegate.build());
         }
@@ -106,6 +111,12 @@ public final class SiegeworksConfigSpec {
 
     public static final class DoubleValue extends Value<Double> {
         private DoubleValue(Supplier<Double> getter, Consumer<Double> setter) {
+            super(getter, setter);
+        }
+    }
+
+    public static final class EnumValue<E extends Enum<E>> extends Value<E> {
+        private EnumValue(Supplier<E> getter, Consumer<E> setter) {
             super(getter, setter);
         }
     }

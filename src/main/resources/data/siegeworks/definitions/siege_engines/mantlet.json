@@ -1,4 +1,6 @@
 {
+  "formatVersion": 2,
+  "maxHealth": 300.0,
   "damageConfig": {
     "entityDamageSources": {
       "siegeworks:tower_crossbow_bolt_projectile": true,

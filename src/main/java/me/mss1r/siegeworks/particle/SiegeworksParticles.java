@@ -3,6 +3,14 @@ package me.mss1r.siegeworks.particle;
 import me.mss1r.siegeworks.Siegeworks;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
+//? if forge {
+/*import com.mojang.serialization.Codec;
+*///?} else {
+import com.mojang.serialization.MapCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+//?}
+import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
@@ -19,6 +27,30 @@ public final class SiegeworksParticles {
             PARTICLE_TYPES.register("muzzle_plume", () -> new SimpleParticleType(false));
     public static final RegistrySupplier<SimpleParticleType> IMPACT_SMOKE_PLUME =
             PARTICLE_TYPES.register("impact_smoke_plume", () -> new SimpleParticleType(false));
+    /** A fragment of a struck block, flung with the velocity it is given. */
+    //? if forge {
+    /*public static final RegistrySupplier<ParticleType<BlockParticleOption>> FRAGMENT =
+            PARTICLE_TYPES.register("fragment", () -> new ParticleType<BlockParticleOption>(false,
+                    BlockParticleOption.DESERIALIZER) {
+                @Override
+                public Codec<BlockParticleOption> codec() {
+                    return BlockParticleOption.codec(this);
+                }
+            });
+    *///?} else {
+    public static final RegistrySupplier<ParticleType<BlockParticleOption>> FRAGMENT =
+            PARTICLE_TYPES.register("fragment", () -> new ParticleType<BlockParticleOption>(false) {
+                @Override
+                public MapCodec<BlockParticleOption> codec() {
+                    return BlockParticleOption.codec(this);
+                }
+
+                @Override
+                public StreamCodec<? super RegistryFriendlyByteBuf, BlockParticleOption> streamCodec() {
+                    return BlockParticleOption.streamCodec(this);
+                }
+            });
+    //?}
 
     private SiegeworksParticles() {
     }

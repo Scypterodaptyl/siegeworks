@@ -1,15 +1,8 @@
 {
-  "mass": 52.0,
-  "penetration": 0.95,
-  "drag": 0.0015,
-  "impactFuse": false,
-  "blockCostMultiplier": 0.9,
-  "blockDamageMultiplier": 1.1,
-  "energyLossMultiplier": 0.95,
-  "armorPiercing": 0.7,
-  "entityDamageMultiplier": 1.3,
-  "shockRadius": 3.3,
-  "shockDamageMultiplier": 0.28,
-  "baseExplosionPower": 0.0,
-  "speedExplosionScale": 0.15
+  "formatVersion": 2,
+  "mass": 8.0,
+  "diameter": 0.12,
+  "hardness": 12.0,
+  "entity": { "damage": 1.3, "armorPiercing": 0.7, "structure": 0.7 },
+  "shock": { "radius": 3.3, "damage": 0.28 }
 }

@@ -25,6 +25,8 @@ public final class SiegeworksServerConfig {
     private static final SiegeworksConfigSpec.IntValue MINIMUM_CAPTURE_SECONDS;
     private static final SiegeworksConfigSpec.IntValue MAXIMUM_CAPTURE_SECONDS;
     private static final SiegeworksConfigSpec.IntValue ABANDON_AFTER_DAYS;
+    private static final SiegeworksConfigSpec.EnumValue<SiegeBlockDamage> BLOCK_DAMAGE;
+    private static final SiegeworksConfigSpec.DoubleValue STONE_FRACTURE_ENERGY;
 
     static {
         SiegeworksConfigSpec.Builder builder = new SiegeworksConfigSpec.Builder();
@@ -117,6 +119,24 @@ public final class SiegeworksServerConfig {
                 .comment("Release an engine to whoever uses it next once neither its owner nor anyone on their team",
                         "has been online for this many days. Set to 0 to keep ownership forever.")
                 .defineInRange("abandonAfterDays", 14, 0, 3650);
+        builder.pop();
+
+        builder.comment("What siege weapons may do to the world.")
+                .push("terrain");
+        BLOCK_DAMAGE = builder
+                .comment("Where projectiles and rams break blocks.",
+                        "EVERYWHERE: anywhere.",
+                        "RESPECT_PROTECTION: only where the player behind the engine could break the block by hand,",
+                        "as claim mods and spawn protection decide. An offline owner is judged by their own profile.",
+                        "NEVER: siege weapons harm creatures and engines but leave blocks whole.")
+                .defineEnum("blockDamage", SiegeBlockDamage.EVERYWHERE);
+        STONE_FRACTURE_ENERGY = builder
+                .comment("Energy in joules to fracture one cubic metre of solid stone.",
+                        "50000 is a gameplay value: thick walls should take minutes of repeated artillery fire, not days.",
+                        "Higher values make blocks harder to destroy; lower values make them easier.",
+                        "Other materials scale from stone. A datapack's fractureEnergy overrides this value for its blocks.",
+                        "This changes craters and accumulated cracks, not flight, penetration resistance or entity damage.")
+                .defineInRange("stoneFractureEnergy", 50_000.0D, 1.0D, 1.0E9D);
         builder.pop(2);
 
         builder.push("movement");
@@ -251,6 +271,22 @@ public final class SiegeworksServerConfig {
 
     public static int getAbandonAfterDays() {
         return ABANDON_AFTER_DAYS.get();
+    }
+
+    public static SiegeBlockDamage getBlockDamage() {
+        return BLOCK_DAMAGE.get();
+    }
+
+    public static void setBlockDamage(SiegeBlockDamage blockDamage) {
+        BLOCK_DAMAGE.set(blockDamage);
+    }
+
+    public static double getStoneFractureEnergy() {
+        return STONE_FRACTURE_ENERGY.get();
+    }
+
+    public static void setStoneFractureEnergy(double energy) {
+        STONE_FRACTURE_ENERGY.set(energy);
     }
 
     public static boolean isGeometryTerrainCollisionEnabled() {

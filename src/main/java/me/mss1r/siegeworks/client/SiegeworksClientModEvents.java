@@ -3,6 +3,7 @@ package me.mss1r.siegeworks.client;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.client.aim.SiegeAimOverlay;
 import me.mss1r.siegeworks.client.projectile.StuckBoltLayer;
+import me.mss1r.siegeworks.client.particle.FragmentParticle;
 import me.mss1r.siegeworks.client.particle.ImpactSmokePlumeParticle;
 import me.mss1r.siegeworks.client.particle.MuzzlePlumeParticle;
 import me.mss1r.siegeworks.client.particle.SiegeSmokeParticle;
@@ -113,6 +114,7 @@ public final class SiegeworksClientModEvents {
               new MuzzlePlumeParticle.Provider());
       event.registerSpecial(SiegeworksParticles.IMPACT_SMOKE_PLUME.get(),
               new ImpactSmokePlumeParticle.Provider());
+      event.registerSpecial(SiegeworksParticles.FRAGMENT.get(), new FragmentParticle.Provider());
    }
 
    @SubscribeEvent

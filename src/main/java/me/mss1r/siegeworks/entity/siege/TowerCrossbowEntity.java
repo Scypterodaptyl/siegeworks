@@ -123,9 +123,13 @@ public class TowerCrossbowEntity extends AbstractBoltThrowerEntity {
     }
 
     @Override
+    protected EntityType<TowerCrossbowBoltProjectile> getBoltType() {
+        return SiegeworksEntities.TOWER_CROSSBOW_BOLT_PROJECTILE.get();
+    }
+
+    @Override
     protected TowerCrossbowBoltProjectile createBolt(ServerLevel serverLevel) {
-        return new TowerCrossbowBoltProjectile(
-                SiegeworksEntities.TOWER_CROSSBOW_BOLT_PROJECTILE.get(), this, serverLevel);
+        return new TowerCrossbowBoltProjectile(getBoltType(), this, serverLevel);
     }
 
     @Override
