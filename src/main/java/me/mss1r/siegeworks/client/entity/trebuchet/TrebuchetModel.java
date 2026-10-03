@@ -34,6 +34,7 @@ public class TrebuchetModel extends GeoModel<TrebuchetEntity> {
         String ammo = animatable.getAmmoLoaded();
         getBone("projectile").ifPresent(geoBone -> geoBone.setHidden(
                 !SiegeAmmo.isStoneAmmoKey(ammo) && !SiegeAmmo.isGrapeshotAmmoKey(ammo)));
-        getBone("projectile_fire").ifPresent(geoBone -> geoBone.setHidden(!SiegeAmmo.isFireAmmoKey(ammo)));
+        // The pot is drawn as its own block on the projectile bone; this bone of the trebuchet's has no pot texture.
+        getBone("projectile_fire").ifPresent(geoBone -> geoBone.setHidden(true));
     }
 }

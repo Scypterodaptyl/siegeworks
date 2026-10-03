@@ -50,9 +50,13 @@ public final class SiegeAmmo {
     }
 
     @Nullable
-    public static BlockState stoneBlockState(String ammo) {
+    /** The block a loaded or flying stone, bag of grapeshot or fire pot is drawn as, or null for none. */
+    public static BlockState projectileBlockState(String ammo) {
         if (isGrapeshotAmmoKey(ammo)) {
             return SiegeworksBlocks.GRAPESHOT.get().defaultBlockState();
+        }
+        if (isFireAmmoKey(ammo)) {
+            return SiegeworksBlocks.FIRE_PROJECTILE.get().defaultBlockState();
         }
 
         Item projectile = AMMO_STONE.equals(ammo) ? Items.STONE : null;

@@ -8,6 +8,7 @@ import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.client.rope.RopeRenderer;
 import me.mss1r.siegeworks.client.rope.SiegeRopeAnchors;
 import me.mss1r.siegeworks.entity.siege.TrebuchetEntity;
+import me.mss1r.siegeworks.client.projectile.TrebuchetProjectileRenderer;
 import me.mss1r.siegeworks.item.SiegeAmmo;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -44,7 +45,7 @@ public class TrebuchetRenderer extends SiegeConstructionRenderer<TrebuchetEntity
                 if (!"projectile".equals(bone.getName()) || trebuchet.getWindingTime() > 0) {
                     return null;
                 }
-                return SiegeAmmo.stoneBlockState(trebuchet.getAmmoLoaded());
+                return SiegeAmmo.projectileBlockState(trebuchet.getAmmoLoaded());
             }
 
             @Override
@@ -58,8 +59,12 @@ public class TrebuchetRenderer extends SiegeConstructionRenderer<TrebuchetEntity
                     poseStack.translate(0.0D, LOADED_GRAPESHOT_Y_OFFSET, 0.0D);
                 }
                 poseStack.scale(scale, scale, scale);
-                super.renderBlockForBone(poseStack, bone, state, trebuchet, bufferSource,
-                        partialTick, packedLight, packedOverlay);
+                if (SiegeAmmo.isFireAmmoKey(trebuchet.getAmmoLoaded())) {
+                    TrebuchetProjectileRenderer.renderFirePot(poseStack, state, bufferSource, packedLight, packedOverlay);
+                } else {
+                    super.renderBlockForBone(poseStack, bone, state, trebuchet, bufferSource,
+                            partialTick, packedLight, packedOverlay);
+                }
                 poseStack.popPose();
             }
         });

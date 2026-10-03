@@ -16,6 +16,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 //? if forge {
@@ -25,6 +26,7 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 //?}
 
 public class TrebuchetProjectileRenderer extends EntityRenderer<TrebuchetProjectile> {
+    private static final float SPIN_DEGREES_PER_TICK = 12.0F;
     private final EntityModel<Entity> model;
 
     public TrebuchetProjectileRenderer(EntityRendererProvider.Context context) {
@@ -33,16 +35,21 @@ public class TrebuchetProjectileRenderer extends EntityRenderer<TrebuchetProject
     }
 
     public void render(TrebuchetProjectile entity, float yaw, float tickDelta, PoseStack poseStack, MultiBufferSource multiBufferSource, int light) {
-        BlockState stoneState = SiegeAmmo.stoneBlockState(entity.getTextureName());
+        BlockState stoneState = SiegeAmmo.projectileBlockState(entity.getTextureName());
         if (stoneState != null && (entity.getType() == SiegeworksEntities.MANGONEL_PROJECTILE.get()
                 || entity.getType() == SiegeworksEntities.TREBUCHET_PROJECTILE.get())) {
             poseStack.pushPose();
-            float spin = (entity.tickCount + tickDelta) * 12.0F;
+            // A load leaves the arm turning over forwards with it, about the one axis across its flight.
+            float heading = Mth.rotLerp(tickDelta, entity.yRotO, entity.getYRot());
+            float spin = (entity.tickCount + tickDelta) * SPIN_DEGREES_PER_TICK;
             float scale = entity.getType() == SiegeworksEntities.TREBUCHET_PROJECTILE.get() ? 0.75F : 0.5F;
-            poseStack.mulPose(Axis.YP.rotationDegrees(spin));
-            poseStack.mulPose(Axis.XP.rotationDegrees(spin * 0.65F));
+            poseStack.mulPose(Axis.YP.rotationDegrees(heading));
+            poseStack.mulPose(Axis.XP.rotationDegrees(spin));
             poseStack.translate(-scale / 2.0F, -scale / 2.0F, -scale / 2.0F);
             poseStack.scale(scale, scale, scale);
+            if (SiegeAmmo.isFireAmmoKey(entity.getTextureName())) {
+                fillBlockWithFirePot(poseStack);
+            }
             Minecraft.getInstance().getBlockRenderer().renderSingleBlock(
                     stoneState, poseStack, multiBufferSource, light, OverlayTexture.NO_OVERLAY,
                     ModelData.EMPTY, null);
@@ -61,6 +68,27 @@ public class TrebuchetProjectileRenderer extends EntityRenderer<TrebuchetProject
         *///?} else {
         model.renderToBuffer(poseStack, vertexConsumer, light, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
         //?}
+        poseStack.popPose();
+    }
+
+    /**
+     * The fire pot's block model sits in the lower middle of its block at half its size; this stretches it over
+     * the whole block, so a pot is drawn as large and as centred as a stone.
+     */
+    public static void fillBlockWithFirePot(PoseStack poseStack) {
+        poseStack.translate(-0.5F, 0.0F, -0.5F);
+        poseStack.scale(2.0F, 2.0F, 2.0F);
+    }
+
+    /** Draws a loaded fire pot on a bone the way GeckoLib draws a block there, at a stone's size. */
+    public static void renderFirePot(PoseStack poseStack, BlockState state, MultiBufferSource bufferSource,
+                                     int packedLight, int packedOverlay) {
+        poseStack.pushPose();
+        poseStack.translate(-0.25F, -0.25F, -0.25F);
+        poseStack.scale(0.5F, 0.5F, 0.5F);
+        fillBlockWithFirePot(poseStack);
+        Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, bufferSource, packedLight,
+                packedOverlay, ModelData.EMPTY, null);
         poseStack.popPose();
     }
 

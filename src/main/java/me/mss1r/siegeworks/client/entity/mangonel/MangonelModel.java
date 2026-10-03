@@ -34,6 +34,7 @@ public class MangonelModel extends TowedSiegeModel<MangonelEntity> {
         String ammo = animatable.getAmmoLoaded();
         getBone("load").ifPresent(geoBone -> geoBone.setHidden(
                 !SiegeAmmo.isStoneAmmoKey(ammo) && !SiegeAmmo.isGrapeshotAmmoKey(ammo)));
-        getBone("load_fire").ifPresent(geoBone -> geoBone.setHidden(!SiegeAmmo.isFireAmmoKey(ammo)));
+        // The pot is drawn as its own block on the load bone; this bone of the mangonel's has no pot texture.
+        getBone("load_fire").ifPresent(geoBone -> geoBone.setHidden(true));
     }
 }
