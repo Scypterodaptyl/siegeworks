@@ -5,9 +5,13 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 public final class SiegePassengerPhysics {
+    /** How far a hitched animal's footing may sink into or hover over the ground it stands on. */
+    private static final double FOOTING_INSET = 1.0E-3D;
     private SiegePassengerPhysics() {
     }
 
@@ -85,5 +89,35 @@ public final class SiegePassengerPhysics {
         double offsetX = rightX * offset.x - forwardX * offset.z;
         double offsetZ = rightZ * offset.x - forwardZ * offset.z;
         return new Vec3(offsetX, offset.y, offsetZ);
+    }
+
+    /**
+     * Where a hitched animal stands for a seat: on the ground under it, up or down as far as the engine itself can
+     * step, so it climbs a step before the engine reaches it. Against anything higher, or with no room to stand up
+     * there, it stays level with the seat and the engine's movement keeps it out of the way.
+     */
+    public static Vec3 mountFooting(AbstractSiegeEntity siege, Entity mount, Vec3 seat) {
+        double step = siege.geometryStepHeight();
+        double halfWidth = mount.getBbWidth() * 0.5D - FOOTING_INSET;
+        AABB standing = new AABB(seat.x - halfWidth, seat.y, seat.z - halfWidth,
+                seat.x + halfWidth, seat.y + mount.getBbHeight(), seat.z + halfWidth);
+        double highest = Double.NEGATIVE_INFINITY;
+        for (VoxelShape shape : mount.level().getBlockCollisions(mount,
+                standing.expandTowards(0.0D, -step, 0.0D).expandTowards(0.0D, step, 0.0D))) {
+            for (AABB part : shape.toAabbs()) {
+                if (part.maxX > standing.minX && part.minX < standing.maxX
+                        && part.maxZ > standing.minZ && part.minZ < standing.maxZ
+                        && part.maxY <= seat.y + step + FOOTING_INSET && part.maxY >= seat.y - step) {
+                    highest = Math.max(highest, part.maxY);
+                }
+            }
+        }
+        if (highest == Double.NEGATIVE_INFINITY || Math.abs(highest - seat.y) < FOOTING_INSET) {
+            return seat;
+        }
+        AABB there = standing.move(0.0D, highest - seat.y, 0.0D).deflate(FOOTING_INSET);
+        return mount.level().getBlockCollisions(mount, there).iterator().hasNext()
+                ? seat
+                : new Vec3(seat.x, highest, seat.z);
     }
 }

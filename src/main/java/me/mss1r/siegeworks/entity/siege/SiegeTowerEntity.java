@@ -938,8 +938,11 @@ public class SiegeTowerEntity extends AbstractSiegeEntity
             alignPassengerToTower(entity);
         }
 
-        Vec3 offset = rotateLocalOffset(getPassengerOffset(entity));
-        moveFunction.accept(entity, getX() + offset.x, getY() + offset.y, getZ() + offset.z);
+        Vec3 seat = position().add(rotateLocalOffset(getPassengerOffset(entity)));
+        if (isDraftMount(entity)) {
+            seat = SiegePassengerPhysics.mountFooting(this, entity, seat);
+        }
+        moveFunction.accept(entity, seat.x, seat.y, seat.z);
     }
 
     @Override

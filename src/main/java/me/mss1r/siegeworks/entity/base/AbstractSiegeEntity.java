@@ -123,6 +123,19 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     protected final Set<UUID> playersNotified = new HashSet<>();
     private final SiegeOperatorReference operator = new SiegeOperatorReference(this);
     private final SiegeOwnership ownership = new SiegeOwnership();
+    /** How far the server's aim may differ from the local operator's before it is taken as a correction. */
+    private static final float AIM_CORRECTION_DEGREES = 10.0F;
+    private float predictedAimYaw;
+    private float predictedAimPitch;
+    private boolean aimPredicted;
+    /** Set while the client ticks it, when its aim changes are its own, not the server's copy coming in. */
+    private boolean tickingOnClient;
+    /** Ticks since the local driver last steered, on the client. */
+    private int clientSteeringIdleTicks;
+    /** How long, in ticks, a driving client's reported yaw stays good for. */
+    private static final int DRIVER_YAW_STALE_TICKS = 10;
+    private float driverYaw;
+    private int driverYawTick = Integer.MIN_VALUE / 2;
     private final SiegeCaptureController capture = new SiegeCaptureController(this);
     private final SiegeDeploymentState deployment = new SiegeDeploymentState(this);
     private final SiegeAudioController audio = new SiegeAudioController(this);
@@ -1088,6 +1101,30 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         this.entityData.set(STEERING_SPEED, Math.max(0.0F, steeringSpeed));
     }
 
+    /**
+     * Takes the yaw a driving player's client has turned the engine to. The server turns it there itself, no
+     * faster than steering allows, instead of replaying the driver's keys a packet's jitter apart from the client.
+     */
+    public void reportDriverYaw(float yaw) {
+        driverYaw = Mth.wrapDegrees(yaw);
+        driverYawTick = tickCount;
+    }
+
+    /** The yaw the driving player's client last turned the engine to, if it came in lately. */
+    public OptionalDouble freshDriverYaw() {
+        return tickCount - driverYawTick <= DRIVER_YAW_STALE_TICKS
+                ? OptionalDouble.of(driverYaw)
+                : OptionalDouble.empty();
+    }
+
+    public int getClientSteeringIdleTicks() {
+        return clientSteeringIdleTicks;
+    }
+
+    public void setClientSteeringIdleTicks(int ticks) {
+        clientSteeringIdleTicks = ticks;
+    }
+
     public void applyClientPredictedYaw(float yaw) {
         aiming.applyClientPredictedYaw(yaw);
     }
@@ -1151,8 +1188,36 @@ public abstract class AbstractSiegeEntity extends LivingEntity
 
     public abstract void stopAnimation(String animationName);
 
+    /**
+     * Keeps the aim the local operator is turning when the server's own copy of it comes back: that copy trails it
+     * by the round trip and would pull it back. A copy far off it is a real correction and stands.
+     */
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (!level().isClientSide || tickingOnClient || !aimPredicted || !aiming.hasLocalPlayerControl()) {
+            return;
+        }
+        if (TRACKED_YAW.equals(key) && usesIndependentAimYaw()
+                && Math.abs(Mth.wrapDegrees(entityData.get(TRACKED_YAW) - predictedAimYaw)) < AIM_CORRECTION_DEGREES) {
+            entityData.set(TRACKED_YAW, predictedAimYaw);
+        } else if (TRACKED_PITCH.equals(key)
+                && Math.abs(entityData.get(TRACKED_PITCH) - predictedAimPitch) < AIM_CORRECTION_DEGREES) {
+            entityData.set(TRACKED_PITCH, predictedAimPitch);
+        }
+    }
+
     @Override
     public void tick() {
+        tickingOnClient = level().isClientSide;
+        try {
+            tickSiege();
+        } finally {
+            tickingOnClient = false;
+        }
+    }
+
+    private void tickSiege() {
         if (level().isClientSide) {
             aiming.capturePreviousRenderState();
         }
@@ -1181,7 +1246,11 @@ public abstract class AbstractSiegeEntity extends LivingEntity
                 if (!usesIndependentAimYaw()) {
                     SiegeMovementPhysics.updateClientSteering(this);
                 }
+                predictedAimYaw = entityData.get(TRACKED_YAW);
+                predictedAimPitch = entityData.get(TRACKED_PITCH);
+                aimPredicted = true;
             } else {
+                aimPredicted = false;
                 aiming.updateClientEntityRotation();
             }
             return;
@@ -1384,8 +1453,11 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     protected void positionRider(Entity entity, MoveFunction moveFunction) {
         SiegePassengerPhysics.updatePassengerState(this, entity);
         if (this.hasPassenger(entity)) {
-            Vec3 offset = SiegePassengerPhysics.rotatedSeatOffset(this, entity);
-            moveFunction.accept(entity, getX() + offset.x, getY() + offset.y, getZ() + offset.z);
+            Vec3 seat = position().add(SiegePassengerPhysics.rotatedSeatOffset(this, entity));
+            if (isDraftMount(entity)) {
+                seat = SiegePassengerPhysics.mountFooting(this, entity, seat);
+            }
+            moveFunction.accept(entity, seat.x, seat.y, seat.z);
         }
     }
 

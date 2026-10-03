@@ -83,7 +83,7 @@ public final class SiegeworksClientGameEvents {
             float forward = Math.max(-1.0F, Math.min(1.0F, event.getInput().forwardImpulse));
             float steering = Math.max(-1.0F, Math.min(1.0F, event.getInput().leftImpulse));
             controlledSiege.setMovementInput(forward, steering);
-            SiegeworksNetworking.sendToServer(new SiegeMovementC2SPayload(forward, steering));
+            SiegeworksNetworking.sendToServer(new SiegeMovementC2SPayload(forward, steering, controlledSiege.getYRot()));
         }
     }
 

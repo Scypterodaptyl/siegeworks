@@ -1,18 +1,23 @@
 package me.mss1r.siegeworks.gameplay.movement;
 
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
+import me.mss1r.siegeworks.gameplay.crew.SiegePassengerPhysics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import me.mss1r.axiomata.collision.StructureTransform;
 import me.mss1r.siegeworks.gameplay.collision.SiegeTerrainCollision;
 import net.minecraft.world.phys.Vec3;
+import java.util.OptionalDouble;
+
 
 public final class SiegeMovementPhysics {
     private SiegeMovementPhysics() {
@@ -31,7 +36,7 @@ public final class SiegeMovementPhysics {
 
         Vec3 shift = before.subtract(siege.towPivotWorldOffset());
         StructureTransform turnedPose = shifted(siege.collisionTransform(), shift);
-        if (!SiegeTerrainCollision.canOccupy(siege, previousPose, turnedPose)) {
+        if (!SiegeTerrainCollision.canOccupy(siege, previousPose, turnedPose) || mountsStrike(siege, shift)) {
             if (clientPredicted) {
                 siege.applyClientPredictedYaw(previousYaw);
             } else {
@@ -42,6 +47,105 @@ public final class SiegeMovementPhysics {
         if (shift.lengthSqr() > 1.0E-12D) {
             siege.setPos(siege.getX() + shift.x, siege.getY(), siege.getZ() + shift.z);
         }
+    }
+
+    /** Whether turning would swing a hitched animal into a wall. */
+    private static boolean mountsStrike(AbstractSiegeEntity siege, Vec3 shift) {
+        for (AbstractHorse mount : siege.getTowingMounts()) {
+            AABB standing = mount.getBoundingBox().deflate(MOUNT_CLEARANCE);
+            if (!mountFits(mount, standing, mountBox(siege, mount, shift))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Stops a towed engine where its hitched animals meet a wall. They ride it, so its own collision leaves them
+     * out. Each stands on the ground as it would be put there, and may only go where it fits or work its way out
+     * of a block it is in; pressed against a wall, the team slides along it.
+     */
+    private static Vec3 clampForMounts(AbstractSiegeEntity siege, Vec3 travel) {
+        Vec3 flat = new Vec3(travel.x, 0.0D, travel.z);
+        for (AbstractHorse mount : siege.getTowingMounts()) {
+            if (flat.horizontalDistanceSqr() < 1.0E-12D) {
+                break;
+            }
+            AABB box = mountBox(siege, mount, Vec3.ZERO);
+            Vec3 allowed = Vec3.ZERO;
+            for (Vec3 way : new Vec3[]{flat, new Vec3(flat.x, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, flat.z)}) {
+                Vec3 reach = way.scale(furthestShare(siege, mount, box, way, travel.y));
+                if (reach.horizontalDistanceSqr() > allowed.horizontalDistanceSqr()) {
+                    allowed = reach;
+                }
+                if (allowed.horizontalDistanceSqr() >= flat.horizontalDistanceSqr() - 1.0E-12D) {
+                    break;
+                }
+            }
+            flat = allowed;
+        }
+        return new Vec3(flat.x, travel.y, flat.z);
+    }
+
+    /** How much of a step along the way an animal can take before it would run into something. */
+    private static double furthestShare(AbstractSiegeEntity siege, Entity mount, AABB box, Vec3 way, double rise) {
+        if (way.horizontalDistanceSqr() < 1.0E-12D) {
+            return 0.0D;
+        }
+        Vec3 seat = mountSeat(siege, mount, Vec3.ZERO);
+        if (mountFits(mount, box, footed(siege, mount, seat.add(way.x, rise, way.z)))) {
+            return 1.0D;
+        }
+        double low = 0.0D;
+        double high = 1.0D;
+        for (int i = 0; i < MOUNT_SEARCH_STEPS; i++) {
+            double middle = (low + high) * 0.5D;
+            if (mountFits(mount, box, footed(siege, mount, seat.add(way.x * middle, rise, way.z * middle)))) {
+                low = middle;
+            } else {
+                high = middle;
+            }
+        }
+        return low;
+    }
+
+    /** Where a hitched animal's seat is for the engine's present pose, moved by the given shift. */
+    private static Vec3 mountSeat(AbstractSiegeEntity siege, Entity mount, Vec3 shift) {
+        return siege.position().add(shift).add(SiegePassengerPhysics.rotatedSeatOffset(siege, mount));
+    }
+
+    /** Where a hitched animal's body stands for the engine's present pose, moved by the given shift. */
+    private static AABB mountBox(AbstractSiegeEntity siege, Entity mount, Vec3 shift) {
+        return footed(siege, mount, mountSeat(siege, mount, shift));
+    }
+
+    /** An animal's body standing on the ground under a seat, as it would be put there. */
+    private static AABB footed(AbstractSiegeEntity siege, Entity mount, Vec3 seat) {
+        Vec3 feet = SiegePassengerPhysics.mountFooting(siege, mount, seat);
+        return mount.getBoundingBox().move(feet.subtract(mount.position())).deflate(MOUNT_CLEARANCE);
+    }
+
+    /**
+     * Whether an animal may go from one place to another: into the open, or anywhere that leaves less of it
+     * inside the blocks it is stuck in.
+     */
+    private static boolean mountFits(Entity mount, AABB from, AABB to) {
+        double inside = intrusion(mount, to);
+        return inside <= 0.0D || inside < intrusion(mount, from) - 1.0E-9D;
+    }
+
+    /** How much of a box lies inside solid blocks. */
+    private static double intrusion(Entity mount, AABB box) {
+        double volume = 0.0D;
+        for (VoxelShape shape : mount.level().getBlockCollisions(mount, box)) {
+            for (AABB part : shape.toAabbs()) {
+                if (part.intersects(box)) {
+                    AABB overlap = part.intersect(box);
+                    volume += overlap.getXsize() * overlap.getYsize() * overlap.getZsize();
+                }
+            }
+        }
+        return volume;
     }
 
     private static StructureTransform shifted(StructureTransform pose, Vec3 shift) {
@@ -123,7 +227,15 @@ public final class SiegeMovementPhysics {
         }
         abstractSiegeEntity.setCurrentSteeringSpeed(steeringSpeed);
 
-        if (Math.abs(steeringInput) > 0.01F && (moving || pivoting) && operator != null) {
+        OptionalDouble driverYaw = controller != null ? abstractSiegeEntity.freshDriverYaw() : OptionalDouble.empty();
+        if (driverYaw.isPresent() && (moving || pivoting) && steeringSpeed > 0.0F) {
+            // Where the driver's client turned it, no faster than steering, with room to catch up a late packet.
+            float yawDelta = Mth.wrapDegrees((float) driverYaw.getAsDouble() - abstractSiegeEntity.getYRot());
+            float limit = steeringSpeed * DRIVER_YAW_CATCH_UP;
+            if (Math.abs(yawDelta) > 1.0E-3F) {
+                turnAboutPivot(abstractSiegeEntity, Mth.clamp(yawDelta, -limit, limit), false);
+            }
+        } else if (Math.abs(steeringInput) > 0.01F && (moving || pivoting) && operator != null) {
             float travelDirection = moving && currentSpeed < 0.0D ? -1.0F : 1.0F;
             float yawDelta = -steeringInput * steeringSpeed * travelDirection;
             turnAboutPivot(abstractSiegeEntity, yawDelta, false);
@@ -142,7 +254,8 @@ public final class SiegeMovementPhysics {
         }
 
         Vec3 newVelocity = new Vec3(horizontalVelocity.x, verticalVelocity, horizontalVelocity.z);
-        Vec3 travel = SiegeTerrainCollision.clampMovement(abstractSiegeEntity, newVelocity);
+        Vec3 travel = clampForMounts(abstractSiegeEntity,
+                SiegeTerrainCollision.clampMovement(abstractSiegeEntity, newVelocity));
 
         abstractSiegeEntity.setDeltaMovement(travel);
         abstractSiegeEntity.move(MoverType.SELF, travel);
@@ -161,6 +274,21 @@ public final class SiegeMovementPhysics {
         return (float) (Math.max(0.0F, maximumTurnDegrees) * speedFraction);
     }
 
+    /** How long, in ticks, a client leaves its turned engine be after steering stops, for the server to catch up. */
+    private static final int STEERING_SETTLE_TICKS = 10;
+    /**
+     * The share of what is left between a client's turned engine and the server's that it closes each tick after:
+     * a degree or two closed over half a second, not in a jolt.
+     */
+    private static final float STEERING_CORRECTION_SHARE = 0.15F;
+    private static final float LEAST_STEERING_CORRECTION = 0.05F;
+    /** How much faster than it steers the server may turn an engine to catch up a driver's late yaw. */
+    private static final float DRIVER_YAW_CATCH_UP = 1.5F;
+    /** How far inside its box a hitched animal may brush the ground it stands on. */
+    private static final double MOUNT_CLEARANCE = 1.0E-3D;
+    /** Halvings spent finding how far a team can go before an animal meets a wall. */
+    private static final int MOUNT_SEARCH_STEPS = 10;
+
     public static void updateClientSteering(AbstractSiegeEntity abstractSiegeEntity) {
         float steeringInput = abstractSiegeEntity.getMovementInputSteering();
         double currentSpeed = abstractSiegeEntity.getCurrentDriveSpeed();
@@ -173,13 +301,23 @@ public final class SiegeMovementPhysics {
             float travelDirection = moving && currentSpeed < 0.0D ? -1.0F : 1.0F;
             float yawDelta = -steeringInput * steeringSpeed * travelDirection;
             turnAboutPivot(abstractSiegeEntity, yawDelta, true);
+            abstractSiegeEntity.setClientSteeringIdleTicks(0);
             return;
         }
 
+        // The server turns on the same steering a round trip behind; pulling towards it before it has caught up
+        // swings the engine back the way it came.
+        int idle = abstractSiegeEntity.getClientSteeringIdleTicks() + 1;
+        abstractSiegeEntity.setClientSteeringIdleTicks(idle);
+        if (idle <= STEERING_SETTLE_TICKS) {
+            return;
+        }
         float yawDelta = Mth.wrapDegrees(abstractSiegeEntity.getTrackedYaw() - abstractSiegeEntity.getYRot());
-        float correctionStep = Math.max(0.05F, steeringSpeed * 1.5F);
-        abstractSiegeEntity.applyClientPredictedYaw(
-                abstractSiegeEntity.getYRot() + Mth.clamp(yawDelta, -correctionStep, correctionStep));
+        if (Math.abs(yawDelta) < LEAST_STEERING_CORRECTION) {
+            return;
+        }
+        // Turned about the same pivot as steering turns it, or the engine would slide on its wheels.
+        turnAboutPivot(abstractSiegeEntity, yawDelta * STEERING_CORRECTION_SHARE, true);
     }
 
     private static float resolveForwardInput(AbstractSiegeEntity abstractSiegeEntity, Player player) {

@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
+import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 //? if forge {
 /*import software.bernie.geckolib.core.animatable.GeoAnimatable;
@@ -17,7 +18,6 @@ import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.animatable.GeoAnimatable;
 //?}
 import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 public abstract class TowedSiegeRenderer<T extends AbstractSiegeEntity & GeoAnimatable>
         extends SiegeConstructionRenderer<T> {
@@ -56,7 +56,7 @@ public abstract class TowedSiegeRenderer<T extends AbstractSiegeEntity & GeoAnim
         poseStack.pushPose();
         enterModelSpace(poseStack, animatable, partialTick);
         renderInModelSpace(poseStack, animatable, bufferSource, partialTick, packedLight);
-        renderTowShafts(poseStack, animatable, bufferSource, packedLight);
+        renderTowShafts(poseStack, animatable, bufferSource, partialTick, packedLight);
         poseStack.popPose();
     }
 
@@ -74,7 +74,7 @@ public abstract class TowedSiegeRenderer<T extends AbstractSiegeEntity & GeoAnim
     }
 
     private void renderTowShafts(PoseStack poseStack, T animatable,
-                                 MultiBufferSource bufferSource, int packedLight) {
+                                 MultiBufferSource bufferSource, float partialTick, int packedLight) {
         TowingProfile profile = animatable.towingProfile();
         if (profile == null) {
             return;
@@ -84,8 +84,12 @@ public abstract class TowedSiegeRenderer<T extends AbstractSiegeEntity & GeoAnim
         for (int index = 0; index < mounts.size() && index < profile.mountSlots().size(); index++) {
             AbstractHorse mount = mounts.get(index);
             TowingProfile.MountSlot slot = profile.mountSlots().get(index);
+            // The animal stands on its own ground, so the shafts reach down or up to where it really is.
+            double rise = Mth.lerp(partialTick, mount.yo, mount.getY())
+                    - Mth.lerp(partialTick, animatable.yo, animatable.getY());
+            Vec3 reach = new Vec3(slot.mountOffset().x, rise, slot.mountOffset().z);
             TowShaftRenderer.render(poseStack, bufferSource, getGeoModel(),
-                    slot.leftAnchor(), slot.rightAnchor(), slot.mountOffset(),
+                    slot.leftAnchor(), slot.rightAnchor(), reach,
                     profile.modelTurnDegrees(), mount, packedLight);
         }
     }

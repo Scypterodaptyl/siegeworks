@@ -75,7 +75,7 @@ public final class MangonelCollisionGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void mangonelShotMovesCollisionAndReleasesAtAuthoredTick(GameTestHelper helper) {
+    public static void mangonelShotMovesCollisionAndReleasesAlongTheLaunchLine(GameTestHelper helper) {
         MangonelEntity mangonel = createMangonel(helper);
         ServerLevel level = helper.getLevel();
         level.addFreshEntity(mangonel);
@@ -87,13 +87,14 @@ public final class MangonelCollisionGameTests {
                 "Mangonel did not start its synchronized shot track");
 
         Vec3 bodyAtRest = bodyCenter(mangonel);
-        mangonel.onSiegeTick(level);
+        // The cup runs along the launch line a third of the way into the second tick of its swing.
         mangonel.onSiegeTick(level);
         helper.assertTrue(mangonel.hasAmmoLoaded(),
-                "Mangonel released its projectile before the authored keyframe");
+                "Mangonel released its projectile before its cup ran along the launch line");
         mangonel.onSiegeTick(level);
-        helper.assertTrue(mangonel.getShootAnimationTick() == 3 && !mangonel.hasAmmoLoaded(),
-                "Mangonel did not release its projectile on animation tick 3");
+        helper.assertTrue(mangonel.getShootAnimationTick() == 2 && !mangonel.hasAmmoLoaded(),
+                "Mangonel did not release its projectile on animation tick 2");
+        mangonel.onSiegeTick(level);
 
         mangonel.onSiegeTick(level);
         helper.assertTrue(bodyCenter(mangonel).distanceToSqr(bodyAtRest) > 1.0E-5D,

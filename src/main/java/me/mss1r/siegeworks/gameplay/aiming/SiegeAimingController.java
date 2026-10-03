@@ -23,6 +23,8 @@ public final class SiegeAimingController {
     private float previousRenderedPitch;
     private float renderedYaw;
     private float renderedPitch;
+    private float lastRenderedTargetYaw;
+    private float lastRenderedTargetPitch;
     private int renderedUpdateTick = Integer.MIN_VALUE;
     private float renderedUpdatePartialTick = Float.NaN;
 
@@ -97,16 +99,22 @@ public final class SiegeAimingController {
         siege.lastRiderPitch = trackedPitch();
     }
 
+    /**
+     * Starts a tick's glide from where the aim was drawn last, not from where it is now: an aim the server turns
+     * arrives before the tick begins, and starting from it would stand the aim still until the next one.
+     */
     public void capturePreviousRenderState() {
         float currentYaw = host.aimingRenderYaw();
         float currentPitch = host.aimingRenderPitch();
-        previousRenderedYaw = currentYaw;
-        previousRenderedPitch = currentPitch;
         if (!renderedInitialized) {
             renderedYaw = currentYaw;
             renderedPitch = currentPitch;
+            lastRenderedTargetYaw = currentYaw;
+            lastRenderedTargetPitch = currentPitch;
             renderedInitialized = true;
         }
+        previousRenderedYaw = lastRenderedTargetYaw;
+        previousRenderedPitch = lastRenderedTargetPitch;
         renderedUpdateTick = Integer.MIN_VALUE;
         renderedUpdatePartialTick = Float.NaN;
     }
@@ -126,10 +134,14 @@ public final class SiegeAimingController {
             previousRenderedPitch = targetPitch;
             renderedYaw = targetYaw;
             renderedPitch = targetPitch;
+            lastRenderedTargetYaw = targetYaw;
+            lastRenderedTargetPitch = targetPitch;
             renderedInitialized = true;
             return;
         }
 
+        lastRenderedTargetYaw = targetYaw;
+        lastRenderedTargetPitch = targetPitch;
         float interpolation = Mth.clamp(partialTick, 0.0F, 1.0F);
         renderedYaw = Mth.wrapDegrees(previousRenderedYaw
                 + Mth.wrapDegrees(targetYaw - previousRenderedYaw) * interpolation);
