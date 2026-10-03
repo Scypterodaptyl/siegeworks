@@ -10,6 +10,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public final class SiegeworksConfigSpec {
+    public static final int FORMAT_VERSION = 1;
+
     //? if forge {
     /*private final ForgeConfigSpec delegate;
 
@@ -42,6 +44,12 @@ public final class SiegeworksConfigSpec {
         *///?} else {
         private final ModConfigSpec.Builder delegate = new ModConfigSpec.Builder();
         //?}
+
+        public Builder() {
+            delegate.comment("Config layout version, not the mod version. Leave this unchanged.",
+                            "Adding settings does not change the layout version.")
+                    .defineInRange("configVersion", FORMAT_VERSION, 1, Integer.MAX_VALUE);
+        }
 
         public Builder comment(String... comments) {
             delegate.comment(comments);

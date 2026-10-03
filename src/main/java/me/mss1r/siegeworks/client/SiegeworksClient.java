@@ -45,6 +45,7 @@ public final class SiegeworksClient {
         KeyMappingRegistry.register(SiegeworksKeyMappings.FREE_LOOK);
         ClientTickEvent.CLIENT_POST.register(ProjectileFlightSoundController::tick);
         ClientTickEvent.CLIENT_POST.register(SiegeworksClientGameEvents::onClientTick);
+        ClientTickEvent.CLIENT_POST.register(SiegeUpdateNotifier::tick);
     }
 
     private static void registerEntityRenderers() {

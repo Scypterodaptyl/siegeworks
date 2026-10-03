@@ -1,4 +1,6 @@
 {
+  "message.siegeworks.update.available": "Siegeworks: доступна версия %s.",
+  "message.siegeworks.update.open": "[Открыть страницу]",
   "item.siegeworks.siege_ladder_spawner": "Осадная лестница",
   "item.siegeworks.siege_ladder_spawner.sections": "Секции: %s",
   "entity.siegeworks.siege_ladder": "Осадная лестница",

@@ -1,4 +1,6 @@
 {
+  "message.siegeworks.update.available": "Siegeworks: version %s is available.",
+  "message.siegeworks.update.open": "[Open page]",
   "item.siegeworks.serpentine_spawner": "Serpentine",
   "item.siegeworks.culverin_spawner": "Culverin",
   "item.siegeworks.battering_ram_spawner": "Battering Ram",
