@@ -77,10 +77,10 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
         SiegeCommandType targetType = target == null ? null : SiegeCommandType.from(target);
         if (activeScreen != screen) {
             activeScreen = screen;
-            selectedType = availableTypes.contains(targetType)
+            selectedType = targetType != null && availableTypes.contains(targetType)
                     ? targetType
                     : availableTypes.stream().findFirst().orElse(null);
-        } else if (!availableTypes.contains(selectedType)) {
+        } else if (selectedType == null || !availableTypes.contains(selectedType)) {
             selectedType = availableTypes.stream().findFirst().orElse(null);
         }
 
