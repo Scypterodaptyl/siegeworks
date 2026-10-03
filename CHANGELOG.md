@@ -6,9 +6,7 @@
 
 - Siege engine ownership, team and alliance access, capture of unmanned enemy machines, and release of abandoned machines.
 - Datapack rules for block material strength, penetration resistance and fracture energy.
-- Server settings for terrain damage and stone fracture energy. Fire and falling debris can respect claim protection.
-- A clickable update notice, shown once per game launch, with a client setting to disable it.
-- Config layout versions. Missing settings are added without resetting valid existing values.
+- A clickable update notice, shown once per game launch. Disable it with `updates.showNotice` in the client config.
 
 ### Changed
 
@@ -16,11 +14,19 @@
 - Penetration and crater damage use projectile mass, diameter, speed and the material struck. Block cracks are saved with the world and remain until the block is removed or its state changes.
 - Tower Crossbow bolts launch at 120 m/s; Arcballista bolts at 140 m/s.
 - Cannon launch speeds are 300 m/s for Culverin, 330 m/s for Serpentine and 315 m/s for Mons Meg.
-- Renamed Hwacha ammunition to So-singijeon and Jung-singijeon, with automatic migration of old item IDs.
+- Renamed Hwacha ammunition to So-singijeon and Jung-singijeon. Existing stacks of `singijeon` and `explosive_singijeon` load as `so_singijeon` and `jung_singijeon`, keeping their count and item data.
 - Tower Crossbow bolts stack to 16.
-- Projectile and engine profiles use format 2. Custom datapacks need to be updated; see the [wiki](https://github.com/mess1re/siegeworks/wiki/Data-Pack-Reference).
 - Projectile profiles are synchronized from the server on joining and after reload. Invalid overrides report their source and do not replace a working catalog during reload.
 - Requires Axiomata 0.1.0-beta.5 or newer.
+
+### Configuration and datapacks
+
+- Client and server configs now include `configVersion = 1`. Missing settings are added while valid existing values are kept; deleting the configs is not needed.
+- New `rules.ownership` settings control access, capture conditions and duration, and release of abandoned machines. `abandonAfterDays` defaults to 14; set it to 0 to keep ownership indefinitely.
+- `rules.terrain.blockDamage` selects `EVERYWHERE` (default), `RESPECT_PROTECTION` or `NEVER`. Fire and falling debris also respect this setting.
+- `rules.terrain.stoneFractureEnergy` adjusts the energy needed to fracture stone (default: 50,000 J/m³). It affects craters and accumulated cracks, not projectile flight, penetration resistance or entity damage. Material profiles can override it for specific blocks.
+- Engine, projectile and block material JSON profiles use `formatVersion: 2`. Engine `projectileSpeed` is replaced by `muzzleVelocity` in m/s. Projectile profiles replace `drag` with `dragCoefficient` and `diameter`, and group impact effects under `entity`, `shock`, `blast` and `fire`; rocket thrust and burn time are under `motor`.
+- Bundled profiles update with the mod jar. Custom datapacks using beta.5 fields need manual conversion; old and unknown fields are rejected. See the [datapack reference](https://github.com/mess1re/siegeworks/wiki/Data-Pack-Reference).
 
 ### Fixed
 
