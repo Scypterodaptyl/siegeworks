@@ -3,7 +3,6 @@
   "boneCubes": {
     "base": 12,
     "catapult": 4,
-    "load": 1,
     "load_fire": 1,
     "loader": 5,
     "hexadecagon_1": 8,
