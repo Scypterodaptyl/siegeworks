@@ -30,13 +30,18 @@ public final class SiegeworksParticles {
     /** A fragment of a struck block, flung with the velocity it is given. */
     //? if forge {
     /*public static final RegistrySupplier<ParticleType<BlockParticleOption>> FRAGMENT =
-            PARTICLE_TYPES.register("fragment", () -> new ParticleType<BlockParticleOption>(false,
-                    BlockParticleOption.DESERIALIZER) {
-                @Override
-                public Codec<BlockParticleOption> codec() {
-                    return BlockParticleOption.codec(this);
-                }
-            });
+            PARTICLE_TYPES.register("fragment", FragmentParticleType::new);
+
+    private static final class FragmentParticleType extends ParticleType<BlockParticleOption> {
+        private FragmentParticleType() {
+            super(false, BlockParticleOption.DESERIALIZER);
+        }
+
+        @Override
+        public Codec<BlockParticleOption> codec() {
+            return BlockParticleOption.codec(this);
+        }
+    }
     *///?} else {
     public static final RegistrySupplier<ParticleType<BlockParticleOption>> FRAGMENT =
             PARTICLE_TYPES.register("fragment", () -> new ParticleType<BlockParticleOption>(false) {
