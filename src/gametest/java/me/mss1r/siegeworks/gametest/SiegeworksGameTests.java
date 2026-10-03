@@ -2493,7 +2493,9 @@ public final class SiegeworksGameTests {
                 helper.assertTrue(recruit.getVehicle() != tower,
                         "A selected recruit did not leave the deployed tower");
                 helper.assertTrue(recruit.getZ() > tower.getZ() + 4.0D,
-                        "A recruit did not clear the far side of the bridge");
+                        "A recruit did not clear the far side of the bridge: recruit=" + recruit.position()
+                                + ", tower=" + tower.position() + ", open=" + tower.isBridgeOpen()
+                                + ", moving=" + tower.bridgeMoving() + ", angle=" + tower.getBridgeAngleRadians());
             }
             helper.assertTrue(recruits[recruits.length - 1].getVehicle() == tower,
                     "Targeted unload removed a recruit from an unselected group");

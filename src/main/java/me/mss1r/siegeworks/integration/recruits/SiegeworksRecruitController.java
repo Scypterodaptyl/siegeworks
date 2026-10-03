@@ -90,7 +90,7 @@ public final class SiegeworksRecruitController implements ISiegeController {
         }
 
         if (temporaryDeployment && siege instanceof SiegeTowerEntity tower
-                && !RecruitsSiegeTraversal.hasTowerTraffic(tower)) {
+                && !RecruitsSiegeTraversal.hasTowerTraffic(tower) && !tower.hasBridgePassengers()) {
             deploymentOverride = deploymentOverrideBeforeTemporary;
             deploymentOverrideBeforeTemporary = null;
             temporaryDeployment = false;

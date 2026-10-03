@@ -37,7 +37,7 @@ final class RecruitsSiegeTraversal {
     private static final double BOARD_LAST_RESORT_SQR = 16.0D * 16.0D;
     private static final int BOARD_STUCK_TICKS = 60;
     private static final int GROUND_EXIT_PATIENCE_TICKS = 100;
-    private static final double TOWER_RETURN_APPROACH_DISTANCE_SQR = 2.25D * 2.25D;
+    private static final double TOWER_RETURN_ENTRY_REACH_SQR = 0.75D * 0.75D;
     private static final double TOWER_RETURN_UPPER_LEVEL_OFFSET = 3.0D;
 
     private static final Map<AbstractRecruitEntity, LadderRoute> LADDER_ROUTES = new WeakHashMap<>();
@@ -648,6 +648,7 @@ final class RecruitsSiegeTraversal {
             return false;
         }
         if (recruit.getVehicle() == tower && tower.isInteriorPassenger(recruit)) {
+            tower.cancelAutomatedReturn(recruit);
             TOWER_RETURN_ROUTES.remove(recruit);
             giveBack(route, recruit);
             recruit.setShouldMount(false);
@@ -674,22 +675,31 @@ final class RecruitsSiegeTraversal {
             return false;
         }
 
-        if (route.approach == null) {
-            route.approach = tower.getAutomatedReturnApproach(recruit);
+        if (!route.crossing) {
+            if (route.approach == null || recruit.tickCount % 20 == 0) {
+                route.approach = tower.getAutomatedReturnApproach(recruit);
+            }
             if (route.approach == null) {
                 RecruitsWalkOrders.stop(recruit);
                 RecruitsDebug.tower(recruit, "has no return approach to walk to");
                 return true;
             }
-            RecruitsDebug.tower(recruit, "walking to the return approach " + route.approach);
+            if (recruit.distanceToSqr(route.approach) > TOWER_RETURN_ENTRY_REACH_SQR
+                    || !tower.beginAutomatedReturn(recruit)) {
+                RecruitsWalkOrders.walkTo(recruit, route.approach, 1.15D);
+                return true;
+            }
+            RecruitsWalkOrders.stop(recruit);
+            route.crossing = true;
         }
 
-        if (recruit.distanceToSqr(route.approach) > TOWER_RETURN_APPROACH_DISTANCE_SQR) {
-            if (recruit.tickCount % 5 == 0) {
-                RecruitsDebug.walk(recruit, "returning to tower", route.approach);
-            }
-            RecruitsWalkOrders.walkTo(recruit, route.approach, 1.15D);
+        SiegeTransportControl.ExitResult result = tower.advanceAutomatedReturn(recruit);
+        if (result == SiegeTransportControl.ExitResult.IN_PROGRESS) {
             return true;
+        }
+        if (result == SiegeTransportControl.ExitResult.FAILED) {
+            failTowerReturn(recruit, tower);
+            return false;
         }
 
         RecruitsWalkOrders.stop(recruit);
@@ -718,6 +728,7 @@ final class RecruitsSiegeTraversal {
         recruit.setShouldMount(false);
         RecruitsWalkOrders.stop(recruit);
         if (tower != null) {
+            tower.cancelAutomatedReturn(recruit);
             tower.cancelBoardingReservation(recruit);
         }
     }
@@ -732,6 +743,7 @@ final class RecruitsSiegeTraversal {
         RecruitsWalkOrders.stop(recruit);
         if (recruit.level() instanceof ServerLevel serverLevel
                 && serverLevel.getEntity(route.towerUuid) instanceof SiegeTowerEntity tower) {
+            tower.cancelAutomatedReturn(recruit);
             tower.cancelBoardingReservation(recruit);
         }
         return true;
@@ -774,6 +786,7 @@ final class RecruitsSiegeTraversal {
         private final UUID towerUuid;
         private final int createdTick;
         private Vec3 approach;
+        private boolean crossing;
 
         private TowerReturnRoute(UUID towerUuid, int createdTick) {
             this.towerUuid = towerUuid;

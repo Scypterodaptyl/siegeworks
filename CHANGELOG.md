@@ -30,6 +30,7 @@
 
 ### Fixed
 
+- Recruits return to siege towers along open drawbridges. The bridge no longer raises automatically while recruits are still on it.
 - Siege engineers keep their firing target and turn the machine to aim. Move, attack and hold orders no longer compete with stale driving targets; recruits resume following after a siege task.
 - Recruit operators can be selected through the machine to open their inventory.
 - Fixed a crash when opening siege commands with no selected engine type.

@@ -844,6 +844,22 @@ public class SiegeTowerEntity extends AbstractSiegeEntity
                 crewRoster.serverSeat(passenger.getUUID()));
     }
 
+    public boolean beginAutomatedReturn(LivingEntity passenger) {
+        return bridge.beginAutomatedReturn(passenger, crewRoster.serverSeat(passenger.getUUID()));
+    }
+
+    public boolean hasBridgePassengers() {
+        return bridge.hasBridgePassengers();
+    }
+
+    public ExitResult advanceAutomatedReturn(LivingEntity passenger) {
+        return bridge.advanceAutomatedReturn(passenger);
+    }
+
+    public void cancelAutomatedReturn(LivingEntity passenger) {
+        bridge.cancelAutomatedReturn(passenger);
+    }
+
     @Override
     public void cancelAutomatedExit(LivingEntity passenger) {
         bridge.cancelAutomatedExit(passenger);
