@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "siegeworks:so_singijeon" },
+    { "item": "siegeworks:so_singijeon" },
+    { "item": "siegeworks:so_singijeon" },
+    { "item": "siegeworks:so_singijeon" },
+    { "item": "siegeworks:black_powder" },
+    { "item": "siegeworks:black_powder" }
+  ],
+  "result": {
+    "item": "siegeworks:jung_singijeon",
+    "count": 4
+  }
+}

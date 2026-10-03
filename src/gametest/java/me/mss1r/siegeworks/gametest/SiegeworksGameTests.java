@@ -758,7 +758,7 @@ public final class SiegeworksGameTests {
         helper.assertTrue(level.addFreshEntity(hwacha), "Failed to add Hwacha loading-cancellation test entity");
 
         loader.setItemInHand(InteractionHand.MAIN_HAND,
-                new ItemStack(SiegeworksItems.SINGIJEON.get(), 2));
+                new ItemStack(SiegeworksItems.SO_SINGIJEON.get(), 2));
         helper.assertTrue(hwacha.handleSiegeInteraction(loader, InteractionHand.MAIN_HAND, level).consumesAction(),
                 "Standard rocket loading did not start");
         for (int tick = 0; tick < 8; tick++) {
@@ -768,7 +768,7 @@ public final class SiegeworksGameTests {
                 "Hwacha did not retain the standard rocket inserted before cancellation");
 
         loader.setItemInHand(InteractionHand.MAIN_HAND,
-                new ItemStack(SiegeworksItems.EXPLOSIVE_SINGIJEON.get(), 2));
+                new ItemStack(SiegeworksItems.JUNG_SINGIJEON.get(), 2));
         hwacha.tick();
         helper.assertTrue(hwacha.getOperationState() == SiegeOperationState.READY,
                 "Hwacha kept loading after the held ammunition changed");
@@ -2402,7 +2402,7 @@ public final class SiegeworksGameTests {
         helper.assertTrue(operator.startRiding(hwacha), "Test operator could not crew the Hwacha");
 
         hwacha.setAutomatedAmmunitionMode(SiegeAmmunitionMode.EXPLOSIVE);
-        SimpleContainer inventory = new SimpleContainer(SiegeworksItems.SINGIJEON.get().getDefaultInstance());
+        SimpleContainer inventory = new SimpleContainer(SiegeworksItems.SO_SINGIJEON.get().getDefaultInstance());
         helper.assertTrue(hwacha.advancePrimaryAction(operator, inventory) == SiegeActionResult.MISSING_AMMUNITION,
                 "Hwacha substituted standard ammunition for the selected explosive mode");
 

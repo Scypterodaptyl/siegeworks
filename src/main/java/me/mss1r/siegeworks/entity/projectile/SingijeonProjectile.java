@@ -78,7 +78,7 @@ public class SingijeonProjectile extends SiegeProjectile {
 
     @Override
     protected Item getDefaultItem() {
-        return SiegeworksItems.SINGIJEON.get();
+        return SiegeworksItems.SO_SINGIJEON.get();
     }
 
     public boolean isExplosive() {

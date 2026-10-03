@@ -4,6 +4,7 @@ import dev.architectury.platform.Platform;
 import me.mss1r.siegeworks.config.SiegeworksClientConfig;
 import me.mss1r.siegeworks.config.SiegeworksServerConfig;
 import me.mss1r.siegeworks.event.MantletProtectionHandler;
+import me.mss1r.siegeworks.registry.ItemIdMigrations;
 //? if forge {
 /*import dev.architectury.platform.forge.EventBuses;
 import me.mss1r.siegeworks.integration.recruits.RecruitsCompat;
@@ -47,6 +48,7 @@ public final class SiegeworksBootstrap {
     //?}
 
     private static void initialize(IEventBus modBus, IEventBus gameBus) {
+        ItemIdMigrations.register(modBus);
         Siegeworks.initialize();
         MantletProtectionHandler.register(gameBus);
     }

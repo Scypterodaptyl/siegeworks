@@ -36,9 +36,9 @@ public interface SiegeworksItems {
             new Item(new Item.Properties().stacksTo(16)));
     RegistrySupplier<Item> ARCBALLISTA_BOLT = ITEMS.register("arcballista_bolt", () ->
             new Item(new Item.Properties().stacksTo(16)));
-    RegistrySupplier<Item> SINGIJEON = ITEMS.register("singijeon", () ->
+    RegistrySupplier<Item> SO_SINGIJEON = ITEMS.register("so_singijeon", () ->
             new Item(new Item.Properties().stacksTo(64)));
-    RegistrySupplier<Item> EXPLOSIVE_SINGIJEON = ITEMS.register("explosive_singijeon", () ->
+    RegistrySupplier<Item> JUNG_SINGIJEON = ITEMS.register("jung_singijeon", () ->
             new Item(new Item.Properties().stacksTo(64)));
     RegistrySupplier<Item> FIRE_ARROW = ITEMS.register("fire_arrow", () -> new FireArrowItem(new Item.Properties()));
     RegistrySupplier<Item> CANNON_BALL = ITEMS.register("cannon_ball", () -> new BlockItem(SiegeworksBlocks.CANNON_BALL.get(), new Item.Properties().stacksTo(8)));

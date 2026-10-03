@@ -251,7 +251,7 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
             }
 
             pendingManualCount = amount;
-            pendingManualExplosive = stack.is(SiegeworksItems.EXPLOSIVE_SINGIJEON.get());
+            pendingManualExplosive = stack.is(SiegeworksItems.JUNG_SINGIJEON.get());
             LoadingRequirement stage = createRocketBatchStage(stack.getItem(), amount);
             return beginLoadingAction(player, hand, serverLevel, MANUAL_STAGE, stage,
                     getRocketBatchTicks(amount));
@@ -262,9 +262,9 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
 
         if (getLoadedCount() == 0) {
             player.displayClientMessage(Component.translatable("siege.loading.need_one_of",
-                    SiegeworksItems.SINGIJEON.get().getDefaultInstance().getHoverName().getString()
+                    SiegeworksItems.SO_SINGIJEON.get().getDefaultInstance().getHoverName().getString()
                             + ", "
-                            + SiegeworksItems.EXPLOSIVE_SINGIJEON.get().getDefaultInstance().getHoverName().getString()),
+                            + SiegeworksItems.JUNG_SINGIJEON.get().getDefaultInstance().getHoverName().getString()),
                     true);
         } else {
             player.displayClientMessage(Component.translatable("siege.hwacha.ignite"), true);
@@ -312,8 +312,8 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
         }
 
         Item expectedItem = pendingManualExplosive
-                ? SiegeworksItems.EXPLOSIVE_SINGIJEON.get()
-                : SiegeworksItems.SINGIJEON.get();
+                ? SiegeworksItems.JUNG_SINGIJEON.get()
+                : SiegeworksItems.SO_SINGIJEON.get();
         ItemStack stack = player.getItemInHand(hand);
         if (!stack.is(expectedItem)) {
             return;
@@ -629,8 +629,8 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
         int slot = getLoadedCount() - 1;
         boolean explosive = isExplosive(slot);
         ItemStack returned = new ItemStack(explosive
-                ? SiegeworksItems.EXPLOSIVE_SINGIJEON.get()
-                : SiegeworksItems.SINGIJEON.get());
+                ? SiegeworksItems.JUNG_SINGIJEON.get()
+                : SiegeworksItems.SO_SINGIJEON.get());
         setExplosive(slot, false);
         setLoadedCount(slot);
         if (getLoadedCount() == 0) {
@@ -651,12 +651,12 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
 
         SiegeAmmunitionMode mode = getAutomatedAmmunitionMode();
         if (mode != SiegeAmmunitionMode.EXPLOSIVE) {
-            pendingAutomatedNormal = Math.min(capacity, countItems(inventory, SiegeworksItems.SINGIJEON.get()));
+            pendingAutomatedNormal = Math.min(capacity, countItems(inventory, SiegeworksItems.SO_SINGIJEON.get()));
             capacity -= pendingAutomatedNormal;
         }
         if (capacity > 0 && mode != SiegeAmmunitionMode.STANDARD) {
             pendingAutomatedExplosive = Math.min(capacity,
-                    countItems(inventory, SiegeworksItems.EXPLOSIVE_SINGIJEON.get()));
+                    countItems(inventory, SiegeworksItems.JUNG_SINGIJEON.get()));
         }
     }
 
@@ -688,8 +688,8 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
     private boolean insertNextAutomatedRocket(LivingEntity operator, Container inventory) {
         boolean explosive = pendingAutomatedNormal <= 0;
         Item item = explosive
-                ? SiegeworksItems.EXPLOSIVE_SINGIJEON.get()
-                : SiegeworksItems.SINGIJEON.get();
+                ? SiegeworksItems.JUNG_SINGIJEON.get()
+                : SiegeworksItems.SO_SINGIJEON.get();
         if (!consumeItems(inventory, item, 1)) {
             return false;
         }
@@ -722,7 +722,7 @@ public class HwachaEntity extends AbstractSiegeEntity implements GeoEntity, Sieg
     }
 
     private static boolean isRocketItem(Item item) {
-        return item == SiegeworksItems.SINGIJEON.get() || item == SiegeworksItems.EXPLOSIVE_SINGIJEON.get();
+        return item == SiegeworksItems.SO_SINGIJEON.get() || item == SiegeworksItems.JUNG_SINGIJEON.get();
     }
 
     private static int countItems(Container inventory, Item item) {
