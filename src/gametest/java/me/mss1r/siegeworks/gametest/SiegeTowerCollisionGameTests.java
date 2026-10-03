@@ -204,7 +204,7 @@ public final class SiegeTowerCollisionGameTests {
         helper.assertTrue(tower != null && occupant != null,
                 "Failed to create moving upper-ladder test entities");
 
-        moveToRelative(helper, tower, 16.0D, 40.0D, 16.0D);
+        moveToRelative(helper, tower, 16.0D, 1.0D, 16.0D);
         occupant.setNoAi(true);
         helper.assertTrue(level.addFreshEntity(tower), "Failed to add upper-ladder tower");
         tower.tick();

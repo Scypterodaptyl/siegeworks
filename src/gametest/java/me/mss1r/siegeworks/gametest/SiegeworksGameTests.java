@@ -2798,7 +2798,8 @@ public final class SiegeworksGameTests {
                 Vec3 point = topExit.add(forward.scale(depth - 0.65D)).add(right.scale(side));
                 level.setBlockAndUpdate(new BlockPos(
                                 (int) Math.floor(point.x), floorY, (int) Math.floor(point.z)),
-                        Blocks.OAK_LEAVES.defaultBlockState());
+                        Blocks.OAK_LEAVES.defaultBlockState()
+                                .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
             }
         }
     }
