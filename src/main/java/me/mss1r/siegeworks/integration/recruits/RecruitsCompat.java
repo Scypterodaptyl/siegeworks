@@ -104,6 +104,10 @@ public final class RecruitsCompat {
         Set<UUID> selectedGroups = new HashSet<>(groupIds);
         List<AbstractRecruitEntity> nearbyRecruits = player.serverLevel().getEntitiesOfClass(
                 AbstractRecruitEntity.class, player.getBoundingBox().inflate(COMMAND_RANGE));
+        if (action == RecruitsSiegeCommandC2SPayload.ACTION_RETURN_TOWER) {
+            sendCommandFeedback(player, handleTowerReturn(player, nearbyRecruits, selectedGroups));
+            return;
+        }
         if (action == RecruitsSiegeCommandC2SPayload.ACTION_UNLOAD_TOWER) {
             int applied = siegeTypeId == null
                     || siegeTypeId.equals(BuiltInRegistries.ENTITY_TYPE.getKey(SiegeworksEntities.SIEGE_TOWER_ENTITY.get()))
@@ -219,12 +223,16 @@ public final class RecruitsCompat {
         sendCommandFeedback(player, applied);
     }
 
+    /** Whether a recruit works, or rides in, on or behind, a machine of the selected type. */
     private static boolean matchesSelectedMachine(AbstractRecruitEntity recruit, ResourceLocation siegeTypeId) {
         if (siegeTypeId == null) {
             return true;
         }
-        return recruit instanceof SiegeEngineerEntity engineer
-                && matchesSiegeType(workedMachine(engineer), siegeTypeId);
+        if (recruit instanceof SiegeEngineerEntity engineer && matchesSiegeType(workedMachine(engineer), siegeTypeId)) {
+            return true;
+        }
+        Entity vehicle = recruit.getVehicle() instanceof AbstractHorse mount ? mount.getVehicle() : recruit.getVehicle();
+        return vehicle instanceof AbstractSiegeEntity siege && matchesSiegeType(siege, siegeTypeId);
     }
 
     private static boolean matchesSiegeType(AbstractSiegeEntity siege, ResourceLocation siegeTypeId) {
@@ -1274,6 +1282,26 @@ public final class RecruitsCompat {
                 Component.translatable("message.siegeworks.recruits.build_started", result.getHoverName()),
                 false
         );
+    }
+
+    /** Brings the selected groups' recruits back into the towers they belong to. */
+    private static int handleTowerReturn(ServerPlayer player, List<AbstractRecruitEntity> nearbyRecruits,
+                                         Set<UUID> selectedGroups) {
+        Set<SiegeTowerEntity> towers = new HashSet<>();
+        for (AbstractRecruitEntity recruit : nearbyRecruits) {
+            if (isSelectedAndCommandable(player, recruit, selectedGroups) && recruit.getVehicle() == null
+                    && recruit.getMountUUID() != null
+                    && player.serverLevel().getEntity(recruit.getMountUUID()) instanceof SiegeTowerEntity tower) {
+                towers.add(tower);
+            }
+        }
+
+        int applied = 0;
+        for (SiegeTowerEntity tower : towers) {
+            applied += applyTowerCrew(player, tower, RecruitsTowerCrewC2SPayload.ACTION_RETURN,
+                    recruit -> isSelectedAndCommandable(player, recruit, selectedGroups));
+        }
+        return applied;
     }
 
     private static int handleTowerUnload(ServerPlayer player, List<AbstractRecruitEntity> nearbyRecruits,

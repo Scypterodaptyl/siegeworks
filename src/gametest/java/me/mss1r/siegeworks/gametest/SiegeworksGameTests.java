@@ -2605,6 +2605,77 @@ public final class SiegeworksGameTests {
         });
     }
 
+    @GameTest(template = "empty", timeoutTicks = 500, batch = "recruits_tower_leave_screen")
+    public static void recruitsLeaveATowerWithoutAnEngineerFromTheCommandScreen(GameTestHelper helper) {
+        recruitsLeaveATowerWithoutAnEngineer(helper, false);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 500, batch = "recruits_tower_leave_map")
+    public static void recruitsLeaveATowerWithoutAnEngineerFromTheMap(GameTestHelper helper) {
+        recruitsLeaveATowerWithoutAnEngineer(helper, true);
+    }
+
+    private static void recruitsLeaveATowerWithoutAnEngineer(GameTestHelper helper, boolean fromMap) {
+        if (!Platform.isModLoaded("recruits")) {
+            helper.succeed();
+            return;
+        }
+        buildFloor(helper);
+        ServerLevel level = helper.getLevel();
+        SiegeTowerEntity tower = SiegeworksEntities.SIEGE_TOWER_ENTITY.get().create(level);
+        LivingEntity[] recruits = new LivingEntity[3];
+        for (int i = 0; i < recruits.length; i++) {
+            recruits[i] = createLivingEntity(level, "recruits:recruit");
+        }
+        helper.assertTrue(tower != null && java.util.Arrays.stream(recruits).allMatch(java.util.Objects::nonNull),
+                "Failed to create Recruits tower test entities");
+        FakePlayer commander = SiegeGameTestPlayers.create(level);
+        java.util.UUID groupId = java.util.UUID.randomUUID();
+        moveToRelative(helper, tower, 16.0D, 1.0D, 16.0D);
+        commander.setPos(tower.getX(), tower.getY(), tower.getZ());
+        level.addFreshEntity(tower);
+        for (int i = 0; i < recruits.length; i++) {
+            moveToRelative(helper, recruits[i], 14.5D + i * 0.75D, 1.0D, 10.0D);
+            if (recruits[i] instanceof Mob mob) {
+                mob.setPersistenceRequired();
+            }
+            level.addFreshEntity(recruits[i]);
+        }
+        helper.runAfterDelay(20, () -> {
+            for (LivingEntity recruit : recruits) {
+                configureRecruitCommandIdentity(recruit, commander.getUUID(), groupId);
+                assignRecruitMount(recruit, tower.getUUID());
+                helper.assertTrue(tower.reserveInteriorSeat(recruit) && recruit.startRiding(tower),
+                        "Recruit could not board the tower interior");
+            }
+        });
+        helper.runAfterDelay(40, () -> {
+            try {
+                Class<?> compat = Class.forName("me.mss1r.siegeworks.integration.recruits.RecruitsCompat");
+                if (fromMap) {
+                    compat.getMethod("leaveMachine", net.minecraft.server.level.ServerPlayer.class,
+                            me.mss1r.siegeworks.entity.base.AbstractSiegeEntity.class, boolean.class)
+                            .invoke(null, commander, tower, false);
+                } else {
+                    compat.getMethod("handleSiegeCommand", net.minecraft.server.level.ServerPlayer.class,
+                                    int.class, java.util.List.class, BlockPos.class, int.class,
+                                    ResourceLocation.class)
+                            .invoke(null, commander, 3, java.util.List.of(groupId), null, -1,
+                                    BuiltInRegistries.ENTITY_TYPE.getKey(tower.getType()));
+                }
+            } catch (ReflectiveOperationException exception) {
+                throw new AssertionError("Could not issue the leave command", exception);
+            }
+        });
+        helper.runAfterDelay(400, () -> {
+            for (LivingEntity recruit : recruits) {
+                helper.assertTrue(recruit.getVehicle() == null,
+                        "A recruit stayed in the tower after the leave order: " + recruit.position());
+            }
+            helper.succeed();
+        });
+    }
+
     private static SiegeClimbableControl.ClimbResult climbToCompletion(
             SiegeLadderEntity ladder, LivingEntity climber, boolean upward) {
         SiegeClimbableControl.ClimbResult result = SiegeClimbableControl.ClimbResult.IN_PROGRESS;

@@ -211,6 +211,8 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
                         RecruitsSiegeCommandC2SPayload.ACTION_BRIDGE_AUTO, null);
                 layout.addSelected("unload_tower", hasActiveGroup, groups, type,
                         RecruitsSiegeCommandC2SPayload.ACTION_UNLOAD_TOWER, null);
+                layout.addSelected("return_tower", hasActiveGroup, groups, type,
+                        RecruitsSiegeCommandC2SPayload.ACTION_RETURN_TOWER, null);
             }
             case MANTLET -> {
                 layout.addSelected("flap_open", hasActiveGroup, groups, type,
