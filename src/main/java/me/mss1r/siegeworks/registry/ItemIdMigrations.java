@@ -4,7 +4,11 @@ import me.mss1r.siegeworks.Siegeworks;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 //? if forge {
-/*import net.minecraftforge.eventbus.api.IEventBus;
+/*import net.minecraft.world.item.Item;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.MissingMappingsEvent;
 import net.minecraftforge.registries.RegisterEvent;
 import net.minecraftforge.registries.RegistryManager;
 *///?} else {
@@ -25,6 +29,9 @@ public final class ItemIdMigrations {
 
     public static void register(IEventBus modBus) {
         modBus.addListener(ItemIdMigrations::onRegister);
+        //? if forge {
+        /*MinecraftForge.EVENT_BUS.addListener(ItemIdMigrations::onMissingMappings);
+        *///?}
     }
 
     private static void onRegister(RegisterEvent event) {
@@ -37,6 +44,20 @@ public final class ItemIdMigrations {
         RENAMES.forEach(event.getRegistry()::addAlias);
         //?}
     }
+
+    //? if forge {
+    /*// A save remembers the IDs it was written with, and Forge reports the renamed ones as missing unless they are
+    // remapped here.
+    private static void onMissingMappings(MissingMappingsEvent event) {
+        for (MissingMappingsEvent.Mapping<Item> mapping
+                : event.getMappings(ForgeRegistries.Keys.ITEMS, Siegeworks.MOD_ID)) {
+            ResourceLocation renamed = RENAMES.get(mapping.getKey());
+            if (renamed != null && ForgeRegistries.ITEMS.containsKey(renamed)) {
+                mapping.remap(ForgeRegistries.ITEMS.getValue(renamed));
+            }
+        }
+    }
+    *///?}
 
     private static ResourceLocation id(String path) {
         //? if forge {
