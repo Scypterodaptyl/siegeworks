@@ -369,6 +369,9 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
             setAmmoLoaded(SiegeAmmo.AMMO_GRAPESHOT);
         } else {
             setAmmoLoaded(pot.load(held));
+            if (!held.canLight()) {
+                player.displayClientMessage(Component.translatable("siege.pot.loaded_unsealed"), true);
+            }
         }
         setWindingTime(getLoadingRequirementTicks("winding"));
         setOperator(player);

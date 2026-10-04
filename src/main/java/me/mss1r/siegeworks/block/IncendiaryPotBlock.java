@@ -203,7 +203,10 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
 
     /** Tells a player why the pot took nothing. */
     private static void refuse(Player player, PotFilling filling) {
-        String reason = filling.wick() ? "sealed" : !filling.hasBase() ? "needs_base" : "full";
+        String reason = filling.wick() ? "sealed"
+                : !filling.hasBase() ? "needs_base"
+                : filling.additives().size() >= PotFilling.ADDITIVE_SLOTS ? "full"
+                : "kind_full";
         player.displayClientMessage(Component.translatable("siege.pot." + reason), true);
     }
 

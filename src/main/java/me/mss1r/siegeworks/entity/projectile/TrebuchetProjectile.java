@@ -2,6 +2,9 @@ package me.mss1r.siegeworks.entity.projectile;
 
 import me.mss1r.siegeworks.gameplay.ballistics.IncendiaryFuse;
 import me.mss1r.siegeworks.item.PotFilling;
+import me.mss1r.siegeworks.registry.SiegeworksSounds;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
+import me.mss1r.siegeworks.config.SiegeworksServerConfig;
 import me.mss1r.siegeworks.item.SiegeAmmo;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectilePhysics;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileBlastResolver;
@@ -256,7 +259,7 @@ public class TrebuchetProjectile extends SiegeProjectile {
     /** A pot breaking unlit: it shatters like any clay pot and what it held spills unburnt. */
     private void shatter(ServerLevel serverLevel, Vec3 impact) {
         serverLevel.playSound(null, impact.x, impact.y, impact.z,
-                SoundEvents.DECORATED_POT_SHATTER, SoundSource.PLAYERS, 1.5F, 0.8F + random.nextFloat() * 0.2F);
+                SoundEvents.DECORATED_POT_SHATTER, SoundSource.PLAYERS, 2.5F, 0.8F + random.nextFloat() * 0.2F);
         SiegeParticleEffects.potShatter(serverLevel, impact, SiegeworksBlocks.FIRE_PROJECTILE.get().defaultBlockState());
         this.discard();
     }
@@ -280,10 +283,29 @@ public class TrebuchetProjectile extends SiegeProjectile {
         for (LivingEntity target : burned) {
             target.setRemainingFireTicks(Math.max(target.getRemainingFireTicks(), payload.burnSeconds() * 20));
         }
-        serverLevel.playSound(null, impact.x, impact.y, impact.z,
-                SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 4.0F, 0.65F + random.nextFloat() * 0.15F);
+        playBurstSounds(serverLevel, impact, payload.blastEnergy());
         SiegeParticleEffects.incendiaryImpact(serverLevel, impact, Mth.ceil(payload.fireRadius()));
         this.discard();
+    }
+
+    /**
+     * The pot cracking open and its fill catching, and its powder, if it holds any, going off with a bang that grows
+     * louder and deeper with how much there is.
+     */
+    private void playBurstSounds(ServerLevel serverLevel, Vec3 at, double blastEnergy) {
+        serverLevel.playSound(null, at.x, at.y, at.z, SoundEvents.DECORATED_POT_SHATTER, SoundSource.PLAYERS,
+                2.5F, 0.8F + random.nextFloat() * 0.15F);
+        serverLevel.playSound(null, at.x, at.y, at.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS,
+                4.0F, 0.65F + random.nextFloat() * 0.15F);
+        if (!(blastEnergy > 0.0D)) {
+            return;
+        }
+        double fullCharge = SiegeworksServerConfig.getIncendiaryGunpowderBlastEnergy() * PotFilling.MAX_OF_A_KIND;
+        float charge = (float) Mth.clamp(blastEnergy / Math.max(1.0D, fullCharge), 0.0D, 1.0D);
+        serverLevel.playSound(null, at.x, at.y, at.z, MinecraftVersionCompat.genericExplodeSound(), SoundSource.PLAYERS,
+                2.0F + 2.0F * charge, 1.1F - 0.25F * charge + random.nextFloat() * 0.1F);
+        serverLevel.playSound(null, at.x, at.y, at.z, SiegeworksSounds.IMPACT_EXPLOSION_LAYER.get(),
+                SoundSource.BLOCKS, 0.6F + 0.6F * charge, 0.95F);
     }
 
     @Override

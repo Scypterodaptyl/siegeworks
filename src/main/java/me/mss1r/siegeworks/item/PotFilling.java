@@ -22,12 +22,14 @@ import java.util.Optional;
 
 /**
  * What an incendiary pot holds. A pot is filled in order: first its base, a piece of charcoal and a honeycomb, which
- * is what makes it burn at all; then up to {@link #ADDITIVE_SLOTS} additives, each strengthening one thing; then a
- * string wick, after which it is sealed and can be lit.
+ * is what makes it burn at all; then up to {@link #ADDITIVE_SLOTS} additives, each strengthening one thing and no
+ * more than {@link #MAX_OF_A_KIND} of any one, so no pot is strongest at everything; then a string wick, after which
+ * it is sealed and can be lit.
  */
 public record PotFilling(List<Item> contents, boolean wick) {
     public static final int BASE_SLOTS = 2;
-    public static final int ADDITIVE_SLOTS = 4;
+    public static final int ADDITIVE_SLOTS = 6;
+    public static final int MAX_OF_A_KIND = 3;
     public static final PotFilling EMPTY = new PotFilling(List.of(), false);
     private static final String TAG_POT = "Pot";
     private static final String TAG_CONTENTS = "Contents";
@@ -72,6 +74,11 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return hasBase() ? contents.subList(BASE_SLOTS, contents.size()) : List.of();
     }
 
+    /** How many of this additive it holds, its base apart. */
+    public int additivesOf(Item item) {
+        return (int) additives().stream().filter(additive -> additive == item).count();
+    }
+
     public boolean canLight() {
         return wick && hasBase();
     }
@@ -85,7 +92,7 @@ public record PotFilling(List<Item> contents, boolean wick) {
             if (!isBaseIngredient(item) || contents.contains(item)) {
                 return Optional.empty();
             }
-        } else if (additives().size() >= ADDITIVE_SLOTS) {
+        } else if (additives().size() >= ADDITIVE_SLOTS || additivesOf(item) >= MAX_OF_A_KIND) {
             return Optional.empty();
         }
         List<Item> more = new ArrayList<>(contents);
@@ -188,7 +195,7 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return new PotFilling(contents, tag.getBoolean(TAG_WICK));
     }
 
-    /** Lines describing what a pot holds, for its tooltip. */
+    /** Lines describing what a pot holds, for its tooltip: whether it has its base, and how much of each additive. */
     public List<Component> describe() {
         List<Component> lines = new ArrayList<>();
         if (isEmpty()) {
@@ -196,16 +203,15 @@ public record PotFilling(List<Item> contents, boolean wick) {
             return lines;
         }
         if (!hasBase()) {
-            lines.add(Component.translatable("tooltip.siegeworks.pot.base",
-                    names(contents)).withStyle(ChatFormatting.GRAY));
-            lines.add(Component.translatable("tooltip.siegeworks.pot.needs_base").withStyle(ChatFormatting.DARK_GRAY));
+            Item missing = contents.contains(Items.CHARCOAL) ? Items.HONEYCOMB : Items.CHARCOAL;
+            lines.add(Component.translatable("tooltip.siegeworks.pot.base_missing", missing.getDescription())
+                    .withStyle(ChatFormatting.GRAY));
             return lines;
         }
-        lines.add(Component.translatable("tooltip.siegeworks.pot.base",
-                names(contents.subList(0, BASE_SLOTS))).withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("tooltip.siegeworks.pot.base").withStyle(ChatFormatting.GRAY));
         if (!additives().isEmpty()) {
-            lines.add(Component.translatable("tooltip.siegeworks.pot.additives",
-                    names(additives())).withStyle(ChatFormatting.GRAY));
+            lines.add(Component.translatable("tooltip.siegeworks.pot.additives", counted(additives()))
+                    .withStyle(ChatFormatting.GRAY));
         }
         if (!wick) {
             lines.add(Component.translatable("tooltip.siegeworks.pot.needs_wick").withStyle(ChatFormatting.DARK_GRAY));
@@ -213,13 +219,17 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return lines;
     }
 
-    private static Component names(List<Item> items) {
+    /** Each kind once, in the order first put in, with how many there are. */
+    private static Component counted(List<Item> items) {
         MutableComponent names = Component.empty();
-        for (int i = 0; i < items.size(); i++) {
+        List<Item> kinds = items.stream().distinct().toList();
+        for (int i = 0; i < kinds.size(); i++) {
+            Item kind = kinds.get(i);
             if (i > 0) {
                 names.append(", ");
             }
-            names.append(items.get(i).getDescription());
+            long count = items.stream().filter(item -> item == kind).count();
+            names.append(Component.translatable("tooltip.siegeworks.pot.count", kind.getDescription(), count));
         }
         return names;
     }

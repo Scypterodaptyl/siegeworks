@@ -77,7 +77,7 @@ public final class IncendiaryFuseGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 20)
-    public static void potIsFilledBaseFirstUpToSixThenSealedWithAWick(GameTestHelper helper) {
+    public static void potIsFilledBaseFirstThenSixAdditivesThenSealedWithAWick(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos pos = placePot(helper, PotFilling.EMPTY);
         Player filler = SiegeGameTestPlayers.create(level);
@@ -87,18 +87,22 @@ public final class IncendiaryFuseGameTests {
         helper.assertTrue(takes(level, pos, filler, Items.CHARCOAL), "The pot did not take charcoal for its base");
         helper.assertTrue(!takes(level, pos, filler, Items.CHARCOAL), "The base took a second charcoal");
         helper.assertTrue(takes(level, pos, filler, Items.HONEYCOMB), "The pot did not take a honeycomb for its base");
-        for (Item additive : List.of(Items.GUNPOWDER, Items.BLAZE_POWDER, Items.CHARCOAL, Items.HONEYCOMB)) {
+        for (int i = 0; i < 3; i++) {
+            helper.assertTrue(takes(level, pos, filler, Items.GUNPOWDER), "The pot refused gunpowder " + (i + 1));
+        }
+        helper.assertTrue(!takes(level, pos, filler, Items.GUNPOWDER), "The pot took a fourth of one additive");
+        for (Item additive : List.of(Items.BLAZE_POWDER, Items.CHARCOAL, Items.HONEYCOMB)) {
             helper.assertTrue(takes(level, pos, filler, additive), "The pot refused an additive: " + additive);
         }
-        helper.assertTrue(!takes(level, pos, filler, Items.GUNPOWDER), "A full pot took a seventh ingredient");
+        helper.assertTrue(!takes(level, pos, filler, Items.CHARCOAL), "A full pot took a seventh additive");
         helper.assertTrue(!level.getBlockState(pos).getValue(IncendiaryPotBlock.WICK), "The pot showed a wick early");
         helper.assertTrue(takes(level, pos, filler, Items.STRING), "The full pot did not take its wick");
         helper.assertTrue(level.getBlockState(pos).getValue(IncendiaryPotBlock.WICK), "The sealed pot shows no wick");
         helper.assertTrue(!takes(level, pos, filler, Items.HONEYCOMB), "A sealed pot took another ingredient");
 
         PotFilling filling = pot(level, pos).filling();
-        helper.assertTrue(filling.contents().size() == 6 && filling.wick() && filling.canLight(),
-                "The pot does not hold its six ingredients and its wick: " + filling);
+        helper.assertTrue(filling.contents().size() == 8 && filling.wick() && filling.canLight(),
+                "The pot does not hold its base, its six additives and its wick: " + filling);
         helper.succeed();
     }
 
@@ -106,14 +110,17 @@ public final class IncendiaryFuseGameTests {
     public static void burstFollowsTheBaseAndEachAdditive(GameTestHelper helper) {
         assertBurst(helper, fill(), 5.0D, 0.7D, 8, 0.0D, "the base alone");
         assertBurst(helper, PotFilling.standard(), 8.0D, 0.7D, 12, 0.0D, "the standard filling");
-        assertBurst(helper, fill(Items.CHARCOAL, Items.CHARCOAL, Items.CHARCOAL, Items.CHARCOAL),
-                11.0D, 0.7D, 8, 0.0D, "four charcoal");
-        assertBurst(helper, fill(Items.HONEYCOMB, Items.HONEYCOMB, Items.HONEYCOMB, Items.HONEYCOMB),
-                5.0D, 0.7D, 16, 0.0D, "four honeycombs");
-        assertBurst(helper, fill(Items.BLAZE_POWDER, Items.BLAZE_POWDER, Items.BLAZE_POWDER, Items.BLAZE_POWDER),
-                5.0D, 1.0D, 8, 0.0D, "four blaze powder");
-        assertBurst(helper, fill(Items.GUNPOWDER, Items.GUNPOWDER, Items.GUNPOWDER, Items.GUNPOWDER),
-                5.0D, 0.7D, 8, 80_000.0D, "four gunpowder");
+        assertBurst(helper, fill(Items.CHARCOAL, Items.CHARCOAL, Items.CHARCOAL),
+                9.5D, 0.7D, 8, 0.0D, "three charcoal");
+        assertBurst(helper, fill(Items.HONEYCOMB, Items.HONEYCOMB, Items.HONEYCOMB),
+                5.0D, 0.7D, 14, 0.0D, "three honeycombs");
+        assertBurst(helper, fill(Items.BLAZE_POWDER, Items.BLAZE_POWDER, Items.BLAZE_POWDER),
+                5.0D, 0.925D, 8, 0.0D, "three blaze powder");
+        assertBurst(helper, fill(Items.GUNPOWDER, Items.GUNPOWDER, Items.GUNPOWDER),
+                5.0D, 0.7D, 8, 60_000.0D, "three gunpowder");
+        assertBurst(helper, fill(Items.CHARCOAL, Items.CHARCOAL, Items.CHARCOAL,
+                        Items.HONEYCOMB, Items.HONEYCOMB, Items.HONEYCOMB),
+                9.5D, 0.7D, 14, 0.0D, "three charcoal and three honeycombs");
         helper.assertTrue(PotFilling.EMPTY.burst().equals(PotFilling.Burst.NONE), "An empty pot would burst");
         helper.succeed();
     }
