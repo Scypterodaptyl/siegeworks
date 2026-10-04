@@ -90,6 +90,7 @@ public final class RecruitsCompat {
 
     private static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            RecruitsNetworking.registerClient();
             RecruitsSiegeCommandCategory.register();
         });
     }
@@ -224,7 +225,7 @@ public final class RecruitsCompat {
     }
 
     /** Whether a recruit works, or rides in, on or behind, a machine of the selected type. */
-    private static boolean matchesSelectedMachine(AbstractRecruitEntity recruit, ResourceLocation siegeTypeId) {
+    static boolean matchesSelectedMachine(AbstractRecruitEntity recruit, ResourceLocation siegeTypeId) {
         if (siegeTypeId == null) {
             return true;
         }
@@ -533,7 +534,7 @@ public final class RecruitsCompat {
         return RecruitsLadderRelocationController.hasLadderItem(recruit);
     }
 
-    private static boolean isAvailableForLadderRelocation(AbstractRecruitEntity recruit) {
+    static boolean isAvailableForLadderRelocation(AbstractRecruitEntity recruit) {
         if (recruit.isPassenger()
                 || RecruitsLadderRelocationController.hasTask(recruit)
                 || RecruitsSiegeTraversal.hasActiveLadderRoute(recruit)) {
@@ -855,9 +856,14 @@ public final class RecruitsCompat {
     }
 
     public static int aboard(ServerPlayer player, SiegeTowerEntity tower, boolean interiorOnly) {
+        return aboard(player, tower, interiorOnly, recruit -> commandable(player, recruit));
+    }
+
+    static int aboard(ServerPlayer player, SiegeTowerEntity tower, boolean interiorOnly,
+                      java.util.function.Predicate<AbstractRecruitEntity> chosen) {
         int count = 0;
         for (Entity passenger : tower.getPassengers()) {
-            if (passenger instanceof AbstractRecruitEntity recruit && commandable(player, recruit)
+            if (passenger instanceof AbstractRecruitEntity recruit && chosen.test(recruit)
                     && (!interiorOnly || tower.isInteriorPassenger(recruit))) {
                 count++;
             }
@@ -891,8 +897,13 @@ public final class RecruitsCompat {
     }
 
     public static int awayFromTower(ServerPlayer player, SiegeTowerEntity tower) {
+        return awayFromTower(player, tower, recruit -> commandable(player, recruit));
+    }
+
+    static int awayFromTower(ServerPlayer player, SiegeTowerEntity tower,
+                             java.util.function.Predicate<AbstractRecruitEntity> chosen) {
         int count = 0;
-        for (AbstractRecruitEntity recruit : nearTower(player, tower, recruit -> commandable(player, recruit))) {
+        for (AbstractRecruitEntity recruit : nearTower(player, tower, chosen)) {
             if (recruit.getVehicle() != tower && tower.getUUID().equals(recruit.getMountUUID())) {
                 count++;
             }
@@ -942,7 +953,7 @@ public final class RecruitsCompat {
         return true;
     }
 
-    private static SiegeEngineerEntity operatorOf(AbstractSiegeEntity siege) {
+    static SiegeEngineerEntity operatorOf(AbstractSiegeEntity siege) {
         if (siege.getReinsHolder() instanceof SiegeEngineerEntity driver) {
             return driver;
         }
@@ -954,7 +965,7 @@ public final class RecruitsCompat {
         return null;
     }
 
-    private static SiegeEngineerEntity commandedOperator(ServerPlayer player, AbstractSiegeEntity siege) {
+    static SiegeEngineerEntity commandedOperator(ServerPlayer player, AbstractSiegeEntity siege) {
         SiegeEngineerEntity engineer = operatorOf(siege);
         return engineer != null && commandable(player, engineer) ? engineer : null;
     }
@@ -1093,7 +1104,8 @@ public final class RecruitsCompat {
 
     public static boolean setMantletFlap(ServerPlayer player, AbstractSiegeEntity siege, boolean open,
                                          boolean dryRun) {
-        if (!(siege instanceof MantletEntity mantlet) || !commands(player, siege)) {
+        if (!(siege instanceof MantletEntity mantlet) || !commands(player, siege)
+                || commandedOperator(player, siege) == null) {
             return false;
         }
         if (!dryRun) {
@@ -1350,6 +1362,17 @@ public final class RecruitsCompat {
         return applied;
     }
 
+    /**
+     * Whether a tower's bridge can be had down for its crew: lowered by the player or their driver at the levers,
+     * or already lying on something they can step out onto.
+     */
+    static boolean bridgeWithinReach(ServerPlayer player, SiegeTowerEntity tower) {
+        SiegeEngineerEntity engineer = operatorOf(tower);
+        return tower.isOperator(player)
+                || engineer != null && engineer.isEffectedByCommand(player.getUUID())
+                || tower.isBridgeOpen() && tower.bridgeLeadsSomewhere();
+    }
+
     private static boolean lowerTowerBridge(ServerPlayer player, SiegeTowerEntity tower) {
         if (tower.isOperator(player)) {
             if (!tower.isDeployed()) {
@@ -1359,7 +1382,7 @@ public final class RecruitsCompat {
         }
         SiegeEngineerEntity engineer = operatorOf(tower);
         if (engineer == null || !engineer.isEffectedByCommand(player.getUUID())) {
-            return false;
+            return tower.isBridgeOpen() && tower.bridgeLeadsSomewhere();
         }
         if (engineer.siegeController instanceof SiegeworksRecruitController controller) {
             controller.requestTemporaryDeployment();
@@ -1401,25 +1424,25 @@ public final class RecruitsCompat {
         return true;
     }
 
-    private static boolean isSelectedAndCommandable(ServerPlayer player, AbstractRecruitEntity recruit,
+    static boolean isSelectedAndCommandable(ServerPlayer player, AbstractRecruitEntity recruit,
                                                      Set<UUID> selectedGroups) {
         return recruit.getGroup() != null
                 && selectedGroups.contains(recruit.getGroup())
                 && isCommandable(player, recruit);
     }
 
-    private static boolean isCommandable(ServerPlayer player, AbstractRecruitEntity recruit) {
+    static boolean isCommandable(ServerPlayer player, AbstractRecruitEntity recruit) {
         return recruit.getGroup() != null
                 && recruit.isEffectedByCommand(player.getUUID(), recruit.getGroup());
     }
 
-    private static boolean isValidCommandTarget(ServerPlayer player, BlockPos targetPos) {
+    static boolean isValidCommandTarget(ServerPlayer player, BlockPos targetPos) {
         return targetPos != null
                 && player.distanceToSqr(Vec3.atCenterOf(targetPos)) <= COMMAND_RANGE_SQR
                 && player.serverLevel().hasChunkAt(targetPos);
     }
 
-    private static boolean mayOpenInClaim(ServerPlayer player, BlockPos pos) {
+    static boolean mayOpenInClaim(ServerPlayer player, BlockPos pos) {
         return player.isCreative() && player.hasPermissions(2) || claimOpensContainerTo(pos, player.getTeam());
     }
 
@@ -1433,7 +1456,7 @@ public final class RecruitsCompat {
                 || team != null && team.getName().equals(claim.getOwnerFactionStringID());
     }
 
-    private static boolean isContainer(ServerPlayer player, BlockPos targetPos) {
+    static boolean isContainer(ServerPlayer player, BlockPos targetPos) {
         BlockState state = player.serverLevel().getBlockState(targetPos);
         if (state.getBlock() instanceof ChestBlock chest) {
             return ChestBlock.getContainer(chest, state, player.serverLevel(), targetPos, false) != null;

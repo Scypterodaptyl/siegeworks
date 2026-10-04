@@ -2706,6 +2706,146 @@ public final class SiegeworksGameTests {
         });
     }
 
+    @GameTest(template = "empty", timeoutTicks = 600, batch = "recruits_tower_no_driver_down")
+    public static void recruitsUnloadWithoutADriverOverABridgeAlreadyDown(GameTestHelper helper) {
+        recruitsUnloadWithoutADriver(helper, true);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 600, batch = "recruits_tower_no_driver_up")
+    public static void recruitsStayInWithoutADriverWhileTheBridgeIsUp(GameTestHelper helper) {
+        recruitsUnloadWithoutADriver(helper, false);
+    }
+
+    private static void recruitsUnloadWithoutADriver(GameTestHelper helper, boolean bridgeDown) {
+        if (!Platform.isModLoaded("recruits")) {
+            helper.succeed();
+            return;
+        }
+        buildFloor(helper);
+        buildBridgeLanding(helper);
+        TowerCrew crew = spawnTestTowerCrew(helper);
+        ServerLevel level = helper.getLevel();
+        LivingEntity[] recruits = new LivingEntity[2];
+        for (int i = 0; i < recruits.length; i++) {
+            recruits[i] = createLivingEntity(level, "recruits:recruit");
+            helper.assertTrue(recruits[i] != null, "Failed to create a recruit");
+            moveToRelative(helper, recruits[i], 14.5D + i * 0.75D, 1.0D, 4.0D);
+            if (recruits[i] instanceof Mob mob) {
+                mob.setPersistenceRequired();
+            }
+            level.addFreshEntity(recruits[i]);
+        }
+        FakePlayer commander = SiegeGameTestPlayers.create(level);
+        commander.setPos(crew.tower().getX(), crew.tower().getY(), crew.tower().getZ());
+        java.util.UUID groupId = java.util.UUID.randomUUID();
+        if (bridgeDown) {
+            crew.tower().setDeployed(crew.driver(), true);
+        }
+        helper.runAfterDelay(20, () -> {
+            for (LivingEntity recruit : recruits) {
+                configureRecruitCommandIdentity(recruit, commander.getUUID(), groupId);
+                assignRecruitMount(recruit, crew.tower().getUUID());
+                helper.assertTrue(crew.tower().reserveInteriorSeat(recruit) && recruit.startRiding(crew.tower()),
+                        "Recruit could not board the tower interior");
+            }
+        });
+        helper.runAfterDelay(170, () -> {
+            crew.driver().stopRiding();
+            helper.assertTrue(crew.tower().isBridgeOpen() == bridgeDown,
+                    "The bridge did not stay as it was left when its driver stepped off");
+            helper.assertTrue(allows(commandStates(commander, groupId, -1), "SIEGE_TOWER.unload_tower") == bridgeDown,
+                    "The unload button did not follow whether the bridge could be had down");
+            issueTargetedTowerUnload(commander, crew.tower(), groupId);
+        });
+        helper.runAfterDelay(450, () -> {
+            for (LivingEntity recruit : recruits) {
+                if (bridgeDown) {
+                    helper.assertTrue(recruit.getVehicle() != crew.tower()
+                                    && recruit.getZ() > crew.tower().getZ() + 4.0D,
+                            "A recruit did not go out over the bridge that was already down: " + recruit.position());
+                } else {
+                    helper.assertTrue(recruit.getVehicle() == crew.tower(),
+                            "A recruit left a tower whose bridge nobody could lower: " + recruit.position());
+                }
+            }
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 460, batch = "recruits_tower_states")
+    public static void towerCommandStatesFollowWhatTheOrdersCanDo(GameTestHelper helper) {
+        if (!Platform.isModLoaded("recruits")) {
+            helper.succeed();
+            return;
+        }
+        buildFloor(helper);
+        buildBridgeLanding(helper);
+        TowerCrew crew = spawnTestTowerCrew(helper);
+        ServerLevel level = helper.getLevel();
+        LivingEntity recruit = createLivingEntity(level, "recruits:recruit");
+        helper.assertTrue(recruit != null, "Failed to create a recruit");
+        moveToRelative(helper, recruit, 14.5D, 1.0D, 4.0D);
+        if (recruit instanceof Mob mob) {
+            mob.setPersistenceRequired();
+        }
+        level.addFreshEntity(recruit);
+        FakePlayer commander = SiegeGameTestPlayers.create(level);
+        commander.setPos(crew.tower().getX(), crew.tower().getY(), crew.tower().getZ());
+        java.util.UUID groupId = java.util.UUID.randomUUID();
+        crew.tower().setDeployed(crew.driver(), true);
+        helper.runAfterDelay(20, () -> {
+            configureRecruitCommandIdentity(recruit, commander.getUUID(), groupId);
+            assignRecruitMount(recruit, crew.tower().getUUID());
+            helper.assertTrue(crew.tower().reserveInteriorSeat(recruit) && recruit.startRiding(crew.tower()),
+                    "Recruit could not board the tower interior");
+        });
+        helper.runAfterDelay(200, () -> {
+            crew.driver().stopRiding();
+            Object states = commandStates(commander, groupId, crew.tower().getId());
+            helper.assertTrue(commandTypes(states).contains("SIEGE_TOWER"),
+                    "The tower tab was missing for a group riding in it without an engineer");
+            helper.assertTrue(allows(states, "SIEGE_TOWER.leave"), "Leaving the tower was refused");
+            helper.assertTrue(!allows(states, "SIEGE_TOWER.bridge_raise"),
+                    "Raising the bridge was offered with nobody at the levers");
+            helper.assertTrue(allows(states, "SIEGE_TOWER.unload_tower"),
+                    "Unloading was refused over a bridge already lying on the wall");
+            issueTargetedTowerUnload(commander, crew.tower(), groupId);
+        });
+        helper.runAfterDelay(420, () -> {
+            helper.assertTrue(recruit.getVehicle() != crew.tower(),
+                    "The unload the screen offered did not take the recruit out");
+            helper.succeed();
+        });
+    }
+
+    private static Object commandStates(FakePlayer commander, java.util.UUID groupId, int targetId) {
+        try {
+            return Class.forName("me.mss1r.siegeworks.integration.recruits.RecruitsCommandStates")
+                    .getMethod("compute", net.minecraft.server.level.ServerPlayer.class, java.util.List.class,
+                            int.class, BlockPos.class)
+                    .invoke(null, commander, java.util.List.of(groupId), targetId, null);
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError("Could not compute the command states", exception);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static java.util.List<String> commandTypes(Object states) {
+        try {
+            return (java.util.List<String>) states.getClass().getMethod("typeNames").invoke(states);
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError("Could not read the command types", exception);
+        }
+    }
+
+    private static boolean allows(Object states, String key) {
+        try {
+            return (boolean) states.getClass().getMethod("allows", String.class).invoke(states, key);
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError("Could not read a command state", exception);
+        }
+    }
+
     private static SiegeClimbableControl.ClimbResult climbToCompletion(
             SiegeLadderEntity ladder, LivingEntity climber, boolean upward) {
         SiegeClimbableControl.ClimbResult result = SiegeClimbableControl.ClimbResult.IN_PROGRESS;

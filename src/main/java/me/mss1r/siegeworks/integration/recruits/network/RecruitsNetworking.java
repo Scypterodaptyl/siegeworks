@@ -5,6 +5,7 @@ import io.netty.buffer.Unpooled;
 import me.mss1r.siegeworks.Siegeworks;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -13,6 +14,8 @@ public final class RecruitsNetworking {
     private static final ResourceLocation SIEGE_COMMAND = id("recruits_siege_command");
     private static final ResourceLocation TOWER_CREW = id("recruits_tower_crew");
     private static final ResourceLocation FIRE_ZONE = id("recruits_fire_zone");
+    private static final ResourceLocation STATES_QUERY = id("recruits_command_states_query");
+    private static final ResourceLocation STATES_ANSWER = id("recruits_command_states");
 
     private RecruitsNetworking() {
     }
@@ -24,6 +27,25 @@ public final class RecruitsNetworking {
                 RecruitsTowerCrewC2SPayload::decode, RecruitsTowerCrewC2SPayload::handle);
         register(FIRE_ZONE,
                 RecruitsFireZoneC2SPayload::decode, RecruitsFireZoneC2SPayload::handle);
+        register(STATES_QUERY,
+                RecruitsCommandStatesPayloads.Query::decode, RecruitsCommandStatesPayloads.Query::handle);
+    }
+
+    /** Client side only: the answers to the Recruits screen asking which siege buttons it may use. */
+    public static void registerClient() {
+        NetworkManager.registerReceiver(NetworkManager.s2c(), STATES_ANSWER,
+                (buffer, context) -> RecruitsCommandStatesPayloads.Answer.handle(
+                        RecruitsCommandStatesPayloads.Answer.decode(buffer), context));
+    }
+
+    public static void sendToServer(RecruitsCommandStatesPayloads.Query packet) {
+        sendToServer(STATES_QUERY, packet, RecruitsCommandStatesPayloads.Query::encode);
+    }
+
+    public static void sendToPlayer(ServerPlayer player, RecruitsCommandStatesPayloads.Answer packet) {
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        RecruitsCommandStatesPayloads.Answer.encode(packet, buffer);
+        NetworkManager.sendToPlayer(player, STATES_ANSWER, buffer);
     }
 
     public static void sendToServer(RecruitsSiegeCommandC2SPayload packet) {

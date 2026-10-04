@@ -12,6 +12,7 @@ import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeRelation;
 import me.mss1r.siegeworks.integration.recruits.RecruitsCompat;
+import me.mss1r.siegeworks.integration.recruits.RecruitsOrderChecks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -148,6 +149,10 @@ final class RtsMapObjects {
             Component carried = carriedLine(siege);
             if (carried != null) lines.add(carried);
             lines.add(stateLine(siege));
+            Component stuck = RecruitsCompat.drivable(siege) ? RecruitsOrderChecks.drive(player, siege) : null;
+            if (stuck != null) {
+                lines.add(Component.translatable("gui.siegeworks.rts.map.cannot_drive", stuck));
+            }
         }
 
         return new MapObjectSnapshot(

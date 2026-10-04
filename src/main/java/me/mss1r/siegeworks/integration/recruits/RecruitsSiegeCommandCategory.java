@@ -7,17 +7,18 @@ import com.talhanation.recruits.client.gui.CommandScreen;
 import com.talhanation.recruits.client.gui.commandscreen.ICommandCategory;
 import com.talhanation.recruits.client.gui.group.RecruitsCommandButton;
 import com.talhanation.recruits.network.MessageBackToMountEntity;
-import com.talhanation.recruits.entities.SiegeEngineerEntity;
 import com.talhanation.recruits.world.RecruitsGroup;
 import me.mss1r.axiomata.blueprint.api.BlueprintStacks;
 import me.mss1r.siegeworks.api.SiegeAmmunitionMode;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeTowerEntity;
+import me.mss1r.siegeworks.integration.recruits.network.RecruitsCommandStatesPayloads;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsNetworking;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsSiegeCommandC2SPayload;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsTowerCrewC2SPayload;
 import me.mss1r.siegeworks.registry.SiegeworksItems;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.core.BlockPos;
@@ -36,9 +37,8 @@ import net.neoforged.api.distmarker.OnlyIn;
 //?}
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 @OnlyIn(Dist.CLIENT)
@@ -54,6 +54,7 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
 
     static void register() {
         if (!registered) {
+            ScreenStates.listen();
             CommandCategoryManager.register(new RecruitsSiegeCommandCategory(), 0);
             registered = true;
         }
@@ -73,7 +74,8 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
     public void createButtons(CommandScreen screen, int x, int y, List<RecruitsGroup> groups, Player player) {
         boolean hasActiveGroup = groups.stream().anyMatch(group -> !group.isDisabled());
         AbstractSiegeEntity target = screen.rayEntity instanceof AbstractSiegeEntity siege ? siege : null;
-        List<SiegeCommandType> availableTypes = availableTypes(player, groups);
+        ScreenStates states = ScreenStates.request(groups, target, screen.rayBlockPos);
+        List<SiegeCommandType> availableTypes = states.types();
         SiegeCommandType targetType = target == null ? null : SiegeCommandType.from(target);
         if (activeScreen != screen) {
             activeScreen = screen;
@@ -85,8 +87,9 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
         }
 
         addTypeButtons(screen, x, y - 80, availableTypes);
-        Layout layout = new Layout();
+        Layout layout = new Layout(states);
 
+        layout.scope("target.");
         if (target instanceof SiegeTowerEntity tower) {
             layout.add("crew_machine", hasActiveGroup,
                     () -> sendTowerCrewCommand(groups, tower, RecruitsTowerCrewC2SPayload.ACTION_BOARD));
@@ -102,9 +105,11 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
         }
 
         if (selectedType != null) {
+            layout.scope(selectedType.name() + ".");
             addSelectedTypeCommands(screen, layout, groups, hasActiveGroup, selectedType);
         }
 
+        layout.scope("");
         layout.addGeneric("place_ladder", hasActiveGroup && screen.rayBlockPos != null, groups,
                 RecruitsSiegeCommandC2SPayload.ACTION_PLACE_LADDER, screen.rayBlockPos);
         layout.addGeneric("build",
@@ -116,6 +121,7 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
         layout.addGeneric("cancel_work", hasActiveGroup, groups,
                 RecruitsSiegeCommandC2SPayload.ACTION_CANCEL_MAINTENANCE, null);
 
+        layout.scope("target.");
         if (target instanceof SiegeLadderEntity) {
             layout.addTargeted("pickup_ladder", hasActiveGroup, groups,
                     RecruitsSiegeCommandC2SPayload.ACTION_PICKUP_LADDER, target.getId());
@@ -143,29 +149,6 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
                 screen.init(Minecraft.getInstance(), screen.width, screen.height);
             }));
         }
-    }
-
-    private static List<SiegeCommandType> availableTypes(Player player, List<RecruitsGroup> groups) {
-        Set<UUID> selectedGroups = Set.copyOf(activeGroupIds(groups));
-        if (selectedGroups.isEmpty()) {
-            return List.of();
-        }
-
-        EnumSet<SiegeCommandType> found = EnumSet.noneOf(SiegeCommandType.class);
-        List<SiegeEngineerEntity> engineers = player.level().getEntitiesOfClass(
-                SiegeEngineerEntity.class,
-                player.getBoundingBox().inflate(RecruitsCompat.COMMAND_RANGE),
-                engineer -> selectedGroups.contains(engineer.getGroup()));
-        for (SiegeEngineerEntity engineer : engineers) {
-            AbstractSiegeEntity machine = RecruitsCompat.workedMachine(engineer);
-            if (machine != null && machine.isOperator(engineer)) {
-                SiegeCommandType type = SiegeCommandType.from(machine);
-                if (type != null) {
-                    found.add(type);
-                }
-            }
-        }
-        return List.of(SiegeCommandType.values()).stream().filter(found::contains).toList();
     }
 
     private static void addSelectedTypeCommands(CommandScreen screen, Layout layout,
@@ -260,12 +243,23 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
         private static final int ROWS_PER_COLUMN = 5;
 
         private final List<Entry> entries = new ArrayList<>();
+        private final ScreenStates states;
+        private String scope = "";
 
-        private record Entry(String key, boolean enabled, Runnable action) {
+        private Layout(ScreenStates states) {
+            this.states = states;
+        }
+
+        private record Entry(String key, String stateKey, boolean enabled, Runnable action) {
+        }
+
+        /** The prefix the server keys the next buttons' states by: the target, a machine type, or none. */
+        private void scope(String scope) {
+            this.scope = scope;
         }
 
         private void add(String key, boolean enabled, Runnable action) {
-            entries.add(new Entry(key, enabled, action));
+            entries.add(new Entry(key, scope + key, enabled, action));
         }
 
         private void addSelected(String key, boolean enabled, List<RecruitsGroup> groups,
@@ -295,7 +289,13 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
                 int row = index % ROWS_PER_COLUMN;
                 int buttonX = originX + Math.round((column - (columns - 1) / 2.0F) * COLUMN_WIDTH);
                 int buttonY = originY + Math.round((row - (rows - 1) / 2.0F) * ROW_HEIGHT);
-                addButton(screen, buttonX, buttonY, entry.key(), entry.enabled(), entry.action());
+                boolean usable = entry.enabled() && states.allows(entry.stateKey());
+                addButton(screen, buttonX, buttonY, entry.key(), usable,
+                        usable ? null : states.refusal(entry.stateKey()), () -> {
+                            entry.action().run();
+                            ScreenStates.forget();
+                            screen.init(Minecraft.getInstance(), screen.width, screen.height);
+                        });
             }
         }
     }
@@ -321,9 +321,12 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
                 new RecruitsTowerCrewC2SPayload(action, tower.getId(), activeGroupIds(groups)));
     }
 
-    private static void addButton(CommandScreen screen, int x, int y, String key, boolean active, Runnable action) {
+    private static void addButton(CommandScreen screen, int x, int y, String key, boolean active,
+                                  Component refusal, Runnable action) {
         RecruitsCommandButton button = new RecruitsCommandButton(x, y, text("text." + key), ignored -> action.run());
-        button.setTooltip(Tooltip.create(text("tooltip." + key)));
+        Component tooltip = text("tooltip." + key);
+        button.setTooltip(Tooltip.create(refusal == null ? tooltip : Component.empty().append(tooltip)
+                .append("\n").append(refusal.copy().withStyle(ChatFormatting.RED))));
         button.active = active;
         screen.addRenderableWidget(button);
     }
@@ -335,6 +338,63 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
     private static void forEachActiveGroup(List<RecruitsGroup> groups,
                                            java.util.function.Consumer<RecruitsGroup> action) {
         groups.stream().filter(group -> !group.isDisabled()).forEach(action);
+    }
+
+    /**
+     * What the server last said the selected groups may do from this screen. It is asked again whenever the groups,
+     * the machine looked at or the block looked at change, and after every order; until it answers every siege
+     * button stays off.
+     */
+    private record ScreenStates(boolean answered, List<SiegeCommandType> types, Map<String, Component> refusals) {
+        private static final ScreenStates PENDING = new ScreenStates(false, List.of(), Map.of());
+        private static int lastQuery;
+        private static Object askedFor;
+        private static ScreenStates answer = PENDING;
+
+        static void listen() {
+            RecruitsCommandStatesPayloads.Answer.receiveWith(reply -> {
+                if (reply.queryId() != lastQuery) {
+                    return;
+                }
+                List<SiegeCommandType> types = new ArrayList<>();
+                for (String name : reply.types()) {
+                    for (SiegeCommandType type : SiegeCommandType.values()) {
+                        if (type.name().equals(name)) {
+                            types.add(type);
+                        }
+                    }
+                }
+                answer = new ScreenStates(true, List.copyOf(types), reply.refusals());
+                if (Minecraft.getInstance().screen instanceof CommandScreen screen) {
+                    screen.init(Minecraft.getInstance(), screen.width, screen.height);
+                }
+            });
+        }
+
+        static ScreenStates request(List<RecruitsGroup> groups, AbstractSiegeEntity target, BlockPos targetPos) {
+            List<UUID> groupIds = activeGroupIds(groups);
+            int targetId = target == null ? -1 : target.getId();
+            Object key = List.of(groupIds, targetId, targetPos == null ? "" : targetPos);
+            if (!key.equals(askedFor)) {
+                askedFor = key;
+                answer = PENDING;
+                RecruitsNetworking.sendToServer(new RecruitsCommandStatesPayloads.Query(
+                        ++lastQuery, groupIds, targetId, targetPos));
+            }
+            return answer;
+        }
+
+        static void forget() {
+            askedFor = null;
+        }
+
+        boolean allows(String key) {
+            return answered && (!refusals.containsKey(key) || refusals.get(key) == null);
+        }
+
+        Component refusal(String key) {
+            return refusals.get(key);
+        }
     }
 
     private static Component text(String suffix) {

@@ -12,6 +12,7 @@ import me.mss1r.siegeworks.gameplay.ownership.SiegeCaptureController;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsSiegeCommandC2SPayload;
 import me.mss1r.siegeworks.integration.recruits.network.RecruitsTowerCrewC2SPayload;
 import me.mss1r.siegeworks.integration.recruits.RecruitsCompat;
+import me.mss1r.siegeworks.integration.recruits.RecruitsOrderChecks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -77,11 +78,10 @@ final class RtsMachineActions {
         }
 
         if (siege instanceof MantletEntity) {
-            boolean ours = RecruitsCompat.setMantletFlap(commander, siege, true, true);
+            Component flapping = RecruitsOrderChecks.flap(commander, siege);
             boolean open = RecruitsCompat.flapOpen(siege);
-            Component notYours = Component.translatable("gui.siegeworks.rts.action.not_yours");
-            actions.add(option(GROUP_FLAP, FLAP_OPEN, "flap_open", open, ours, notYours));
-            actions.add(option(GROUP_FLAP, FLAP_CLOSE, "flap_close", !open, ours, notYours));
+            actions.add(option(GROUP_FLAP, FLAP_OPEN, "flap_open", open, flapping == null, flapping));
+            actions.add(option(GROUP_FLAP, FLAP_CLOSE, "flap_close", !open, flapping == null, flapping));
         }
 
         if (siege instanceof SiegeLadderEntity ladder) {
@@ -143,23 +143,21 @@ final class RtsMachineActions {
                                                    List<UUID> members) {
         boolean anyone = !members.isEmpty();
         Component noMen = Component.translatable("gui.siegeworks.rts.action.no_men");
-        boolean anyInside = RecruitsCompat.aboard(commander, tower, true) > 0;
-        boolean anyAway = RecruitsCompat.awayFromTower(commander, tower) > 0;
-        boolean hasDriver = RecruitsCompat.setTowerBridge(commander, tower, null, true);
+        Predicate<AbstractRecruitEntity> ours = recruit -> RecruitsCompat.commandable(commander, recruit);
+        Component returning = RecruitsOrderChecks.returnToTower(commander, tower, ours);
+        Component unloading = RecruitsOrderChecks.unload(commander, tower, ours);
+        Component bridging = RecruitsOrderChecks.bridge(commander, tower);
         Boolean bridge = RecruitsCompat.towerBridgeSetting(commander, tower);
-        Component noDriver = Component.translatable("gui.siegeworks.rts.action.no_driver");
         return List.of(
                 row(CREW, "crew", anyone, noMen),
-                row(RETURN, "return", anyAway,
-                        Component.translatable("gui.siegeworks.rts.action.nobody_away")),
-                row(UNLOAD, "unload", anyInside,
-                        Component.translatable("gui.siegeworks.rts.action.nobody_inside")),
+                row(RETURN, "return", returning == null, returning),
+                row(UNLOAD, "unload", unloading == null, unloading),
                 option(GROUP_BRIDGE, BRIDGE_DOWN, "bridge_down",
-                        Boolean.TRUE.equals(bridge), hasDriver, noDriver),
+                        Boolean.TRUE.equals(bridge), bridging == null, bridging),
                 option(GROUP_BRIDGE, BRIDGE_UP, "bridge_up",
-                        Boolean.FALSE.equals(bridge), hasDriver, noDriver),
+                        Boolean.FALSE.equals(bridge), bridging == null, bridging),
                 option(GROUP_BRIDGE, BRIDGE_AUTO, "bridge_auto",
-                        bridge == null, hasDriver, noDriver));
+                        bridge == null, bridging == null, bridging));
     }
 
     private static MapObjectAction option(String group, String id, String key, boolean selected,
@@ -278,9 +276,11 @@ final class RtsMachineActions {
         }
 
         if (FLAP_OPEN.equals(actionId) || FLAP_CLOSE.equals(actionId)) {
-            if (!RecruitsCompat.setMantletFlap(commander, siege, FLAP_OPEN.equals(actionId), false)) {
-                commander.displayClientMessage(
-                        Component.translatable("gui.siegeworks.rts.action.not_yours"), true);
+            Component flapping = RecruitsOrderChecks.flap(commander, siege);
+            if (flapping != null) {
+                commander.displayClientMessage(flapping, true);
+            } else {
+                RecruitsCompat.setMantletFlap(commander, siege, FLAP_OPEN.equals(actionId), false);
             }
             return;
         }
