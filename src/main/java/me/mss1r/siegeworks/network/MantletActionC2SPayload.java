@@ -2,6 +2,7 @@ package me.mss1r.siegeworks.network;
 
 import dev.architectury.networking.NetworkManager;
 import me.mss1r.siegeworks.entity.siege.MantletEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -10,14 +11,13 @@ import me.mss1r.siegeworks.Siegeworks;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
 //?}
 
 //? if forge {
 /*public record MantletActionC2SPayload(int entityId, int action) {
 *///?} else {
 public record MantletActionC2SPayload(int entityId, int action) implements CustomPacketPayload {
-    public static final Type<MantletActionC2SPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "mantlet_action"));
+    public static final Type<MantletActionC2SPayload> TYPE = new Type<>(MinecraftVersionCompat.id(Siegeworks.MOD_ID, "mantlet_action"));
     public static final StreamCodec<RegistryFriendlyByteBuf, MantletActionC2SPayload> STREAM_CODEC =
             StreamCodec.ofMember(MantletActionC2SPayload::write, MantletActionC2SPayload::decode);
     private void write(RegistryFriendlyByteBuf buffer) { encode(this, buffer); }

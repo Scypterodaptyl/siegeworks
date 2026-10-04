@@ -10,6 +10,7 @@ import me.mss1r.siegeworks.client.entity.TowedSiegeRenderer;
 import me.mss1r.siegeworks.entity.siege.MangonelEntity;
 import me.mss1r.siegeworks.client.projectile.TrebuchetProjectileRenderer;
 import me.mss1r.siegeworks.item.SiegeAmmo;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
@@ -27,7 +28,7 @@ public class MangonelRenderer extends TowedSiegeRenderer<MangonelEntity> {
             + 3.0D / 32.0D * LOADED_GRAPESHOT_SCALE;
 
     private static final ResourceLocation ROPE_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/rope.png");
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/rope.png");
     private static final String ARM_ANCHOR = "rope_arm";
     private static final String DRUM_ANCHOR = "rope_drum";
 

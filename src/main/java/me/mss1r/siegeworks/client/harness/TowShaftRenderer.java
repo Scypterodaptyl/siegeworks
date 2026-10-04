@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.client.rope.RopeRenderer;
 import me.mss1r.siegeworks.client.rope.SiegeRopeAnchors;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
@@ -14,7 +15,7 @@ import java.util.Optional;
 
 public final class TowShaftRenderer {
     private static final ResourceLocation SHAFT_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/tow_shaft.png");
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/tow_shaft.png");
 
     private static final float SHAFT_WIDTH = 1.5F / 16.0F;
 

@@ -3,7 +3,7 @@ package me.mss1r.siegeworks.registry;
 import me.mss1r.siegeworks.Siegeworks;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
-import net.minecraft.resources.ResourceLocation;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.sounds.SoundEvent;
 
@@ -45,12 +45,12 @@ public final class SiegeworksSounds {
     }
 
     private static RegistrySupplier<SoundEvent> register(String name) {
-        return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, name)));
+        return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(MinecraftVersionCompat.id(Siegeworks.MOD_ID, name)));
     }
 
     private static RegistrySupplier<SoundEvent> registerFixed(String name, float range) {
         return SOUND_EVENTS.register(name, () -> SoundEvent.createFixedRangeEvent(
-                ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, name), range));
+                MinecraftVersionCompat.id(Siegeworks.MOD_ID, name), range));
     }
 
     public static void register() {

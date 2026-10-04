@@ -3,9 +3,9 @@ package me.mss1r.siegeworks.gametest;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.config.SiegeBlockDamage;
 import me.mss1r.siegeworks.config.SiegeworksServerConfig;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.resources.ResourceLocation;
 //? if forge {
 /*import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
@@ -26,7 +26,7 @@ public final class FractureConfigGameTests {
     public static void higherFractureEnergyNeedsMoreHits(GameTestHelper helper) {
         double before = SiegeworksServerConfig.getStoneFractureEnergy();
         SiegeBlockDamage damageBefore = SiegeworksServerConfig.getBlockDamage();
-        var ball = ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "cannon_ball");
+        var ball = MinecraftVersionCompat.id(Siegeworks.MOD_ID, "cannon_ball");
         try {
             SiegeworksServerConfig.setBlockDamage(SiegeBlockDamage.EVERYWHERE);
             int[] hits = new int[3];

@@ -8,6 +8,7 @@ import me.mss1r.siegeworks.client.rope.RopeRenderer;
 import me.mss1r.siegeworks.client.rope.SiegeRopeAnchors;
 import me.mss1r.siegeworks.client.entity.TowedSiegeRenderer;
 import me.mss1r.siegeworks.entity.siege.SiegeTowerEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -38,7 +39,7 @@ public class SiegeTowerRenderer extends TowedSiegeRenderer<SiegeTowerEntity> {
     };
 
     private static final ResourceLocation ROPE_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/rope.png");
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/rope.png");
 
     private static final String[][] ROPE_ANCHORS = {
             {"rope_drum_a", "rope_shaft_a", "rope_roller_a", "rope_bridge_a"},

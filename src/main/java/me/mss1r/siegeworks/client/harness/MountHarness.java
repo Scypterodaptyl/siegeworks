@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.client.harness;
 
 import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
@@ -29,7 +30,7 @@ public enum MountHarness {
                  float outerX, float outerY, float z,
                  float innerWidth, float innerHeight, float innerX, float innerY,
                  double anchorX, double anchorY, double anchorZ) {
-        this.texture = ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/" + name + ".png");
+        this.texture = MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/" + name + ".png");
         this.outerWidth = outerWidth;
         this.outerHeight = outerHeight;
         this.depth = depth;

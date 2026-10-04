@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks.gameplay.upgrade;
 
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -42,14 +43,14 @@ public final class TowerCoveringController {
             UUID.fromString("e61566ce-bb65-4ff7-bd17-22e4e0d1bba9");
     *///?} else {
     private static final ResourceLocation HEALTH_MODIFIER_ID =
-            ResourceLocation.fromNamespaceAndPath("siegeworks", "siege_tower_leather_covering");
+            MinecraftVersionCompat.id("siegeworks", "siege_tower_leather_covering");
     //?}
     private static final TagKey<Item> MATERIALS = TagKey.create(
             Registries.ITEM,
             //? if forge {
-            /*ResourceLocation.fromNamespaceAndPath("forge", "leather")
+            /*MinecraftVersionCompat.id("forge", "leather")
             *///?} else {
-            ResourceLocation.fromNamespaceAndPath("c", "leathers")
+            MinecraftVersionCompat.id("c", "leathers")
             //?}
     );
 

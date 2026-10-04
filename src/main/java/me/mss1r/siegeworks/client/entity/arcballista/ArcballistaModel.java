@@ -3,6 +3,7 @@ package me.mss1r.siegeworks.client.entity.arcballista;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.client.entity.TowedSiegeModel;
 import me.mss1r.siegeworks.entity.siege.ArcballistaEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.resources.ResourceLocation;
 //? if forge {
 /*import software.bernie.geckolib.core.animation.AnimationState;
@@ -13,17 +14,17 @@ import software.bernie.geckolib.animation.AnimationState;
 public class ArcballistaModel extends TowedSiegeModel<ArcballistaEntity> {
     @Override
     public ResourceLocation getModelResource(ArcballistaEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "geo/arcballista.geo.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "geo/arcballista.geo.json");
     }
 
     @Override
     public ResourceLocation getTextureResource(ArcballistaEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/arcballista.png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/arcballista.png");
     }
 
     @Override
     public ResourceLocation getAnimationResource(ArcballistaEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "animations/arcballista.animation.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "animations/arcballista.animation.json");
     }
 
     @Override

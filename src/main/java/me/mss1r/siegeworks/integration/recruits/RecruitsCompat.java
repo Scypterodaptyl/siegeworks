@@ -22,6 +22,7 @@ import me.mss1r.siegeworks.api.SiegeMeleeControl;
 import me.mss1r.siegeworks.api.SiegeOperatorRegistry;
 import me.mss1r.siegeworks.api.SiegePlayerAttributionRegistry;
 import me.mss1r.siegeworks.config.SiegeworksServerConfig;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import me.mss1r.siegeworks.entity.siege.BatteringRamEntity;
 import me.mss1r.siegeworks.entity.siege.MantletEntity;
@@ -71,7 +72,7 @@ public final class RecruitsCompat {
     /** How far Recruits itself reaches with a command, so siege orders from its screen reach as far; map orders keep the RTS radius. */
     static final double COMMAND_RANGE = 200.0D;
     private static final double COMMAND_RANGE_SQR = COMMAND_RANGE * COMMAND_RANGE;
-    private static final ResourceLocation OPERATOR_TYPE = ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "recruits");
+    private static final ResourceLocation OPERATOR_TYPE = MinecraftVersionCompat.id(Siegeworks.MOD_ID, "recruits");
 
     private RecruitsCompat() {
     }

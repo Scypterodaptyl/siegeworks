@@ -7,6 +7,7 @@ import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
 import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileImpacts;
 import me.mss1r.siegeworks.gameplay.damage.StructuralDamageSystem;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
@@ -45,13 +46,13 @@ import java.util.function.Predicate;
 @PrefixGameTestTemplate(false)
 public final class SiegeImpactBalanceGameTests {
     private static final ResourceLocation CANNON_BALL =
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "cannon_ball");
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "cannon_ball");
     private static final ResourceLocation GIANT_CANNON_BALL =
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "giant_cannon_ball_projectile");
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "giant_cannon_ball_projectile");
     private static final ResourceLocation TREBUCHET_STONE =
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "trebuchet_projectile");
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "trebuchet_projectile");
     private static final ResourceLocation MANGONEL_STONE =
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "mangonel_projectile");
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "mangonel_projectile");
     private static final double CULVERIN_SPEED = 300.0D;
     private static final double MONS_MEG_SPEED = 315.0D;
     private static final double TREBUCHET_SPEED = 43.0D;

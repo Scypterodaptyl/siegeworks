@@ -7,6 +7,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 
@@ -22,6 +23,19 @@ import java.util.function.Consumer;
 
 public final class MinecraftVersionCompat {
     private MinecraftVersionCompat() {
+    }
+
+    /**
+     * A resource location. Forge 1.20.1 only gained the 1.21 factory in 47.3 and OptiFine replaces the class without
+     * it, so 1.20.1 builds use the constructor every 1.20.1 has.
+     */
+    @SuppressWarnings("removal")
+    public static ResourceLocation id(String namespace, String path) {
+        //? if forge {
+        /*return new ResourceLocation(namespace, path);
+        *///?} else {
+        return ResourceLocation.fromNamespaceAndPath(namespace, path);
+        //?}
     }
 
     public static double entityInteractionRange(Player player) {

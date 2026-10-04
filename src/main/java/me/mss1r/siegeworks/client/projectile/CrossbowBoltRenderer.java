@@ -8,6 +8,7 @@ import me.mss1r.siegeworks.entity.projectile.AbstractBoltProjectile;
 import me.mss1r.siegeworks.entity.projectile.ArcballistaBoltProjectile;
 import me.mss1r.siegeworks.client.projectile.ArcballistaBoltModel;
 import me.mss1r.siegeworks.client.projectile.TowerCrossbowBoltModel;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -81,6 +82,6 @@ public class CrossbowBoltRenderer<T extends AbstractBoltProjectile> extends Enti
     @Override
     public ResourceLocation getTextureLocation(T entity) {
         String texture = entity instanceof ArcballistaBoltProjectile ? "arcballista_projectile" : "tower_crossbow_projectile";
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/" + texture + ".png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/" + texture + ".png");
     }
 }

@@ -4,6 +4,7 @@ import me.mss1r.axiomata.blueprint.api.construction.BuildProgress;
 import me.mss1r.axiomata.blueprint.api.construction.BlueprintConstructionPlan;
 import me.mss1r.axiomata.blueprint.api.construction.ConstructionHitTesting;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -100,7 +101,7 @@ public final class SiegeConstructionController {
 
     private ResourceLocation modelIdentifier() {
         ResourceLocation type = BuiltInRegistries.ENTITY_TYPE.getKey(siege().getType());
-        return type == null ? ResourceLocation.fromNamespaceAndPath("siegeworks", "unknown") : type;
+        return type == null ? MinecraftVersionCompat.id("siegeworks", "unknown") : type;
     }
 
     private AbstractSiegeEntity siege() {

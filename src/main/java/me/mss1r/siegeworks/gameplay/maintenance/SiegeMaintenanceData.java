@@ -11,6 +11,7 @@ import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeTowerEntity;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
@@ -58,7 +59,7 @@ public final class SiegeMaintenanceData {
 
     public static void registerReloadListener() {
         ReloadListenerRegistry.register(PackType.SERVER_DATA, new Loader(),
-                ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "maintenance_blueprints"));
+                MinecraftVersionCompat.id(Siegeworks.MOD_ID, "maintenance_blueprints"));
     }
 
     public static MaintenanceRecipe forSiege(AbstractSiegeEntity siege) {

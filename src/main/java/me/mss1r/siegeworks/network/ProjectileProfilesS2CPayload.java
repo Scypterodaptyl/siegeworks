@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import dev.architectury.networking.NetworkManager;
 import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
 import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.FriendlyByteBuf;
@@ -25,7 +26,7 @@ public record ProjectileProfilesS2CPayload(Map<ResourceLocation, ProjectilePhysi
 public record ProjectileProfilesS2CPayload(Map<ResourceLocation, ProjectilePhysicsProfile> profiles)
         implements CustomPacketPayload {
     public static final Type<ProjectileProfilesS2CPayload> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "projectile_profiles"));
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "projectile_profiles"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ProjectileProfilesS2CPayload> STREAM_CODEC =
             StreamCodec.ofMember(ProjectileProfilesS2CPayload::write, ProjectileProfilesS2CPayload::decode);
     private void write(RegistryFriendlyByteBuf buffer) { encode(this, buffer); }

@@ -120,7 +120,7 @@ public final class SiegeworksGameTests {
     private static final String TEST_OPERATOR_TAG = "siegeworks_test_operator";
 
     static {
-        SiegeOperatorRegistry.register(ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "gametest_operator"),
+        SiegeOperatorRegistry.register(MinecraftVersionCompat.id(Siegeworks.MOD_ID, "gametest_operator"),
                 entity -> entity.getTags().contains(TEST_OPERATOR_TAG));
     }
 

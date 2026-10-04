@@ -3,6 +3,7 @@ package me.mss1r.siegeworks.integration.recruits.network;
 import dev.architectury.networking.NetworkManager;
 import io.netty.buffer.Unpooled;
 import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -75,6 +76,6 @@ public final class RecruitsNetworking {
     }
 
     private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, path);
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, path);
     }
 }

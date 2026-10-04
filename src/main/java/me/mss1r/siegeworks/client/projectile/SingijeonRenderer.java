@@ -6,6 +6,7 @@ import com.mojang.math.Axis;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.entity.projectile.SingijeonProjectile;
 import me.mss1r.siegeworks.client.projectile.SingijeonModel;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -49,6 +50,6 @@ public class SingijeonRenderer extends EntityRenderer<SingijeonProjectile> {
     }
 
     private static ResourceLocation texture(String name) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/" + name + ".png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/" + name + ".png");
     }
 }

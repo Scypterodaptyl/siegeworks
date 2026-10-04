@@ -3,6 +3,7 @@ package me.mss1r.siegeworks.client.entity.hwacha;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.client.entity.TowedSiegeModel;
 import me.mss1r.siegeworks.entity.siege.HwachaEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.resources.ResourceLocation;
 //? if forge {
 /*import software.bernie.geckolib.core.animation.AnimationState;
@@ -16,17 +17,17 @@ public class HwachaModel extends TowedSiegeModel<HwachaEntity> {
 
     @Override
     public ResourceLocation getModelResource(HwachaEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "geo/hwacha.geo.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "geo/hwacha.geo.json");
     }
 
     @Override
     public ResourceLocation getTextureResource(HwachaEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/hwacha.png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/hwacha.png");
     }
 
     @Override
     public ResourceLocation getAnimationResource(HwachaEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "animations/hwacha.animation.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "animations/hwacha.animation.json");
     }
 
     @Override

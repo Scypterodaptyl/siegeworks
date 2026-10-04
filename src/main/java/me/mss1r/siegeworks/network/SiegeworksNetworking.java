@@ -6,6 +6,7 @@ import dev.architectury.utils.Env;
 import dev.architectury.utils.EnvExecutor;
 import io.netty.buffer.Unpooled;
 import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -145,6 +146,6 @@ public final class SiegeworksNetworking {
     }
 
     private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, path);
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, path);
     }
 }

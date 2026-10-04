@@ -8,9 +8,9 @@ import me.mss1r.siegeworks.client.particle.ImpactSmokePlumeParticle;
 import me.mss1r.siegeworks.client.particle.MuzzlePlumeParticle;
 import me.mss1r.siegeworks.client.particle.SiegeSmokeParticle;
 import me.mss1r.siegeworks.particle.SiegeworksParticles;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 //? if forge {
 /*import net.minecraftforge.api.distmarker.Dist;
 *///?} else {
@@ -127,7 +127,7 @@ public final class SiegeworksClientModEvents {
    *///?} else {
    public static void registerGuiOverlays(RegisterGuiLayersEvent event) {
       event.registerAbove(VanillaGuiLayers.CROSSHAIR,
-              ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "siege_aim"),
+              MinecraftVersionCompat.id(Siegeworks.MOD_ID, "siege_aim"),
               (graphics, deltaTracker) -> SiegeAimOverlay.render(
                       graphics,
                       deltaTracker.getGameTimeDeltaPartialTick(false),

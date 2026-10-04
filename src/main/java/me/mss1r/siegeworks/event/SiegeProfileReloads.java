@@ -11,6 +11,7 @@ import me.mss1r.siegeworks.data.profile.BlockMaterialProfiles;
 import me.mss1r.siegeworks.data.profile.SiegeEngineProfile;
 import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
 import me.mss1r.siegeworks.gameplay.maintenance.SiegeMaintenanceData;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 
@@ -46,6 +47,6 @@ public final class SiegeProfileReloads {
     }
 
     private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, path);
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, path);
     }
 }

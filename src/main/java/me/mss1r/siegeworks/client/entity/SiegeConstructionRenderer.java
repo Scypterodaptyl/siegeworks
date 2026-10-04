@@ -8,6 +8,7 @@ import me.mss1r.axiomata.blueprint.api.visual.BlueprintConstructionVisuals;
 import me.mss1r.axiomata.blueprint.client.renderer.ConstructionHighlightRenderType;
 import me.mss1r.axiomata.structure.StructureSections;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -225,7 +226,7 @@ public abstract class SiegeConstructionRenderer<T extends AbstractSiegeEntity & 
             name = name.substring(0, name.length() - ".geo.json".length());
         }
         StructureSections sections = BlueprintConstructionVisuals.sections(
-                ResourceLocation.fromNamespaceAndPath(model.getNamespace(), name));
+                MinecraftVersionCompat.id(model.getNamespace(), name));
         if (sections == null || matchesLoadedModel(entity, sections, model)) {
             return sections;
         }

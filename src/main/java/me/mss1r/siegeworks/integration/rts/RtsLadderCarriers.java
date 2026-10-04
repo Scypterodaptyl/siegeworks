@@ -5,6 +5,7 @@ import me.mss1r.recruitsrtscommand.api.MapIcon;
 import me.mss1r.recruitsrtscommand.api.MapObjectAction;
 import me.mss1r.recruitsrtscommand.api.MapObjectSnapshot;
 import me.mss1r.siegeworks.integration.recruits.RecruitsCompat;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -36,7 +37,7 @@ final class RtsLadderCarriers {
         for (AbstractRecruitEntity carrier : carriers) {
             objects.add(new MapObjectSnapshot(
                     carrier.getUUID(),
-                    MapIcon.item(ResourceLocation.fromNamespaceAndPath("siegeworks", "siege_ladder_spawner"),
+                    MapIcon.item(MinecraftVersionCompat.id("siegeworks", "siege_ladder_spawner"),
                             ICON_SCALE),
                     player.getUUID(),
                     carrier.blockPosition(),

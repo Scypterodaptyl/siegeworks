@@ -5,6 +5,7 @@ import me.mss1r.siegeworks.entity.projectile.CannonProjectile;
 import me.mss1r.siegeworks.client.projectile.CannonBall;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -34,6 +35,6 @@ public class CannonBallRenderer extends EntityRenderer<CannonProjectile> {
     }
 
     public ResourceLocation getTextureLocation(CannonProjectile entity) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/block/cannon_ball.png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/block/cannon_ball.png");
     }
 }

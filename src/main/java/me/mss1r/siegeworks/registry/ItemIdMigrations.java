@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.registry;
 
 import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 //? if forge {
@@ -60,10 +61,6 @@ public final class ItemIdMigrations {
     *///?}
 
     private static ResourceLocation id(String path) {
-        //? if forge {
-        /*return new ResourceLocation(Siegeworks.MOD_ID, path);
-        *///?} else {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, path);
-        //?}
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, path);
     }
 }

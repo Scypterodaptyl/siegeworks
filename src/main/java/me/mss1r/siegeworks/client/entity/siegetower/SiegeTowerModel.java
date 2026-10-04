@@ -2,6 +2,7 @@ package me.mss1r.siegeworks.client.entity.siegetower;
 
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.entity.siege.SiegeTowerEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 //? if forge {
@@ -14,17 +15,17 @@ import software.bernie.geckolib.model.GeoModel;
 public class SiegeTowerModel extends GeoModel<SiegeTowerEntity> {
     @Override
     public ResourceLocation getModelResource(SiegeTowerEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "geo/siege_tower.geo.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "geo/siege_tower.geo.json");
     }
 
     @Override
     public ResourceLocation getTextureResource(SiegeTowerEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/siege_tower.png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/siege_tower.png");
     }
 
     @Override
     public ResourceLocation getAnimationResource(SiegeTowerEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "animations/siege_tower.animation.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "animations/siege_tower.animation.json");
     }
 
     @Override

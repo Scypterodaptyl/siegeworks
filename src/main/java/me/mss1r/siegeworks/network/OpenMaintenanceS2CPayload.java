@@ -1,13 +1,13 @@
 package me.mss1r.siegeworks.network;
 
 import dev.architectury.networking.NetworkManager;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.network.FriendlyByteBuf;
 //? if neoforge {
 import me.mss1r.siegeworks.Siegeworks;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
 //?}
 
 //? if forge {
@@ -30,7 +30,7 @@ public record OpenMaintenanceS2CPayload(
         boolean dismantling, int dismantleProgress, int dismantleRequired,
         String repairCost, String dismantleRefund
 ) implements CustomPacketPayload {
-    public static final Type<OpenMaintenanceS2CPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "open_maintenance"));
+    public static final Type<OpenMaintenanceS2CPayload> TYPE = new Type<>(MinecraftVersionCompat.id(Siegeworks.MOD_ID, "open_maintenance"));
     public static final StreamCodec<RegistryFriendlyByteBuf, OpenMaintenanceS2CPayload> STREAM_CODEC =
             StreamCodec.ofMember(OpenMaintenanceS2CPayload::write, OpenMaintenanceS2CPayload::decode);
     private void write(RegistryFriendlyByteBuf buffer) { encode(this, buffer); }

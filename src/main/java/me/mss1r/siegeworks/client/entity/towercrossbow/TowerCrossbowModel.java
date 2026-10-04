@@ -2,6 +2,7 @@ package me.mss1r.siegeworks.client.entity.towercrossbow;
 
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.entity.siege.TowerCrossbowEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 //? if forge {
@@ -14,17 +15,17 @@ import software.bernie.geckolib.model.GeoModel;
 public class TowerCrossbowModel extends GeoModel<TowerCrossbowEntity> {
     @Override
     public ResourceLocation getModelResource(TowerCrossbowEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "geo/tower_crossbow.geo.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "geo/tower_crossbow.geo.json");
     }
 
     @Override
     public ResourceLocation getTextureResource(TowerCrossbowEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/tower_crossbow.png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/tower_crossbow.png");
     }
 
     @Override
     public ResourceLocation getAnimationResource(TowerCrossbowEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "animations/tower_crossbow.animation.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "animations/tower_crossbow.animation.json");
     }
 
     @Override

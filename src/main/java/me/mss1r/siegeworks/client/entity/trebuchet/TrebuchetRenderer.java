@@ -10,6 +10,7 @@ import me.mss1r.siegeworks.client.rope.SiegeRopeAnchors;
 import me.mss1r.siegeworks.entity.siege.TrebuchetEntity;
 import me.mss1r.siegeworks.client.projectile.TrebuchetProjectileRenderer;
 import me.mss1r.siegeworks.item.SiegeAmmo;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
@@ -27,7 +28,7 @@ public class TrebuchetRenderer extends SiegeConstructionRenderer<TrebuchetEntity
     private static final double LOADED_GRAPESHOT_Y_OFFSET = 3.0D / 32.0D * LOADED_GRAPESHOT_SCALE;
 
     private static final ResourceLocation ROPE_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/rope.png");
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/rope.png");
     private static final String BEAM_ANCHOR = "rope_beam";
     private static final String GUIDE_ANCHOR = "rope_guide";
     private static final String DRUM_ANCHOR = "rope_drum";

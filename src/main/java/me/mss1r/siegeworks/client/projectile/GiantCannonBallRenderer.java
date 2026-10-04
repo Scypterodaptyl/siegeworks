@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.entity.projectile.GiantCannonProjectile;
 import me.mss1r.siegeworks.client.projectile.GiantCannonProjectileModel;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -36,6 +37,6 @@ public class GiantCannonBallRenderer extends EntityRenderer<GiantCannonProjectil
 
     @Override
     public ResourceLocation getTextureLocation(GiantCannonProjectile entity) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/block/giant_cannon_ball.png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/block/giant_cannon_ball.png");
     }
 }

@@ -2,6 +2,7 @@ package me.mss1r.siegeworks.network;
 
 import dev.architectury.networking.NetworkManager;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
@@ -10,14 +11,13 @@ import me.mss1r.siegeworks.Siegeworks;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
 //?}
 
 //? if forge {
 /*public record SiegeYawC2SPayload(float yaw, float pitch) {
 *///?} else {
 public record SiegeYawC2SPayload(float yaw, float pitch) implements CustomPacketPayload {
-    public static final Type<SiegeYawC2SPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "siege_yaw"));
+    public static final Type<SiegeYawC2SPayload> TYPE = new Type<>(MinecraftVersionCompat.id(Siegeworks.MOD_ID, "siege_yaw"));
     public static final StreamCodec<RegistryFriendlyByteBuf, SiegeYawC2SPayload> STREAM_CODEC =
             StreamCodec.ofMember(SiegeYawC2SPayload::write, SiegeYawC2SPayload::decode);
     private void write(RegistryFriendlyByteBuf buffer) { encode(this, buffer); }

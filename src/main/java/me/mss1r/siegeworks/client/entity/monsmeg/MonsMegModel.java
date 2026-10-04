@@ -3,6 +3,7 @@ package me.mss1r.siegeworks.client.entity.monsmeg;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.client.entity.TowedSiegeModel;
 import me.mss1r.siegeworks.entity.siege.MonsMegEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.resources.ResourceLocation;
 //? if forge {
 /*import software.bernie.geckolib.core.animation.AnimationState;
@@ -13,17 +14,17 @@ import software.bernie.geckolib.animation.AnimationState;
 public class MonsMegModel extends TowedSiegeModel<MonsMegEntity> {
     @Override
     public ResourceLocation getModelResource(MonsMegEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "geo/mons_meg.geo.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "geo/mons_meg.geo.json");
     }
 
     @Override
     public ResourceLocation getTextureResource(MonsMegEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/mons_meg.png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/mons_meg.png");
     }
 
     @Override
     public ResourceLocation getAnimationResource(MonsMegEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "animations/mons_meg.animation.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "animations/mons_meg.animation.json");
     }
 
     @Override

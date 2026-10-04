@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.client.projectile;
 
 import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import me.mss1r.siegeworks.entity.projectile.TrebuchetProjectile;
 import me.mss1r.siegeworks.item.SiegeAmmo;
@@ -98,8 +99,8 @@ public class TrebuchetProjectileRenderer extends EntityRenderer<TrebuchetProject
             textureName = "stone";
         }
         if ("fire".equals(textureName)) {
-            return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/block/fire_projectile.png");
+            return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/block/fire_projectile.png");
         }
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/trebuchet_projectile_" + textureName + ".png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/trebuchet_projectile_" + textureName + ".png");
     }
 }

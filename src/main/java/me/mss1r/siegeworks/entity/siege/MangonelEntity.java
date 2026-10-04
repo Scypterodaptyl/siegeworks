@@ -9,6 +9,7 @@ import me.mss1r.siegeworks.api.SiegeAmmunitionMode;
 import me.mss1r.siegeworks.api.SiegeBallistics;
 import me.mss1r.siegeworks.api.MountedSiegeItemControl;
 import me.mss1r.siegeworks.api.SiegeOperationState;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import me.mss1r.siegeworks.entity.projectile.MangonelPassengerProjectile;
 import me.mss1r.siegeworks.entity.projectile.TrebuchetProjectile;
@@ -48,7 +49,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.tags.TagKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 //? if forge {
@@ -99,7 +99,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     private static final double UNLOADED_ARM_ANGLE = 0.0D;
     private static final double LOADED_ARM_ANGLE = -60.0D;
     private static final TagKey<Item> PASSENGER_LOADING_ITEMS = TagKey.create(Registries.ITEM,
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "mangonel_passenger_loading_items"));
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "mangonel_passenger_loading_items"));
     private static final Vec3 ARM_PIVOT = new Vec3(0.0D, 9.0D / 16.0D, -7.0D / 16.0D);
     private static final Vec3 LOAD_CENTER = new Vec3(0.0D, 44.0D / 16.0D, -6.0D / 16.0D);
     private static final Vec3 ROOT_COLLISION_PIVOT = new Vec3(0.0D, 6.0D / 16.0D, 0.0D);

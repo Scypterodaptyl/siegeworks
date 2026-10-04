@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.entity.projectile.ScattershotProjectile;
 import me.mss1r.siegeworks.client.projectile.ScattershotProjectileModel;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -16,9 +17,9 @@ public final class ScattershotProjectileRenderer extends EntityRenderer<Scatters
     private static final float VISUAL_SCALE = 2.5F;
 
     private static final ResourceLocation IRON_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/scattershot_iron.png");
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/scattershot_iron.png");
     private static final ResourceLocation STONE_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/scattershot_stone.png");
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/scattershot_stone.png");
 
     private final ScattershotProjectileModel model;
 

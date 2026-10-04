@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.data.profile;
 
 import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.resources.ResourceLocation;
 
 /** Projectile profiles for ammunition that shares an entity type with another but hits differently. */
@@ -14,6 +15,6 @@ public final class ProjectileVariants {
     }
 
     private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, path);
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, path);
     }
 }

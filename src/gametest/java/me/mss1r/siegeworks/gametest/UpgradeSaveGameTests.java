@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.gametest;
 
 import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import me.mss1r.siegeworks.registry.SiegeworksItems;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -72,7 +73,7 @@ public final class UpgradeSaveGameTests {
             //? if forge {
             /*ResourceLocation oldId = new ResourceLocation(Siegeworks.MOD_ID, oldPath);
             *///?} else {
-            ResourceLocation oldId = ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, oldPath);
+            ResourceLocation oldId = MinecraftVersionCompat.id(Siegeworks.MOD_ID, oldPath);
             //?}
             helper.assertTrue(BuiltInRegistries.ITEM.get(oldId) == item,
                     "Legacy ID does not resolve: " + oldId);

@@ -2,6 +2,7 @@ package me.mss1r.siegeworks.client.entity.siegeladder;
 
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.resources.ResourceLocation;
 //? if forge {
 /*import software.bernie.geckolib.core.animation.AnimationState;
@@ -13,17 +14,17 @@ import software.bernie.geckolib.model.GeoModel;
 public class SiegeLadderModel extends GeoModel<SiegeLadderEntity> {
     @Override
     public ResourceLocation getModelResource(SiegeLadderEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "geo/siege_ladder.geo.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "geo/siege_ladder.geo.json");
     }
 
     @Override
     public ResourceLocation getTextureResource(SiegeLadderEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/siege_ladder.png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/siege_ladder.png");
     }
 
     @Override
     public ResourceLocation getAnimationResource(SiegeLadderEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "animations/siege_ladder.animation.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "animations/siege_ladder.animation.json");
     }
 
     @Override

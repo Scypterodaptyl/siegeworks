@@ -3,6 +3,7 @@ package me.mss1r.siegeworks.client.entity.fieldgun;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.client.entity.TowedSiegeModel;
 import me.mss1r.siegeworks.entity.siege.AbstractFieldGunEntity;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.resources.ResourceLocation;
 //? if forge {
 /*import software.bernie.geckolib.core.animation.AnimationState;
@@ -16,9 +17,9 @@ public final class FieldGunModel<T extends AbstractFieldGunEntity> extends Towed
     private final ResourceLocation animationResource;
 
     public FieldGunModel(String assetName) {
-        this.modelResource = ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "geo/" + assetName + ".geo.json");
-        this.textureResource = ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/" + assetName + ".png");
-        this.animationResource = ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "animations/" + assetName + ".animation.json");
+        this.modelResource = MinecraftVersionCompat.id(Siegeworks.MOD_ID, "geo/" + assetName + ".geo.json");
+        this.textureResource = MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/" + assetName + ".png");
+        this.animationResource = MinecraftVersionCompat.id(Siegeworks.MOD_ID, "animations/" + assetName + ".animation.json");
     }
 
     @Override

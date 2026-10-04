@@ -3,6 +3,7 @@ package me.mss1r.siegeworks.client.entity.trebuchet;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.entity.siege.TrebuchetEntity;
 import me.mss1r.siegeworks.item.SiegeAmmo;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.resources.ResourceLocation;
 //? if forge {
 /*import software.bernie.geckolib.core.animation.AnimationState;
@@ -14,17 +15,17 @@ import software.bernie.geckolib.model.GeoModel;
 public class TrebuchetModel extends GeoModel<TrebuchetEntity> {
     @Override
     public ResourceLocation getModelResource(TrebuchetEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "geo/trebuchet.geo.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "geo/trebuchet.geo.json");
     }
 
     @Override
     public ResourceLocation getTextureResource(TrebuchetEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "textures/entity/trebuchet.png");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "textures/entity/trebuchet.png");
     }
 
     @Override
     public ResourceLocation getAnimationResource(TrebuchetEntity animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "animations/trebuchet.animation.json");
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, "animations/trebuchet.animation.json");
     }
 
     @Override

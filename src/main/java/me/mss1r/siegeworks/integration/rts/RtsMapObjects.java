@@ -13,6 +13,7 @@ import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeRelation;
 import me.mss1r.siegeworks.integration.recruits.RecruitsCompat;
 import me.mss1r.siegeworks.integration.recruits.RecruitsOrderChecks;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -126,7 +127,7 @@ final class RtsMapObjects {
                 .getKey(siege.getType());
         if (key == null) return MapIcon.item(fallbackItem(), MACHINE_ICON_SCALE);
 
-        ResourceLocation spawner = ResourceLocation.fromNamespaceAndPath(
+        ResourceLocation spawner = MinecraftVersionCompat.id(
                 key.getNamespace(), key.getPath() + "_spawner");
         return net.minecraftforge.registries.ForgeRegistries.ITEMS.containsKey(spawner)
                 ? MapIcon.item(spawner, MACHINE_ICON_SCALE)
@@ -134,7 +135,7 @@ final class RtsMapObjects {
     }
 
     private static ResourceLocation fallbackItem() {
-        return ResourceLocation.fromNamespaceAndPath("siegeworks", "catapult_spawner");
+        return MinecraftVersionCompat.id("siegeworks", "catapult_spawner");
     }
 
     private static MapObjectSnapshot describe(ServerPlayer player, AbstractSiegeEntity siege) {

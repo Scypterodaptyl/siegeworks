@@ -7,11 +7,11 @@ import me.mss1r.siegeworks.data.profile.BlockMaterialProfile;
 import me.mss1r.siegeworks.data.profile.BlockMaterialProfiles;
 import me.mss1r.siegeworks.gameplay.damage.StructuralDamageSystem;
 import me.mss1r.siegeworks.particle.SiegeworksParticles;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
@@ -33,7 +33,7 @@ import java.util.List;
 /** Projectile penetration, craters and accumulated cracks. Distances are in metres and energy in joules. */
 public final class ProjectileImpacts {
     public static final TagKey<Block> PROJECTILE_PROOF = TagKey.create(Registries.BLOCK,
-            ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "projectile_proof"));
+            MinecraftVersionCompat.id(Siegeworks.MOD_ID, "projectile_proof"));
 
     /** Normalizes vanilla blast resistance and hardness against stone. */
     private static final double STONE_RESISTANCE = 6.0D;

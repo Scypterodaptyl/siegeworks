@@ -3,6 +3,7 @@ package me.mss1r.siegeworks.client.maintenance;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.network.MaintenanceActionC2SPayload;
 import me.mss1r.siegeworks.network.OpenMaintenanceS2CPayload;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.Button;
@@ -20,7 +21,7 @@ public class SiegeMaintenanceScreen extends Screen {
     private static final int TEXT_COLOR = 0x404040;
     private static final int HEADING_COLOR = 0x303030;
     private static final int PROGRESS_COLOR = 0x9A4D00;
-    private static final ResourceLocation PANEL_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation PANEL_TEXTURE = MinecraftVersionCompat.id(
             Siegeworks.MOD_ID,
             "textures/gui/maintenance.png"
     );

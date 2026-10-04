@@ -5,6 +5,7 @@ import com.mojang.serialization.JsonOps;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.config.SiegeworksServerConfig;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileImpacts;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -301,6 +302,6 @@ public final class DatapackGameTests {
     }
 
     private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, path);
+        return MinecraftVersionCompat.id(Siegeworks.MOD_ID, path);
     }
 }
