@@ -486,6 +486,16 @@ public abstract class AbstractBoltProjectile extends SiegeProjectile {
         setXRot(pitch);
     }
 
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        // Before its first tick a bolt has no earlier angle to turn from, so it appears already pointing its way.
+        if (level().isClientSide && tickCount == 0 && (RENDER_YAW.equals(key) || RENDER_PITCH.equals(key))) {
+            renderYawO = getRenderYaw();
+            renderPitchO = getRenderPitch();
+        }
+    }
+
     public void alignRenderToDirection(Vec3 direction) {
         setRenderAnglesFromDirection(direction);
         renderYawO = getRenderYaw();
