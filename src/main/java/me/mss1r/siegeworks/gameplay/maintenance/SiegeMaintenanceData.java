@@ -1,42 +1,26 @@
 package me.mss1r.siegeworks.gameplay.maintenance;
 
-import dev.architectury.registry.ReloadListenerRegistry;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import com.google.gson.reflect.TypeToken;
-import com.mojang.logging.LogUtils;
+import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinition;
+import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinitions;
 import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeTowerEntity;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
-import me.mss1r.siegeworks.Siegeworks;
-import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.Resource;
-import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
-import net.minecraft.server.packs.PackType;
-import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.Item;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
 
-import java.io.Reader;
-import java.lang.reflect.Type;
-import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
+/**
+ * What repairing and dismantling a machine cost and give back, worked out from the blueprint it is built by, as
+ * Axiomata loaded it. A material given as a tag counts as the item that shows that tag.
+ */
 public final class SiegeMaintenanceData {
-    private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Gson GSON = new GsonBuilder().create();
-    private static final Type BLUEPRINT_FILE_TYPE = new TypeToken<List<BlueprintRecipe>>() {}.getType();
-    private static final String BLUEPRINT_DIRECTORY = "blueprints";
-    private static final String BLUEPRINT_PREFIX = BLUEPRINT_DIRECTORY + "/";
     private static final int HITS_PER_RESOURCE = 4;
+    private static final String LADDER_BLUEPRINT = "siegeworks:siege_ladder";
     private static final Map<String, String> ENTITY_TO_SPAWNER = Map.ofEntries(
             Map.entry("siegeworks:serpentine", "siegeworks:serpentine_spawner"),
             Map.entry("siegeworks:culverin", "siegeworks:culverin_spawner"),
@@ -51,19 +35,11 @@ public final class SiegeMaintenanceData {
             Map.entry("siegeworks:siege_ladder", "siegeworks:siege_ladder_spawner")
     );
 
-    private static volatile Map<String, BlueprintRecipe> recipesById = Map.of();
-    private static volatile Map<String, BlueprintRecipe> recipesByResult = Map.of();
-
     private SiegeMaintenanceData() {
     }
 
-    public static void registerReloadListener() {
-        ReloadListenerRegistry.register(PackType.SERVER_DATA, new Loader(),
-                MinecraftVersionCompat.id(Siegeworks.MOD_ID, "maintenance_blueprints"));
-    }
-
     public static MaintenanceRecipe forSiege(AbstractSiegeEntity siege) {
-        BlueprintRecipe recipe = findRecipe(siege);
+        BlueprintDefinition recipe = findRecipe(siege);
         if (recipe == null) {
             return MaintenanceRecipe.empty();
         }
@@ -143,106 +119,42 @@ public final class SiegeMaintenanceData {
     }
 
     @Nullable
-    private static BlueprintRecipe findRecipe(AbstractSiegeEntity siege) {
-        String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(siege.getType()).toString();
+    private static BlueprintDefinition findRecipe(AbstractSiegeEntity siege) {
         if (siege instanceof SiegeLadderEntity) {
-            BlueprintRecipe ladderRecipe = recipesById.get("siege_ladder");
-            if (ladderRecipe != null) {
-                return ladderRecipe;
+            BlueprintDefinition ladder = BlueprintDefinitions.get(LADDER_BLUEPRINT);
+            if (ladder != null) {
+                return ladder;
             }
         }
-
-        String spawnerId = ENTITY_TO_SPAWNER.get(entityId);
-        return spawnerId == null ? null : recipesByResult.get(spawnerId);
+        String spawnerId = ENTITY_TO_SPAWNER.get(BuiltInRegistries.ENTITY_TYPE.getKey(siege.getType()).toString());
+        if (spawnerId == null) {
+            return null;
+        }
+        // The first blueprint by id that makes the machine, so the answer does not depend on load order.
+        for (Map.Entry<String, BlueprintDefinition> entry : new TreeMap<>(BlueprintDefinitions.allById()).entrySet()) {
+            if (spawnerId.equals(entry.getValue().result().item().toString())) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
-    private static Map<ResourceLocation, Integer> collectIngredients(BlueprintRecipe recipe, int stages) {
+    private static Map<ResourceLocation, Integer> collectIngredients(BlueprintDefinition recipe, int stages) {
         Map<ResourceLocation, Integer> result = new LinkedHashMap<>();
-        if (recipe.key == null) {
-            return result;
-        }
-
-        if (recipe.construction != null && !recipe.construction.isEmpty()) {
-            for (ConstructionStageSpec stage : recipe.construction.subList(0,
-                    Math.min(stages, recipe.construction.size()))) {
-                if (stage == null || stage.materials == null) {
-                    continue;
-                }
-                for (ConstructionMaterialSpec material : stage.materials) {
-                    if (material == null || material.key == null) {
-                        continue;
-                    }
-                    IngredientSpec ingredient = recipe.key.get(material.key);
-                    mergeIngredient(result, ingredient, material.count);
-                }
-            }
-            return result;
-        }
-
-        if (recipe.pattern == null) {
-            return result;
-        }
-
-        for (String row : recipe.pattern) {
-            if (row == null) {
-                continue;
-            }
-            for (int i = 0; i < row.length(); i++) {
-                char symbol = row.charAt(i);
-                if (symbol == ' ') {
-                    continue;
-                }
-
-                IngredientSpec ingredient = recipe.key.get(String.valueOf(symbol));
-                mergeIngredient(result, ingredient, ingredient == null ? 0 : ingredient.count);
+        for (BlueprintDefinition.Stage stage : recipe.stages().subList(0, Math.min(stages, recipe.stageCount()))) {
+            for (BlueprintDefinition.Material material : stage.materials()) {
+                Item shown = material.displayStack().getItem();
+                result.merge(BuiltInRegistries.ITEM.getKey(shown), material.count(), Integer::sum);
             }
         }
         return result;
     }
 
-    private static void mergeIngredient(Map<ResourceLocation, Integer> result,
-                                        @Nullable IngredientSpec ingredient, int count) {
-        ResourceLocation itemId = ingredient == null ? null : ResourceLocation.tryParse(ingredient.item);
-        if (itemId != null && BuiltInRegistries.ITEM.containsKey(itemId)) {
-            result.merge(itemId, Math.max(1, count), Integer::sum);
-        }
-    }
-
-    private static int collectConstructionHits(BlueprintRecipe recipe, int stages) {
-        if (recipe.construction == null) {
-            return 0;
-        }
-        return recipe.construction.stream()
+    private static int collectConstructionHits(BlueprintDefinition recipe, int stages) {
+        return recipe.stages().stream()
                 .limit(stages)
-                .filter(stage -> stage != null)
-                .mapToInt(stage -> Math.max(0, stage.hits))
+                .mapToInt(stage -> Math.max(0, stage.hits()))
                 .sum();
-    }
-
-    @Nullable
-    private static BlueprintRecipe readBlueprint(ResourceLocation location, Resource resource) {
-        try (Reader reader = resource.openAsReader()) {
-            JsonElement root = JsonParser.parseReader(reader);
-            if (root == null || root.isJsonNull()) {
-                return null;
-            }
-            if (root.isJsonArray()) {
-                List<BlueprintRecipe> recipes = GSON.fromJson(root, BLUEPRINT_FILE_TYPE);
-                return recipes == null || recipes.isEmpty() ? null : recipes.get(0);
-            }
-            if (root.isJsonObject()) {
-                return GSON.fromJson(root, BlueprintRecipe.class);
-            }
-            return null;
-        } catch (Exception exception) {
-            LOGGER.warn("Could not read maintenance blueprint {}", location, exception);
-            return null;
-        }
-    }
-
-    private static String blueprintId(ResourceLocation location) {
-        String path = location.getPath();
-        return path.substring(BLUEPRINT_PREFIX.length(), path.length() - ".json".length());
     }
 
     public record MaintenanceRecipe(Map<ResourceLocation, Integer> ingredients, int requiredHits) {
@@ -252,70 +164,6 @@ public final class SiegeMaintenanceData {
 
         public boolean isEmpty() {
             return ingredients.isEmpty();
-        }
-    }
-
-    private static final class BlueprintRecipe {
-        private String[] pattern;
-        private Map<String, IngredientSpec> key = new LinkedHashMap<>();
-        private List<ConstructionStageSpec> construction = List.of();
-        private ResultSpec result;
-    }
-
-    private static final class IngredientSpec {
-        private String item;
-        private int count = 1;
-    }
-
-    private static final class ResultSpec {
-        private String item;
-    }
-
-    private static final class ConstructionStageSpec {
-        private int hits;
-        private List<ConstructionMaterialSpec> materials = List.of();
-    }
-
-    private static final class ConstructionMaterialSpec {
-        private String key;
-        private int count = 1;
-    }
-
-    private record Catalog(Map<String, BlueprintRecipe> byId, Map<String, BlueprintRecipe> byResult) {
-    }
-
-    private static final class Loader extends SimplePreparableReloadListener<Catalog> {
-        @Override
-        protected Catalog prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
-            Map<String, BlueprintRecipe> byId = new LinkedHashMap<>();
-            Map<String, BlueprintRecipe> byResult = new LinkedHashMap<>();
-            resourceManager.listResources(BLUEPRINT_DIRECTORY, location ->
-                            location.getNamespace().equals("siegeworks")
-                                    && location.getPath().startsWith(BLUEPRINT_PREFIX)
-                                    && location.getPath().endsWith(".json")
-                                    && !location.getPath().endsWith("/index.json"))
-                    .entrySet().stream()
-                    .sorted(Map.Entry.comparingByKey())
-                    .forEach(entry -> {
-                        BlueprintRecipe recipe = readBlueprint(entry.getKey(), entry.getValue());
-                        if (recipe == null || recipe.result == null || recipe.result.item == null) {
-                            return;
-                        }
-                        String id = blueprintId(entry.getKey());
-                        byId.put(id, recipe);
-                        byResult.putIfAbsent(recipe.result.item, recipe);
-                    });
-            return new Catalog(
-                    Collections.unmodifiableMap(new LinkedHashMap<>(byId)),
-                    Collections.unmodifiableMap(new LinkedHashMap<>(byResult))
-            );
-        }
-
-        @Override
-        protected void apply(Catalog catalog, ResourceManager resourceManager, ProfilerFiller profiler) {
-            recipesById = catalog.byId();
-            recipesByResult = catalog.byResult();
-            LOGGER.info("Loaded {} Siegeworks maintenance blueprints", recipesById.size());
         }
     }
 }

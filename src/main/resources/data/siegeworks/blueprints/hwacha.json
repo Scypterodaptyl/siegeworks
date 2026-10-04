@@ -1,102 +1,12 @@
-[
-  {
-    "key": {
-      "W": {
-        "item": "siegeworks:wheel",
-        "count": 2
-      },
-      "S": {
-        "item": "siegeworks:rope",
-        "count": 6
-      },
-      "I": {
-        "item": "minecraft:iron_ingot",
-        "count": 6
-      },
-      "L": {
-        "item": "minecraft:oak_log",
-        "count": 8
-      },
-      "P": {
-        "item": "minecraft:oak_planks",
-        "count": 10
-      },
-      "N": {
-        "item": "minecraft:iron_nugget",
-        "count": 4
-      }
-    },
-    "result": {
-      "item": "siegeworks:hwacha_spawner",
-      "count": 1,
-      "deployment": {
-        "mode": "ground",
-        "preview_entity": "siegeworks:hwacha"
-      }
-    },
-    "construction": [
-      {
-        "section": "wheels",
-        "hits": 6,
-        "materials": [
-          {
-            "key": "W",
-            "count": 2
-          },
-          {
-            "key": "I",
-            "count": 2
-          },
-          {
-            "key": "L",
-            "count": 1
-          }
-        ]
-      },
-      {
-        "section": "base_stage_1",
-        "hits": 12,
-        "materials": [
-          {
-            "key": "L",
-            "count": 5
-          },
-          {
-            "key": "P",
-            "count": 4
-          },
-          {
-            "key": "I",
-            "count": 2
-          },
-          {
-            "key": "N",
-            "count": 4
-          }
-        ]
-      },
-      {
-        "section": "base_stage_2",
-        "hits": 10,
-        "materials": [
-          {
-            "key": "L",
-            "count": 2
-          },
-          {
-            "key": "P",
-            "count": 6
-          },
-          {
-            "key": "I",
-            "count": 2
-          },
-          {
-            "key": "S",
-            "count": 6
-          }
-        ]
-      }
-    ]
-  }
-]
+{
+  "formatVersion": 3,
+  "result": { "item": "siegeworks:hwacha_spawner", "entity": "siegeworks:hwacha" },
+  "stages": [
+    { "section": "wheels", "hits": 6,
+      "materials": { "siegeworks:wheel": 2, "minecraft:iron_ingot": 2, "minecraft:oak_log": 1 } },
+    { "section": "base_stage_1", "hits": 12,
+      "materials": { "minecraft:oak_log": 5, "minecraft:oak_planks": 4, "minecraft:iron_ingot": 2, "minecraft:iron_nugget": 4 } },
+    { "section": "base_stage_2", "hits": 10,
+      "materials": { "minecraft:oak_log": 2, "minecraft:oak_planks": 6, "minecraft:iron_ingot": 2, "siegeworks:rope": 6 } }
+  ]
+}

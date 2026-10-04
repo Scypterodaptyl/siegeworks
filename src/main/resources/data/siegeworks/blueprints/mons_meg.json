@@ -1,112 +1,14 @@
-[
-  {
-    "key": {
-      "W": {
-        "item": "siegeworks:wheel",
-        "count": 4
-      },
-      "B": {
-        "item": "siegeworks:barrel",
-        "count": 24
-      },
-      "I": {
-        "item": "minecraft:iron_ingot",
-        "count": 24
-      },
-      "L": {
-        "item": "minecraft:oak_log",
-        "count": 32
-      },
-      "P": {
-        "item": "minecraft:oak_planks",
-        "count": 24
-      },
-      "N": {
-        "item": "minecraft:iron_nugget",
-        "count": 56
-      }
-    },
-    "result": {
-      "item": "siegeworks:mons_meg_spawner",
-      "count": 1,
-      "deployment": {
-        "mode": "ground",
-        "preview_entity": "siegeworks:mons_meg"
-      }
-    },
-    "construction": [
-      {
-        "section": "wheels_1",
-        "hits": 10,
-        "materials": [
-          {
-            "key": "W",
-            "count": 2
-          },
-          {
-            "key": "I",
-            "count": 6
-          },
-          {
-            "key": "L",
-            "count": 2
-          }
-        ]
-      },
-      {
-        "section": "wheels_2",
-        "hits": 10,
-        "materials": [
-          {
-            "key": "W",
-            "count": 2
-          },
-          {
-            "key": "I",
-            "count": 6
-          },
-          {
-            "key": "L",
-            "count": 2
-          }
-        ]
-      },
-      {
-        "section": "base",
-        "hits": 24,
-        "materials": [
-          {
-            "key": "L",
-            "count": 28
-          },
-          {
-            "key": "P",
-            "count": 24
-          },
-          {
-            "key": "I",
-            "count": 12
-          },
-          {
-            "key": "N",
-            "count": 40
-          }
-        ]
-      },
-      {
-        "section": "barrel",
-        "hits": 20,
-        "materials": [
-          {
-            "key": "B",
-            "count": 24
-          },
-          {
-            "key": "N",
-            "count": 16
-          }
-        ]
-      }
-    ]
-  }
-]
+{
+  "formatVersion": 3,
+  "result": { "item": "siegeworks:mons_meg_spawner", "entity": "siegeworks:mons_meg" },
+  "stages": [
+    { "section": "wheels_1", "hits": 10,
+      "materials": { "siegeworks:wheel": 2, "minecraft:iron_ingot": 6, "minecraft:oak_log": 2 } },
+    { "section": "wheels_2", "hits": 10,
+      "materials": { "siegeworks:wheel": 2, "minecraft:iron_ingot": 6, "minecraft:oak_log": 2 } },
+    { "section": "base", "hits": 24,
+      "materials": { "minecraft:oak_log": 28, "minecraft:oak_planks": 24, "minecraft:iron_ingot": 12, "minecraft:iron_nugget": 40 } },
+    { "section": "barrel", "hits": 20,
+      "materials": { "siegeworks:barrel": 24, "minecraft:iron_nugget": 16 } }
+  ]
+}

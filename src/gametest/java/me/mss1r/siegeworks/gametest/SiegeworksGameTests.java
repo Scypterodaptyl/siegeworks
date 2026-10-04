@@ -1598,8 +1598,8 @@ public final class SiegeworksGameTests {
 
         SimpleContainer materials = new SimpleContainer(64);
         for (BlueprintConstructionPlan.Stage stage : machine.buildProgress().plan().stages()) {
-            for (ItemStack material : stage.materials()) {
-                materials.addItem(new ItemStack(material.getItem(), 64));
+            for (me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinition.Material material : stage.materials()) {
+                materials.addItem(material.displayStack().copyWithCount(64));
             }
         }
 

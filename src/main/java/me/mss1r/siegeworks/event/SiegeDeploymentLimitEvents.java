@@ -18,13 +18,12 @@ public final class SiegeDeploymentLimitEvents {
     }
 
     public static void checkBlueprintDeployment(BlueprintRecipeCheckEvent event) {
-        if (event.recipe == null || !event.recipe.buildsInWorld()
-                || event.recipe.result == null || event.recipe.result.item == null) {
+        if (event.recipe == null || !event.recipe.buildsInWorld()) {
             return;
         }
 
-        ResourceLocation itemId = ResourceLocation.tryParse(event.recipe.result.item);
-        if (itemId == null || !BuiltInRegistries.ITEM.containsKey(itemId)) {
+        ResourceLocation itemId = event.recipe.result().item();
+        if (!BuiltInRegistries.ITEM.containsKey(itemId)) {
             return;
         }
         Item resultItem = BuiltInRegistries.ITEM.get(itemId);

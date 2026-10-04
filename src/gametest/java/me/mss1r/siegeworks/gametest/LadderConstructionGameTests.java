@@ -1,5 +1,7 @@
 package me.mss1r.siegeworks.gametest;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import me.mss1r.axiomata.blueprint.api.ConstructionStarters;
 import me.mss1r.axiomata.blueprint.api.construction.BlueprintConstructionPlan;
 import me.mss1r.axiomata.blueprint.api.construction.BuildProgress;
@@ -7,6 +9,7 @@ import me.mss1r.axiomata.blueprint.api.construction.ConstructionDeployer;
 import me.mss1r.axiomata.blueprint.api.construction.ConstructionWork;
 import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinition;
 import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinitions;
+import me.mss1r.axiomata.blueprint.internal.definition.BlueprintFormat;
 import me.mss1r.axiomata.blueprint.item.BlueprintItem;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
@@ -17,13 +20,13 @@ import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import me.mss1r.siegeworks.registry.SiegeworksItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -35,6 +38,11 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 //?}
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 
@@ -70,8 +78,10 @@ public final class LadderConstructionGameTests {
                 "The ladder build did not begin with its base standing");
         BlueprintConstructionPlan.Stage section = built.buildProgress().currentStage();
         helper.assertTrue(section != null && section.hits() == 12 && section.materials().size() == 2
-                        && section.materials().get(0).is(Items.OAK_LOG) && section.materials().get(0).getCount() == 4
-                        && section.materials().get(1).is(Items.STICK) && section.materials().get(1).getCount() == 3,
+                        && section.materials().get(0).key().equals("minecraft:oak_log")
+                        && section.materials().get(0).count() == 4
+                        && section.materials().get(1).key().equals("minecraft:stick")
+                        && section.materials().get(1).count() == 3,
                 "A ladder section does not take four logs, three sticks and twelve blows: " + describe(section));
         succeed(helper, built);
     }
@@ -135,6 +145,36 @@ public final class LadderConstructionGameTests {
         helper.assertTrue(logs == 14 && sticks == 9,
                 "A two-section ladder is reckoned at " + logs + " logs and " + sticks + " sticks, not 14 and 9");
         succeed(helper, ladder);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20, batch = BATCH)
+    public static void bundledBlueprintsReadAsTheOldFilesDid(GameTestHelper helper) {
+        BlueprintFormat.Ids ids = new BlueprintFormat.Ids(
+                BuiltInRegistries.ITEM::containsKey, BuiltInRegistries.ENTITY_TYPE::containsKey);
+        for (JsonElement name : readJson("data/siegeworks/blueprints/index.json").getAsJsonArray()) {
+            String id = Siegeworks.MOD_ID + ":" + name.getAsString();
+            BlueprintFormat.Parsed old = BlueprintFormat.parse(
+                    readJson("legacy_blueprints/" + name.getAsString() + ".json"), ids);
+            helper.assertTrue(old.valid(), "The old " + id + " no longer reads: " + old.errors());
+            BlueprintDefinition loaded = BlueprintDefinitions.get(id);
+            helper.assertTrue(loaded != null, "Blueprint " + id + " did not load");
+            String expected = BlueprintFormat.write(old.definition()).toString();
+            String actual = BlueprintFormat.write(loaded).toString();
+            helper.assertTrue(expected.equals(actual),
+                    "Blueprint " + id + " changed in the new format:\n was " + expected + "\n now " + actual);
+        }
+        helper.succeed();
+    }
+
+    private static JsonElement readJson(String path) {
+        try (InputStream stream = LadderConstructionGameTests.class.getClassLoader().getResourceAsStream(path)) {
+            if (stream == null) {
+                throw new IllegalStateException("Missing test resource " + path);
+            }
+            return JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
+        } catch (IOException exception) {
+            throw new UncheckedIOException(exception);
+        }
     }
 
     private static String describe(BlueprintConstructionPlan.Stage stage) {

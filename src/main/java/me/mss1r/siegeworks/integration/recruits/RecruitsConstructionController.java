@@ -106,9 +106,9 @@ final class RecruitsConstructionController {
         Container materials = RecruitsSupplyInventory.resolve(engineer, assignedEntity.position());
         ConstructionWork.Result result = ConstructionWork.strike(machine, materials);
         if (result.status() == ConstructionWork.Status.MISSING_MATERIAL) {
-            reportBlocked(engineer, "material:" + result.missing().getItem(), Component.translatable(
+            reportBlocked(engineer, "material:" + result.missing().key(), Component.translatable(
                     "message.siegeworks.recruits.build_missing_material",
-                    engineer.getDisplayName(), result.missing().getHoverName()));
+                    engineer.getDisplayName(), result.missing().displayName()));
             return true;
         }
         if (!result.worked()) {

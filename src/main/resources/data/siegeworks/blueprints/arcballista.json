@@ -1,94 +1,12 @@
-[
-  {
-    "key": {
-      "W": {
-        "item": "siegeworks:wheel",
-        "count": 2
-      },
-      "I": {
-        "item": "minecraft:iron_ingot",
-        "count": 6
-      },
-      "R": {
-        "item": "siegeworks:rope",
-        "count": 6
-      },
-      "L": {
-        "item": "minecraft:oak_log",
-        "count": 8
-      },
-      "P": {
-        "item": "minecraft:oak_planks",
-        "count": 8
-      },
-      "N": {
-        "item": "minecraft:iron_nugget",
-        "count": 2
-      }
-    },
-    "result": {
-      "item": "siegeworks:arcballista_spawner",
-      "count": 1,
-      "deployment": {
-        "mode": "ground",
-        "preview_entity": "siegeworks:arcballista"
-      }
-    },
-    "construction": [
-      {
-        "section": "wheels",
-        "hits": 6,
-        "materials": [
-          {
-            "key": "W",
-            "count": 2
-          },
-          {
-            "key": "I",
-            "count": 2
-          },
-          {
-            "key": "L",
-            "count": 1
-          }
-        ]
-      },
-      {
-        "section": "frame",
-        "hits": 14,
-        "materials": [
-          {
-            "key": "L",
-            "count": 6
-          },
-          {
-            "key": "P",
-            "count": 8
-          },
-          {
-            "key": "N",
-            "count": 2
-          }
-        ]
-      },
-      {
-        "section": "mechanism",
-        "hits": 10,
-        "materials": [
-          {
-            "key": "I",
-            "count": 4
-          },
-          {
-            "key": "R",
-            "count": 6
-          },
-          {
-            "key": "L",
-            "count": 1
-          }
-        ]
-      }
-    ]
-  }
-]
+{
+  "formatVersion": 3,
+  "result": { "item": "siegeworks:arcballista_spawner", "entity": "siegeworks:arcballista" },
+  "stages": [
+    { "section": "wheels", "hits": 6,
+      "materials": { "siegeworks:wheel": 2, "minecraft:iron_ingot": 2, "minecraft:oak_log": 1 } },
+    { "section": "frame", "hits": 14,
+      "materials": { "minecraft:oak_log": 6, "minecraft:oak_planks": 8, "minecraft:iron_nugget": 2 } },
+    { "section": "mechanism", "hits": 10,
+      "materials": { "minecraft:iron_ingot": 4, "siegeworks:rope": 6, "minecraft:oak_log": 1 } }
+  ]
+}

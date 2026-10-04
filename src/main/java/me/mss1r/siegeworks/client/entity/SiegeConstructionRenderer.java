@@ -166,20 +166,17 @@ public abstract class SiegeConstructionRenderer<T extends AbstractSiegeEntity & 
 
     private void renderStageSign(T entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         BlueprintDefinition recipe = BlueprintDefinitions.get(entity.buildBlueprintId());
-        if (recipe == null || recipe.construction == null || recipe.construction.isEmpty()) {
+        if (recipe == null || recipe.stages().isEmpty()) {
             return;
         }
-        int stageIndex = Math.min(entity.builtSections(), recipe.construction.size() - 1);
-        BlueprintDefinition.StageSpec stage = recipe.construction.get(stageIndex);
-        if (stage == null || stage.section == null) {
-            return;
-        }
+        int stageIndex = Math.min(entity.builtSections(), recipe.stageCount() - 1);
+        BlueprintDefinition.Stage stage = recipe.stages().get(stageIndex);
 
         Component line = Component.empty()
-                .append(BlueprintConstructionVisuals.stageName(entity.buildBlueprintId(), stage.section))
+                .append(BlueprintConstructionVisuals.stageName(entity.buildBlueprintId(), stage.section()))
                 .append(Component.literal(String.format("  %d/%d  ·  %d/%d",
                         entity.buildHits(), Math.max(1, entity.buildStageHits()),
-                        stageIndex + 1, recipe.construction.size())));
+                        stageIndex + 1, recipe.stageCount())));
 
         poseStack.pushPose();
         poseStack.translate(0.0D, entity.getBbHeight() + 0.7D, 0.0D);
