@@ -18,8 +18,8 @@ deps.axiomata_mod = "0.1.0-beta.6"
 deps.geckolib = "4.8.4"
 deps.recruits = "1.15.2"
 deps.recruits_range = "[1.15.2,1.16.0)"
-deps.rts_command = "0.1.0-beta.1"
-deps.rts_command_range = "[0.1.0-beta.1,)"
+deps.rts_command = "21a4b88"
+deps.rts_command_range = "[0.1.0-beta.2,)"
 
 [neoforge."1.21.1"]
 mod.minecraft_range = "[1.21.1]"

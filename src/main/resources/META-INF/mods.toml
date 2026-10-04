@@ -52,3 +52,10 @@ mandatory=false
 versionRange="${recruits_version_range}"
 ordering="AFTER"
 side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="recruitsrtscommand"
+mandatory=false
+versionRange="${rts_command_version_range}"
+ordering="AFTER"
+side="BOTH"
