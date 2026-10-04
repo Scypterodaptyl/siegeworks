@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-/** The Recruits screen asking which of its siege buttons the selected groups may use, and the answer. */
+/** Recruits screen request for which siege buttons the selected groups can use, and the reply. */
 public final class RecruitsCommandStatesPayloads {
     private static final int MAX_GROUPS = 64;
     private static final int MAX_STATES = 256;

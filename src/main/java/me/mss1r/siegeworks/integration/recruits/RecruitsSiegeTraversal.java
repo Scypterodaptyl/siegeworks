@@ -150,7 +150,7 @@ final class RecruitsSiegeTraversal {
                 return;
             }
             if (request.overBridge()) {
-                // Sent out over the bridge, it stays aboard rather than drop out at the foot of the tower.
+                // When sent out over the bridge, it stays aboard instead of dropping at the tower's base.
                 if (recruit.tickCount - request.createdTick() >= GROUND_EXIT_PATIENCE_TICKS) {
                     TRANSPORT_EXIT_REQUESTS.remove(recruit);
                     RecruitsDebug.tower(recruit, "found no way across the bridge and stays aboard");

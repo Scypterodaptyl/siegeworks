@@ -19,17 +19,17 @@ import java.util.Iterator;
 import java.util.Map;
 
 /**
- * Cracks blows have left in blocks short of breaking them. Damage does not heal: a crack stays, saved with its
- * dimension, until the block breaks or is replaced.
+ * Cracks left in blocks by hits that didn't break them. Cracks don't heal; they are saved per dimension until the block
+ * breaks or changes.
  */
 public final class StructuralDamageSystem {
-    /** How often the cracks are shown again; a client forgets one after twenty seconds without word. */
+    /** Resend interval for cracks; clients drop a crack after 20 seconds without an update. */
     private static final int OVERLAY_REFRESH_TICKS = 200;
 
     private StructuralDamageSystem() {
     }
 
-    /** How far toward breaking {@code state} at {@code pos} already is, from zero to one. */
+    /** Crack progress of {@code state} at {@code pos}, from 0 to 1. */
     public static float progress(ServerLevel level, BlockPos pos, BlockState state) {
         Crack crack = Cracks.of(level).cracks.get(pos);
         return crack != null && crack.matches(state) ? crack.progress() : 0.0F;
@@ -96,7 +96,7 @@ public final class StructuralDamageSystem {
         }
     }
 
-    /** The cracks of one dimension, kept in its saved data. */
+    /** Cracks of one dimension, stored in its saved data. */
     private static final class Cracks extends SavedData {
         private static final String DATA_NAME = "siegeworks_cracks";
         private static final String TAG_CRACKS = "Cracks";

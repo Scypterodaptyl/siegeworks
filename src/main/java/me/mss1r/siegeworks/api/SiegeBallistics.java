@@ -4,7 +4,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** A few aiming helpers shared by siege engines and integrations. */
 public final class SiegeBallistics {
-    /** Earth's 9.81 m/s² in blocks per tick per tick, a block being a metre. */
+    /** Gravity, 9.81 m/s², in blocks/tick² (1 block = 1 m). */
     public static final double GRAVITY = 9.81D / 400.0D;
     private static final int MAX_FLIGHT_TICKS = 600;
     private static final double LOWEST_ELEVATION = -60.0D;
@@ -20,12 +20,12 @@ public final class SiegeBallistics {
      * Velocity is in blocks/tick; gravity and thrust are in blocks/tick².
      */
     public record Flight(double gravity, double airDrag, double thrust, int thrustTicks) {
-        /** A shot thrown through the air under the earth's gravity. */
+        /** Ballistic flight under gravity only. */
         public static Flight ballistic(double airDrag) {
             return new Flight(GRAVITY, airDrag, 0.0D, 0);
         }
 
-        /** The velocity a shot flying at {@code velocity} has a tick later, once it has moved. */
+        /** Velocity after one tick of flight. */
         public Vec3 afterMove(Vec3 velocity) {
             double kept = Math.max(0.0D, 1.0D - airDrag * velocity.length());
             return new Vec3(velocity.x * kept, velocity.y * kept - gravity, velocity.z * kept);
@@ -101,8 +101,8 @@ public final class SiegeBallistics {
     }
 
     /**
-     * How far a shot leaving at {@code speed} blocks per tick and {@code elevationDegrees} above the horizon
-     * flies before it comes down {@code drop} blocks below where it left, or {@code 0} if it never does.
+     * Horizontal distance until a shot launched at {@code speed} blocks/tick and {@code elevationDegrees} is {@code
+     * drop} blocks below its launch height, or {@code 0} if it never gets there.
      */
     public static double range(double speed, double elevationDegrees, double drop, Flight flight) {
         double elevation = Math.toRadians(elevationDegrees);
@@ -132,7 +132,7 @@ public final class SiegeBallistics {
         return 0.0D;
     }
 
-    /** A motor's push along the way the shot is going, or along its launch line while it is still. */
+    /** Motor thrust direction: along the velocity, or along the launch line while at rest. */
     private static double[] thrust(double horizontalVelocity, double verticalVelocity, double elevation,
                                    double thrust) {
         double speed = Math.sqrt(horizontalVelocity * horizontalVelocity + verticalVelocity * verticalVelocity);
@@ -185,7 +185,7 @@ public final class SiegeBallistics {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
-    /** How far above the target height a shot passes the target's distance, or -infinity if it falls short. */
+    /** Height above the target when the shot reaches the target's distance, or -infinity if it falls short. */
     private static double elevationHeightError(double horizontalDistance, double targetHeight, double speed,
                                                double elevationDegrees, Flight flight) {
         double elevation = Math.toRadians(elevationDegrees);

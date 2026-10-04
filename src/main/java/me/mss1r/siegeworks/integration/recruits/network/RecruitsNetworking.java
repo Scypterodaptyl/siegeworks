@@ -32,7 +32,7 @@ public final class RecruitsNetworking {
                 RecruitsCommandStatesPayloads.Query::decode, RecruitsCommandStatesPayloads.Query::handle);
     }
 
-    /** Client side only: the answers to the Recruits screen asking which siege buttons it may use. */
+    /** Client only: replies to the Recruits screen's siege button state requests. */
     public static void registerClient() {
         NetworkManager.registerReceiver(NetworkManager.s2c(), STATES_ANSWER,
                 (buffer, context) -> RecruitsCommandStatesPayloads.Answer.handle(

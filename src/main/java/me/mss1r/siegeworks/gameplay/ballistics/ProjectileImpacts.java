@@ -44,7 +44,7 @@ public final class ProjectileImpacts {
     /** Reference stone strength (Pa) and Poncelet drag (kg/m³). */
     private static final double STONE_STRENGTH = 16_700_000.0D;
     private static final double STONE_DRAG = 625.0D;
-    /** Light a block of solid matter stops; one that lets light through is that much the less matter. */
+    /** Light opacity of a solid block; translucent blocks count as proportionally less material. */
     private static final double OPAQUE_LIGHT = 15.0D;
     /** Porous strength scales with the solid fraction to this power; drag scales linearly. */
     private static final double POROUS_STRENGTH_EXPONENT = 1.5D;
@@ -60,11 +60,11 @@ public final class ProjectileImpacts {
     private static final double MAX_CRACK_PER_BLOW = 0.5D;
     /** How far past a crater's edge its cracked ring reaches, in blocks. */
     private static final double RING_WIDTH = 1.5D;
-    /** The farthest a single crater reaches from where it opens, in blocks. */
+    /** Max reach of a single crater from its origin, in blocks. */
     private static final double MAX_CRATER_REACH = 12.0D;
-    /** How ragged a crater's edge comes out, in blocks: no material breaks along a ruled line. */
+    /** Randomness of the crater edge, in blocks. */
     private static final double RAGGEDNESS = 0.7D;
-    /** Share of the energy taken out of a projectile that goes into breaking the material, not into heat. */
+    /** Fraction of the energy a projectile loses that goes into fracture rather than heat. */
     private static final double FRACTURE_SHARE = 0.75D;
     /** Reference speed in m/s for momentum-based fracture scaling. Independent of engine launch speed. */
     private static final double REFERENCE_IMPACT_SPEED = 400.0D;
@@ -74,15 +74,15 @@ public final class ProjectileImpacts {
     private static final double BLAST_SHARE = 0.15D;
     /** Minimum crack progress; smaller shares are redistributed to nearer blocks. */
     private static final double LEAST_CRACK = 0.02D;
-    /** Slower than this, in metres per second, a projectile has come to rest. */
+    /** Below this speed, in m/s, a projectile counts as stopped. */
     private static final double LEAST_FLIGHT_SPEED = 5.0D;
-    /** Fragments a blow throws out of its crater: some for any blow, more for each block it broke. */
+    /** Fragments thrown from a crater: a base amount, plus more per broken block. */
     private static final int LEAST_FRAGMENTS = 16;
     private static final int FRAGMENTS_PER_BLOCK = 14;
     private static final int MOST_FRAGMENTS = 96;
-    /** Of the fragments, the share thrown as a jet out of the mouth; the rest burst round it, and dust settles. */
+    /** Share of fragments thrown as a jet out of the mouth; the rest burst around it, plus settling dust. */
     private static final double JET_SHARE = 0.4D;
-    /** How widely fragments spread about the way out, and how fast, in blocks a tick, they leave. */
+    /** Fragment spread around the exit direction, and fragment speed in blocks/tick. */
     private static final double FRAGMENT_SPREAD = 1.4D;
     private static final double FRAGMENT_SPEED = 0.35D;
     private static final double DRIVE_SAMPLE_STEP = 0.2D;
@@ -99,7 +99,7 @@ public final class ProjectileImpacts {
         }
     }
 
-    /** The material of a block, or null if nothing breaks it. */
+    /** Block material, or null if it can't be broken. */
     @Nullable
     public static Material material(BlockGetter level, BlockPos pos, BlockState state) {
         float hardness = state.getDestroySpeed(level, pos);
@@ -136,7 +136,7 @@ public final class ProjectileImpacts {
         return Math.min(1.0D, volume);
     }
 
-    /** Whether a projectile is hard enough to cut through a block at all. */
+    /** True if the projectile is hard enough to penetrate the block at all. */
     public static boolean canCut(ProjectilePhysicsProfile physics, BlockGetter level, BlockPos pos, BlockState state) {
         return material(level, pos, state) != null
                 && BlockMaterialProfiles.resistance(state) <= physics.hardness();
@@ -159,12 +159,12 @@ public final class ProjectileImpacts {
     }
 
     /**
-     * Drives a projectile from where it met a block for as long as it goes through, breaking every block it
-     * passes: a block of the world is whole or gone, and one a shot went through is not whole.
-     * What it loses beyond the channel itself bores on along its path from the face it came in by.
+     * Drives the projectile through blocks from the contact point while it can, breaking every block it passes; blocks
+     * can't be partially broken. Energy lost beyond the channel itself bores further along the path from the entry
+     * face.
      *
-     * @param velocity its real velocity, in metres per second
-     * @return where it ended up and its real speed; {@link Drive#passedThrough()} when it came out into the open
+     * @param velocity real velocity, in m/s
+     * @return final position and real speed; {@link Drive#passedThrough()} when it came out into the open
      */
     public static Drive drive(ServerLevel level, ProjectilePhysicsProfile physics, double diameter,
                               Vec3 entry, BlockPos firstBlock, Vec3 velocity, @Nullable Player breaker) {
@@ -212,11 +212,11 @@ public final class ProjectileImpacts {
                         denser ? faceNormal(pos, contact) : mouthFace);
                 break;
             }
-            // In a block that is mostly gaps, most of what it lost went into thrashing them, not into breaking.
+            // In mostly hollow blocks, most of the lost energy goes into the gaps rather than breaking material.
             double fracture = 0.5D * physics.mass() * (speed * speed - next * next) * craterYield(speed)
                     * FRACTURE_SHARE * material.matter() * kept(physics.hardness(), state);
             speed = next;
-            // The crater opens where it went into solid matter, not into the leaves in front of it.
+            // The crater starts where it entered solid material, not the leaves in front of it.
             if (mouth == null || material.matter() > mouthMatter) {
                 mouth = contact;
                 mouthFace = faceNormal(pos, contact);
@@ -234,8 +234,8 @@ public final class ProjectileImpacts {
     }
 
     /**
-     * Where a projectile flying {@code along} stops in a face looking {@code outward}, what it still carried
-     * bores on into what it struck, at {@code speed} metres per second; a share of its energy goes into fracture.
+     * Where a projectile moving {@code along} stops in a face pointing {@code outward}, its remaining energy at {@code
+     * speed} m/s bores further in; part of the energy goes into fracture.
      */
     public static void stop(ServerLevel level, Vec3 center, Vec3 outward, Vec3 along,
                             ProjectilePhysicsProfile physics, double speed, double diameter,
@@ -251,8 +251,8 @@ public final class ProjectileImpacts {
     }
 
     /**
-     * The material of a block as cracked as it is: cracked through, it bears a blow that much the less, though it
-     * weighs the same and is still in the way.
+     * Block material adjusted for existing cracks: a cracked block resists less but has the same mass and still blocks
+     * the path.
      */
     @Nullable
     private static Material cracked(ServerLevel level, BlockPos pos, BlockState state) {
@@ -277,16 +277,16 @@ public final class ProjectileImpacts {
     }
 
     /**
-     * How much a joule of a blow at {@code speed} breaks against one at the reference speed: what it breaks goes
-     * with its momentum, mass times speed, so a joule of it goes the further the slower it comes.
+     * Fracture effectiveness of a joule at {@code speed} relative to the reference speed. Fracture scales with
+     * momentum, so slower impacts break more per joule.
      */
     private static double craterYield(double speed) {
         return speed > 0.0D ? REFERENCE_IMPACT_SPEED / speed : 1.0D;
     }
 
     /**
-     * The share of a blow left to the struck block once a projectile of {@code hardness} has spent its part on
-     * breaking up against it: all of it on a block half as hard or softer, half of it on one as hard.
+     * Share of the impact left for the struck block after a projectile of {@code hardness} loses part of it shattering:
+     * all of it against a block half as hard or softer, half against an equally hard one.
      */
     private static double kept(double hardness, BlockState struck) {
         if (!(hardness > 0.0D) || Double.isInfinite(hardness)) {
@@ -296,18 +296,18 @@ public final class ProjectileImpacts {
         return 1.0D - SHATTER_SHARE * Mth.clamp(2.0D * likeness - 1.0D, 0.0D, 1.0D);
     }
 
-    /** A charge of {@code energy} joules going off at {@code center}, breaking whatever is around it. */
+    /** Detonates a charge of {@code energy} joules at {@code center}, breaking blocks around it. */
     public static void blast(ServerLevel level, Vec3 center, Vec3 outward, double energy, @Nullable Player breaker) {
         crush(level, center, outward, null, energy * BLAST_SHARE, 0.0D, 0.0D, Double.POSITIVE_INFINITY, breaker);
     }
 
     /**
-     * Spends energy on a penetration channel or blast crater, then cracks the surrounding blocks.
-         * Protected blocks absorb energy without breaking.
-         *
-         * @param outward outward crater direction
-         * @param along flight direction, or null for an explosive charge
-         * @param channel penetration depth in metres
+     * Spends energy on a penetration channel or blast crater, then cracks the surrounding blocks. Protected blocks
+     * absorb energy without breaking.
+     *
+     * @param outward outward crater direction
+     * @param along flight direction, or null for an explosive charge
+     * @param channel penetration depth in metres
      */
     public static void crush(ServerLevel level, Vec3 center, Vec3 outward, @Nullable Vec3 along, double energy,
                              double diameter, double channel, double hardness, @Nullable Player breaker) {
@@ -326,8 +326,8 @@ public final class ProjectileImpacts {
         double spallRadius = SPALL_RADIUS_CALIBRES * diameter;
         double spallDepth = SPALL_DEPTH_CALIBRES * diameter;
         double channelWidth = Math.max(0.5D, diameter * 0.5D);
-        // Far enough to hold the channel and the spalled cone, or the half-sphere of a charge, this energy could
-        // break out of that material, and the ring cracked round either.
+        // Search radius: large enough for the channel and spall cone (or the charge's hemisphere) this energy can break
+        // in this material, plus the crack ring.
         double radius = Math.min(MAX_CRATER_REACH, 1.0D + RAGGEDNESS + RING_WIDTH + (axis != null
                 ? Math.max(channel, spallRadius)
                 : diameter * 0.5D + Math.cbrt(3.0D * volume / (2.0D * Math.PI))));
@@ -370,7 +370,7 @@ public final class ProjectileImpacts {
             if (budget < cost) {
                 break;
             }
-            // A protected block still stands in the way and takes its share.
+            // Protected blocks still absorb their share of energy.
             budget -= cost;
             if (target.mayBreak()) {
                 breakOut(level, target.pos(), center, outward, debrisPower, breaker);
@@ -381,7 +381,7 @@ public final class ProjectileImpacts {
                 }
             }
         }
-        // What was too little to break the next block out goes into that block, the one it stopped at.
+        // Energy too small to break the next block goes into cracking the block where it stopped.
         double left = budget;
         if (standing < targets.size() && budget > 0.0D) {
             Target stoppedAt = targets.get(standing);
@@ -395,7 +395,7 @@ public final class ProjectileImpacts {
                 }
             }
         }
-        // The channel runs from the mouth as deep as the crater went.
+        // The channel runs from the mouth to the crater's depth.
         Vec3 boreEnd = axis != null ? center.add(axis.scale(deepest)) : center;
         List<Target> ring = new ArrayList<>(targets.subList(Math.min(targets.size(), standing + 1), targets.size()));
         ring.addAll(around);
@@ -413,7 +413,7 @@ public final class ProjectileImpacts {
                 blocksWorth))), LEAST_FRAGMENTS, MOST_FRAGMENTS);
         BlockParticleOption fragment = new BlockParticleOption(SiegeworksParticles.FRAGMENT.get(), struck);
         RandomSource random = level.random;
-        // How far the burst and the dust reach grows with the blow.
+        // The burst and dust radius grows with impact energy.
         double reach = 0.4D + 0.25D * Math.sqrt(count);
         Vec3 mouth = center.add(out.scale(0.3D));
         level.sendParticles(fragment, mouth.x, mouth.y, mouth.z, count, reach * 0.5D, reach * 0.5D, reach * 0.5D,
@@ -430,7 +430,7 @@ public final class ProjectileImpacts {
         }
     }
 
-    /** Whether a block at {@code offset} from where a shot went in lies in the channel it drove. */
+    /** True if the block at {@code offset} from the entry point lies in the channel. */
     private static boolean inChannel(Vec3 offset, Vec3 axis, double channel, double width) {
         double along = offset.dot(axis);
         double aside = Math.sqrt(Math.max(0.0D, offset.lengthSqr() - along * along));
@@ -444,7 +444,7 @@ public final class ProjectileImpacts {
         if (down <= 0.5D && across <= 0.5D) {
             return 1.0D;
         }
-        // A block lies as deep as its near face, half a block short of its centre.
+        // A block's depth is its near face, half a block before its centre.
         double reached = Math.max(0.0D, down - 0.5D);
         if (down < -0.5D || reached > depth) {
             return 0.0D;
@@ -473,7 +473,7 @@ public final class ProjectileImpacts {
         if (cracked.isEmpty()) {
             return;
         }
-        // Nearest first; keep as many as the energy can crack by at least the least crack each.
+        // Nearest first; keep only as many blocks as the energy can crack by at least the minimum amount each.
         Integer[] order = new Integer[cracked.size()];
         for (int i = 0; i < order.length; i++) {
             order[i] = i;
@@ -515,7 +515,7 @@ public final class ProjectileImpacts {
         }
     }
 
-    /** Breaks a block a projectile goes through, throwing it back out of the hole when it can get out. */
+    /** Breaks a block in the projectile's path and ejects it from the hole if it can get out. */
     private static boolean breakThrough(ServerLevel level, BlockPos pos, BlockState state, Vec3 contact,
                                        Vec3 direction, @Nullable Player breaker) {
         if (!SiegeBlockBreaker.mayDamage(level, pos, state, breaker)) {
@@ -526,7 +526,7 @@ public final class ProjectileImpacts {
                 || SiegeBlockBreaker.breakBlock(level, pos, breaker);
     }
 
-    /** The fracture energy of the solid block nearest {@code center}, which sets how far a crater reaches. */
+    /** Fracture energy of the solid block nearest {@code center}; sets the crater radius. */
     private static double nearestFracture(ServerLevel level, BlockPos center, double hardness) {
         double best = -1.0D;
         int bestDistance = Integer.MAX_VALUE;

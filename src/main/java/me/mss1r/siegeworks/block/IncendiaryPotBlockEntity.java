@@ -21,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
-/** A placed incendiary pot: what it holds, and once lit, when it bursts and who lit it. */
+/** Contents of a placed pot, plus its fuse state and who lit it. */
 public class IncendiaryPotBlockEntity extends BlockEntity {
     private static final String TAG_FILLING = "Filling";
     private static final String TAG_BURST_AT = "BurstAt";
@@ -52,7 +52,7 @@ public class IncendiaryPotBlockEntity extends BlockEntity {
         return burstAt >= 0L;
     }
 
-    /** Lights the fuse, to burn for {@code length} ticks from {@code now}; {@code lighter} answers for the fire. */
+    /** Lights the fuse to burst {@code length} ticks after {@code now}. {@code lighter} is blamed for the fire. */
     public void light(long now, int length, @Nullable UUID lighter) {
         this.burstAt = now + length;
         this.fuseLength = length;
@@ -65,7 +65,7 @@ public class IncendiaryPotBlockEntity extends BlockEntity {
         return lighter;
     }
 
-    /** Set while the pot is being taken away to burst, so taking it away does not burst it again. */
+    /** Set while the pot is being removed to burst, so the removal doesn't trigger a second burst. */
     public boolean isDetonating() {
         return detonating;
     }

@@ -45,7 +45,7 @@ public final class SiegeAccess {
         };
     }
 
-    /** Whether the actor stands with an owner who holds something outside an engine, such as a carried ladder. */
+    /** Whether the actor is on the side of an owner whose property is outside an engine, e.g. a carried ladder. */
     public static boolean sameSide(Entity actor, @Nullable UUID ownerUuid) {
         return ownerUuid == null
                 || !SiegeworksServerConfig.isOwnershipEnforced()
@@ -53,7 +53,7 @@ public final class SiegeAccess {
                 || relationOf(actor, actor.level(), ownerUuid) != SiegeRelation.HOSTILE;
     }
 
-    /** Uses the actor's own team, which a recruit keeps while the player commanding it is offline. */
+    /** Uses the actor's own team, which recruits keep while their commanding player is offline. */
     public static SiegeRelation relationOf(@Nullable Entity actor, AbstractSiegeEntity siege) {
         return relationOf(actor, siege.level(), siege.getOwnerUuid());
     }

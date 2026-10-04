@@ -61,9 +61,9 @@ public final class SiegeMovementPhysics {
     }
 
     /**
-     * Stops a towed engine where its hitched animals meet a wall. They ride it, so its own collision leaves them
-     * out. Each stands on the ground as it would be put there, and may only go where it fits or work its way out
-     * of a block it is in; pressed against a wall, the team slides along it.
+     * Stops a towed engine where its hitched animals hit a wall. Animals ride the engine, so its own collision ignores
+     * them. Each animal is placed on the ground and may only move where it fits or out of a block it's stuck in;
+     * against a wall the team slides along it.
      */
     private static Vec3 clampForMounts(AbstractSiegeEntity siege, Vec3 travel) {
         Vec3 flat = new Vec3(travel.x, 0.0D, travel.z);
@@ -87,7 +87,7 @@ public final class SiegeMovementPhysics {
         return new Vec3(flat.x, travel.y, flat.z);
     }
 
-    /** How much of a step along the way an animal can take before it would run into something. */
+    /** Fraction of a step an animal can take before colliding. */
     private static double furthestShare(AbstractSiegeEntity siege, Entity mount, AABB box, Vec3 way, double rise) {
         if (way.horizontalDistanceSqr() < 1.0E-12D) {
             return 0.0D;
@@ -109,32 +109,32 @@ public final class SiegeMovementPhysics {
         return low;
     }
 
-    /** Where a hitched animal's seat is for the engine's present pose, moved by the given shift. */
+    /** Seat position of a hitched animal for the engine's current pose, offset by the given shift. */
     private static Vec3 mountSeat(AbstractSiegeEntity siege, Entity mount, Vec3 shift) {
         return siege.position().add(shift).add(SiegePassengerPhysics.rotatedSeatOffset(siege, mount));
     }
 
-    /** Where a hitched animal's body stands for the engine's present pose, moved by the given shift. */
+    /** Body position of a hitched animal for the engine's current pose, offset by the given shift. */
     private static AABB mountBox(AbstractSiegeEntity siege, Entity mount, Vec3 shift) {
         return footed(siege, mount, mountSeat(siege, mount, shift));
     }
 
-    /** An animal's body standing on the ground under a seat, as it would be put there. */
+    /** An animal's bounding box placed on the ground under a seat. */
     private static AABB footed(AbstractSiegeEntity siege, Entity mount, Vec3 seat) {
         Vec3 feet = SiegePassengerPhysics.mountFooting(siege, mount, seat);
         return mount.getBoundingBox().move(feet.subtract(mount.position())).deflate(MOUNT_CLEARANCE);
     }
 
     /**
-     * Whether an animal may go from one place to another: into the open, or anywhere that leaves less of it
-     * inside the blocks it is stuck in.
+     * Whether an animal can move between positions: into free space, or anywhere that reduces its overlap with blocks
+     * it's stuck in.
      */
     private static boolean mountFits(Entity mount, AABB from, AABB to) {
         double inside = intrusion(mount, to);
         return inside <= 0.0D || inside < intrusion(mount, from) - 1.0E-9D;
     }
 
-    /** How much of a box lies inside solid blocks. */
+    /** Volume of the box inside solid blocks. */
     private static double intrusion(Entity mount, AABB box) {
         double volume = 0.0D;
         for (VoxelShape shape : mount.level().getBlockCollisions(mount, box)) {
@@ -209,7 +209,7 @@ public final class SiegeMovementPhysics {
                 speedStep = abstractSiegeEntity.getDriveAcceleration(operator);
             }
         }
-        // Slowing down needs no team: whatever drives it may give out, but it still rolls to a stop.
+        // Slowing down doesn't need a draft team: the engine always coasts to a stop.
         boolean slowing = Math.abs(targetSpeed) < Math.abs(currentSpeed) || targetSpeed * currentSpeed < 0.0D;
         if (slowing) {
             speedStep = Math.max(speedStep, abstractSiegeEntity.getRollingDeceleration());
@@ -234,7 +234,8 @@ public final class SiegeMovementPhysics {
 
         OptionalDouble driverYaw = controller != null ? abstractSiegeEntity.freshDriverYaw() : OptionalDouble.empty();
         if (driverYaw.isPresent() && (moving || pivoting) && steeringSpeed > 0.0F) {
-            // Where the driver's client turned it, no faster than steering, with room to catch up a late packet.
+            // Turn toward the client's reported yaw at steering speed, with extra margin to catch up after a late
+            // packet.
             float yawDelta = Mth.wrapDegrees((float) driverYaw.getAsDouble() - abstractSiegeEntity.getYRot());
             float limit = steeringSpeed * DRIVER_YAW_CATCH_UP;
             if (Math.abs(yawDelta) > 1.0E-3F) {
@@ -279,19 +280,19 @@ public final class SiegeMovementPhysics {
         return (float) (Math.max(0.0F, maximumTurnDegrees) * speedFraction);
     }
 
-    /** How long, in ticks, a client leaves its turned engine be after steering stops, for the server to catch up. */
+    /** Ticks after steering stops before the client's engine yaw is eased toward the server's. */
     private static final int STEERING_SETTLE_TICKS = 10;
     /**
-     * The share of what is left between a client's turned engine and the server's that it closes each tick after:
-     * a degree or two closed over half a second, not in a jolt.
+     * Fraction of the remaining yaw difference closed per tick after that: a degree or two over half a second, without
+     * a jolt.
      */
     private static final float STEERING_CORRECTION_SHARE = 0.15F;
     private static final float LEAST_STEERING_CORRECTION = 0.05F;
-    /** How much faster than it steers the server may turn an engine to catch up a driver's late yaw. */
+    /** How much faster than steering the server may turn to catch up with a late yaw. */
     private static final float DRIVER_YAW_CATCH_UP = 1.5F;
-    /** How far inside its box a hitched animal may brush the ground it stands on. */
+    /** How far into a hitched animal's box the ground may reach. */
     private static final double MOUNT_CLEARANCE = 1.0E-3D;
-    /** Halvings spent finding how far a team can go before an animal meets a wall. */
+    /** Bisection steps used to find how far a team can move before an animal hits a wall. */
     private static final int MOUNT_SEARCH_STEPS = 10;
 
     public static void updateClientSteering(AbstractSiegeEntity abstractSiegeEntity) {
@@ -310,8 +311,8 @@ public final class SiegeMovementPhysics {
             return;
         }
 
-        // The server turns on the same steering a round trip behind; pulling towards it before it has caught up
-        // swings the engine back the way it came.
+        // The server applies the same steering a round trip later; correcting toward it before it catches up would
+        // swing the engine back.
         int idle = abstractSiegeEntity.getClientSteeringIdleTicks() + 1;
         abstractSiegeEntity.setClientSteeringIdleTicks(idle);
         if (idle <= STEERING_SETTLE_TICKS) {
@@ -321,7 +322,7 @@ public final class SiegeMovementPhysics {
         if (Math.abs(yawDelta) < LEAST_STEERING_CORRECTION) {
             return;
         }
-        // Turned about the same pivot as steering turns it, or the engine would slide on its wheels.
+        // Rotate about the steering pivot, or the engine slides sideways on its wheels.
         turnAboutPivot(abstractSiegeEntity, yawDelta * STEERING_CORRECTION_SHARE, true);
     }
 

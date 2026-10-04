@@ -27,7 +27,7 @@ public final class SiegeworksParticles {
             PARTICLE_TYPES.register("muzzle_plume", () -> new SimpleParticleType(false));
     public static final RegistrySupplier<SimpleParticleType> IMPACT_SMOKE_PLUME =
             PARTICLE_TYPES.register("impact_smoke_plume", () -> new SimpleParticleType(false));
-    /** A fragment of a struck block, flung with the velocity it is given. */
+    /** Block fragment particle that keeps its given velocity. */
     //? if forge {
     /*public static final RegistrySupplier<ParticleType<BlockParticleOption>> FRAGMENT =
             PARTICLE_TYPES.register("fragment", FragmentParticleType::new);

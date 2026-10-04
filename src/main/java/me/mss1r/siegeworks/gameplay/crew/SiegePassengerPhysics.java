@@ -10,7 +10,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public final class SiegePassengerPhysics {
-    /** How far a hitched animal's footing may sink into or hover over the ground it stands on. */
+    /** How far a hitched animal's feet may sink into or float above the ground. */
     private static final double FOOTING_INSET = 1.0E-3D;
     private SiegePassengerPhysics() {
     }
@@ -92,9 +92,9 @@ public final class SiegePassengerPhysics {
     }
 
     /**
-     * Where a hitched animal stands for a seat: on the ground under it, up or down as far as the engine itself can
-     * step, so it climbs a step before the engine reaches it. Against anything higher, or with no room to stand up
-     * there, it stays level with the seat and the engine's movement keeps it out of the way.
+     * Ground position for a hitched animal's seat: the ground below, up to the engine's step height up or down, so it
+     * climbs a step before the engine reaches it. Against anything higher, or without headroom, it stays at seat height
+     * and engine movement keeps it clear.
      */
     public static Vec3 mountFooting(AbstractSiegeEntity siege, Entity mount, Vec3 seat) {
         double step = siege.geometryStepHeight();

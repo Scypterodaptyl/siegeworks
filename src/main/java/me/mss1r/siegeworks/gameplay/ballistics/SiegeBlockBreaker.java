@@ -42,9 +42,9 @@ public final class SiegeBlockBreaker {
     }
 
     /**
-     * Whether a siege weapon the given player answers for may damage this block, by the server's terrain rule.
-     * Under {@code RESPECT_PROTECTION} it asks the same questions as a player breaking the block by hand, so
-     * claim mods and spawn protection decide.
+     * Whether a siege weapon attributed to this player may damage the block under the server's terrain rule. With
+     * {@code RESPECT_PROTECTION} it runs the same checks as the player breaking the block by hand, so claim mods and
+     * spawn protection apply.
      */
     public static boolean mayDamage(ServerLevel level, BlockPos pos, BlockState state, @Nullable Player breaker) {
         return switch (SiegeworksServerConfig.getBlockDamage()) {
@@ -140,7 +140,9 @@ public final class SiegeBlockBreaker {
                 Explosion.BlockInteraction.KEEP);
     }
 
-    /** The player who answers for what {@code owner} breaks: the one in control, else the owner, online or not. */
+    /**
+     * Player responsible for blocks broken by {@code owner}: the controlling player, else the owner, online or not.
+     */
     @Nullable
     public static Player responsiblePlayer(@Nullable Entity owner) {
         if (owner == null || !(owner.level() instanceof ServerLevel level)) {
@@ -150,13 +152,13 @@ public final class SiegeBlockBreaker {
         return online != null ? online : playerFor(level, responsibleUuid(owner, new HashSet<>()));
     }
 
-    /** Whoever answers for {@code owner}, remembered so a shot can still be answered for once its engine is gone. */
+    /** Player responsible for {@code owner}, cached so shots stay attributed after their engine is gone. */
     @Nullable
     public static UUID responsibleUuid(@Nullable Entity owner) {
         return responsibleUuid(owner, new HashSet<>());
     }
 
-    /** The player with this id: the real one when online, otherwise one standing in for their profile. */
+    /** Player for this id: the real player when online, otherwise a fake player for their profile. */
     @Nullable
     public static Player playerFor(ServerLevel level, @Nullable UUID playerId) {
         if (playerId == null) {

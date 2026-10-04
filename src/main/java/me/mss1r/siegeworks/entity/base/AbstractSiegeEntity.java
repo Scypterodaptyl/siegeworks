@@ -126,16 +126,16 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     protected final Set<UUID> playersNotified = new HashSet<>();
     private final SiegeOperatorReference operator = new SiegeOperatorReference(this);
     private final SiegeOwnership ownership = new SiegeOwnership();
-    /** How far the server's aim may differ from the local operator's before it is taken as a correction. */
+    /** Max difference between server and local aim before the server value is applied as a correction. */
     private static final float AIM_CORRECTION_DEGREES = 10.0F;
     private float predictedAimYaw;
     private float predictedAimPitch;
     private boolean aimPredicted;
-    /** Set while the client ticks it, when its aim changes are its own, not the server's copy coming in. */
+    /** True while the client ticks the engine, so aim changes come from the local operator rather than the server. */
     private boolean tickingOnClient;
-    /** Ticks since the local driver last steered, on the client. */
+    /** Client-side ticks since the local driver last steered. */
     private int clientSteeringIdleTicks;
-    /** How long, in ticks, a driving client's reported yaw stays good for. */
+    /** How long, in ticks, a yaw reported by the driving client stays valid. */
     private static final int DRIVER_YAW_STALE_TICKS = 10;
     private float driverYaw;
     private int driverYawTick = Integer.MIN_VALUE / 2;
@@ -739,7 +739,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         this.entityData.set(DISMANTLE_PROGRESS, Math.max(0, progress));
     }
 
-    /** Whoever last crewed or fired the engine; blamed for its damage, never granted its ownership. */
+    /** Last player who crewed or fired the engine. Used for damage attribution, never for ownership. */
     @Nullable
     public Entity getOperator() {
         return operator.get();
@@ -773,7 +773,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         return ownership.isOwnedBy(playerUuid);
     }
 
-    /** Frees the engine once its side has been offline for the configured time; returns whether it did. */
+    /** Releases the engine once its team has been offline for the configured time. Returns true if released. */
     public boolean releaseIfAbandoned(ServerLevel level, long nowMillis) {
         UUID owner = getOwnerUuid();
         int days = SiegeworksServerConfig.getAbandonAfterDays();
@@ -801,7 +801,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         return true;
     }
 
-    /** How an enemy player takes hold of the controls to capture this engine: by default, its seat. */
+    /** How an enemy player takes control to capture this engine. Default: its seat. */
     protected InteractionResult boardForCapture(Player player) {
         if (!canAddPassenger(player) || !player.startRiding(this)) {
             return InteractionResult.FAIL;
@@ -1105,15 +1105,15 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     }
 
     /**
-     * Takes the yaw a driving player's client has turned the engine to. The server turns it there itself, no
-     * faster than steering allows, instead of replaying the driver's keys a packet's jitter apart from the client.
+     * Applies the yaw reported by the driving client. The server turns toward it at the normal steering rate instead of
+     * replaying the driver's inputs, which would jitter with packet timing.
      */
     public void reportDriverYaw(float yaw) {
         driverYaw = Mth.wrapDegrees(yaw);
         driverYawTick = tickCount;
     }
 
-    /** The yaw the driving player's client last turned the engine to, if it came in lately. */
+    /** Last yaw reported by the driving client, if it is recent. */
     public OptionalDouble freshDriverYaw() {
         return tickCount - driverYawTick <= DRIVER_YAW_STALE_TICKS
                 ? OptionalDouble.of(driverYaw)
@@ -1192,8 +1192,8 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     public abstract void stopAnimation(String animationName);
 
     /**
-     * Keeps the aim the local operator is turning when the server's own copy of it comes back: that copy trails it
-     * by the round trip and would pull it back. A copy far off it is a real correction and stands.
+     * Keeps the locally driven aim when the server's echo arrives: the echo lags by a round trip and would pull the aim
+     * back. A large difference is a real correction and is applied.
      */
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
@@ -1646,7 +1646,6 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         return true;
     }
 
-    /** A machine does not freeze in powder snow. */
     @Override
     public boolean canFreeze() {
         return false;
@@ -1660,7 +1659,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     }
     *///?}
 
-    /** Potions, poison and withering work on the living, not on timber and iron. */
+    /** Siege engines are immune to potion effects. */
     @Override
     public boolean canBeAffected(MobEffectInstance effect) {
         return false;
@@ -1781,7 +1780,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         return SiegeworksServerConfig.getMovementDeceleration(getType(), isDraftMount(operator));
     }
 
-    /** How fast it slows of itself, however weak the team that drove it: what it takes to roll to a stop. */
+    /** Deceleration when nothing drives the engine, independent of team strength. */
     public final double getRollingDeceleration() {
         return SiegeworksServerConfig.getMovementDeceleration(getType(), false);
     }
@@ -1819,7 +1818,7 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         return SiegeProfileCatalogs.ENGINES.forEntity(this.getType()).accuracyMultiplier();
     }
 
-    /** Takes the profile's health, keeping the share of it the engine had, so a half-broken one stays half. */
+    /** Applies the profile's max health, keeping the current health fraction. */
     private void followProfileHealth() {
         SiegeProfileCatalogs.ENGINES.forEntity(getType()).maxHealth().ifPresent(wanted -> {
             AttributeInstance maxHealth = getAttribute(Attributes.MAX_HEALTH);

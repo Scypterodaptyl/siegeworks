@@ -21,10 +21,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * What an incendiary pot holds. A pot is filled in order: first its base, a piece of charcoal and a honeycomb, which
- * is what makes it burn at all; then up to {@link #ADDITIVE_SLOTS} additives, each strengthening one thing and no
- * more than {@link #MAX_OF_A_KIND} of any one, so no pot is strongest at everything; then a string wick, after which
- * it is sealed and can be lit.
+ * Contents of an incendiary pot. Filled in order: the base (one charcoal and one honeycomb), required for it to burn;
+ * then up to {@link #ADDITIVE_SLOTS} additives, at most {@link #MAX_OF_A_KIND} of each; then a string wick, which seals
+ * it and makes it lightable.
  */
 public record PotFilling(List<Item> contents, boolean wick) {
     public static final int BASE_SLOTS = 2;
@@ -39,10 +38,7 @@ public record PotFilling(List<Item> contents, boolean wick) {
         contents = List.copyOf(contents);
     }
 
-    /**
-     * What a pot made before pots were filled by hand holds, and what a full pot evenly spread between fire and
-     * stickiness holds: the base, two more charcoal, two more honeycombs, and a wick.
-     */
+    /** Filling of pots made before hand filling existed: base, two more charcoal, two more honeycomb, and a wick. */
     public static PotFilling standard() {
         return new PotFilling(List.of(Items.CHARCOAL, Items.HONEYCOMB,
                 Items.CHARCOAL, Items.CHARCOAL, Items.HONEYCOMB, Items.HONEYCOMB), true);
@@ -74,7 +70,7 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return hasBase() ? contents.subList(BASE_SLOTS, contents.size()) : List.of();
     }
 
-    /** How many of this additive it holds, its base apart. */
+    /** Count of this additive, excluding the base. */
     public int additivesOf(Item item) {
         return (int) additives().stream().filter(additive -> additive == item).count();
     }
@@ -83,7 +79,7 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return wick && hasBase();
     }
 
-    /** The pot with one more ingredient in it, if it takes that one now. */
+    /** This filling with one more ingredient, if it is accepted now. */
     public Optional<PotFilling> with(Item item) {
         if (wick || !isIngredient(item)) {
             return Optional.empty();
@@ -100,12 +96,12 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return Optional.of(new PotFilling(more, false));
     }
 
-    /** The pot with its wick in, if its base is complete and it has none yet. */
+    /** This filling with a wick, if the base is complete and there is no wick yet. */
     public Optional<PotFilling> withWick() {
         return wick || !hasBase() ? Optional.empty() : Optional.of(new PotFilling(contents, true));
     }
 
-    /** What bursting does, from the base and each additive in turn; nothing for a pot without a base. */
+    /** Burst stats from the base and additives; {@link Burst#NONE} without a base. */
     public Burst burst() {
         if (!hasBase()) {
             return Burst.NONE;
@@ -128,12 +124,12 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return new Burst(fireRadius, Math.min(1.0D, fireChance), burnSeconds, blastEnergy);
     }
 
-    /** Fire on the ground round it, how long the creatures it splashes burn, and the blast of its powder. */
+    /** Fire radius and chance, burn time for entities, and blast energy. */
     public record Burst(double fireRadius, double fireChance, int burnSeconds, double blastEnergy) {
         public static final Burst NONE = new Burst(0.0D, 0.0D, 0, 0.0D);
     }
 
-    /** Everything it holds, as items, wick included. */
+    /** Contents as item stacks, including the wick. */
     public List<ItemStack> asItems() {
         List<ItemStack> items = new ArrayList<>();
         for (Item item : contents) {
@@ -146,8 +142,8 @@ public record PotFilling(List<Item> contents, boolean wick) {
     }
 
     /**
-     * What a pot item holds. An item says so itself unless it holds what its kind holds by default: nothing for a
-     * clay pot, and for an incendiary pot the standard filling, so one made before pots were filled keeps working.
+     * Filling stored on a pot item. Items without data hold their default: empty for a clay pot, the standard filling
+     * for an incendiary pot, so pots made before hand filling still work.
      */
     public static PotFilling of(ItemStack stack) {
         CompoundTag data = MinecraftVersionCompat.customData(stack);
@@ -161,7 +157,7 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return stack.is(SiegeworksItems.CLAY_POT.get()) || stack.is(SiegeworksItems.FIRE_PROJECTILE.get());
     }
 
-    /** The item that holds this: an incendiary pot once it has its wick, a clay pot until then. */
+    /** Item for this filling: an incendiary pot once it has a wick, a clay pot before. */
     public ItemStack toItem() {
         boolean incendiary = wick;
         ItemStack stack = new ItemStack(incendiary ? SiegeworksItems.FIRE_PROJECTILE.get()
@@ -195,7 +191,7 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return new PotFilling(contents, tag.getBoolean(TAG_WICK));
     }
 
-    /** Lines describing what a pot holds, for its tooltip: whether it has its base, and how much of each additive. */
+    /** Tooltip lines: whether the base is complete, and additive counts. */
     public List<Component> describe() {
         List<Component> lines = new ArrayList<>();
         if (isEmpty()) {
@@ -219,7 +215,7 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return lines;
     }
 
-    /** Each kind once, in the order first put in, with how many there are. */
+    /** Each additive once, in insertion order, with its count. */
     private static Component counted(List<Item> items) {
         MutableComponent names = Component.empty();
         List<Item> kinds = items.stream().distinct().toList();

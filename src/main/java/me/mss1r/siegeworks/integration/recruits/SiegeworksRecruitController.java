@@ -55,7 +55,7 @@ public final class SiegeworksRecruitController implements ISiegeController {
     private int committedTargetUnreachableTicks;
     private Boolean attackOrderBeforeRam;
 
-    /** A ram waits for an order to attack; the engineer's own setting comes back when he leaves it. */
+    /** Rams wait for an attack order; the engineer's own setting is restored when he leaves. */
     public SiegeworksRecruitController(SiegeEngineerEntity engineer, AbstractSiegeEntity siege) {
         this.engineer = engineer;
         this.siege = siege;
@@ -145,7 +145,7 @@ public final class SiegeworksRecruitController implements ISiegeController {
         }
     }
 
-    /** An order to go somewhere outranks fighting; following or holding a position does not. */
+    /** Move orders take priority over fighting; follow and hold orders don't. */
     private boolean followsMoveOrder() {
         return RecruitsDriveOrders.any(siege)
                 || engineer.getFollowState() == 0 && engineer.getShouldMovePos() && engineer.getMovePos() != null;
@@ -376,7 +376,7 @@ public final class SiegeworksRecruitController implements ISiegeController {
         targetPos = committedTarget == null ? null : committedTarget.getEyePosition();
     }
 
-    /** An engine that turns slowly never fires if it chases whichever enemy is nearest each moment. */
+    /** Slow-turning engines never fire if they keep switching to the nearest enemy. */
     private void commitTo(LivingEntity target) {
         committedTarget = target;
         committedTargetUnreachableTicks = 0;
@@ -542,8 +542,8 @@ public final class SiegeworksRecruitController implements ISiegeController {
     }
 
     /**
-     * Turns the whole engine. One that can pivot does it standing still, because driving scales its steering
-     * down with speed; steering eases off near the heading so it settles instead of swinging past it.
+     * Turns the engine. Engines that can pivot do it in place, since steering is scaled down with speed; steering eases
+     * off near the target heading to avoid overshooting.
      */
     private boolean steerTowardYaw(float yaw, float forward) {
         float error = Mth.wrapDegrees(yaw - siege.getYRot());

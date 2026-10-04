@@ -24,9 +24,9 @@ public final class ExplosionPhysics {
     public static final String TAG_DEBRIS = "siegeworks:debris";
     private static final String TAG_PLAYER = "siegeworks:debris_player";
     private static final Map<ServerLevel, DebrisQuota> DEBRIS_QUOTAS = new WeakHashMap<>();
-    /** How far above the struck face, in blocks, ejecta leave a crater from. */
+    /** Height above the struck face, in blocks, that ejecta start from. */
     private static final double MOUTH_CLEARANCE = 0.6D;
-    /** Half-block steps of open space an ejected block needs ahead of it to clear its crater. */
+    /** Open space, in half-block steps, an ejected block needs in front of it to clear the crater. */
     private static final int EJECTA_CLEARANCE_STEPS = 5;
 
     private ExplosionPhysics() {
@@ -54,9 +54,8 @@ public final class ExplosionPhysics {
     }
 
     /**
-     * Throws a block a crater broke out of it, along {@code outward} and spread about it so it clears the rim.
-     * A block buried too deep to get out stays behind as crushed rubble, which the caller clears, and is not
-     * thrown only to fall back into the hole.
+     * Ejects a block broken out of a crater along {@code outward}, spread so it clears the rim. Blocks buried too deep
+     * to get out are left as rubble for the caller to clear instead of being thrown back into the hole.
      */
     public static boolean launchDestroyedBlock(ServerLevel level, BlockPos pos, Vec3 center, Vec3 outward,
                                                float blastPower, @Nullable Player breaker) {
@@ -97,9 +96,8 @@ public final class ExplosionPhysics {
     }
 
     /**
-     * Where a broken block leaves its crater: out of the mouth, just above the struck face across from where it
-     * broke, as a crater throws its ejecta out over its rim. A block buried where the mouth is closed leaves
-     * from where it was.
+     * Ejecta start point: just above the struck face, across from where the block broke, so ejecta leave over the rim.
+     * If the mouth is blocked, it starts where the block was.
      */
     private static Vec3 craterMouth(ServerLevel level, Vec3 center, BlockPos pos, Vec3 outward) {
         if (outward.lengthSqr() < 1.0E-8D) {
@@ -120,7 +118,7 @@ public final class ExplosionPhysics {
 
     private static void spawnDebris(ServerLevel level, float blastPower, BlockPos pos, BlockState state,
                                     Vec3 from, Vec3 motion, @Nullable Player breaker) {
-        // Set up wholly before it enters the world, so the first anyone sees of it is where it flies out from.
+        // Fully set up before being added, so it first appears at its launch point.
         FallingBlockEntity debris = EntityType.FALLING_BLOCK.create(level);
         if (debris == null) {
             return;
@@ -154,10 +152,7 @@ public final class ExplosionPhysics {
         return placed;
     }
 
-    /**
-     * Ejecta leave a crater through its mouth in a cone about {@code outward}, the way the blow came in, so
-     * they land beyond the rim instead of back in the hole.
-     */
+    /** Ejecta leave through the mouth in a cone around {@code outward}, so they land beyond the rim. */
     private static Vec3 ejectaMotion(ServerLevel level, Vec3 center, BlockPos pos, Vec3 outward, float power) {
         Vec3 axis = outward.lengthSqr() > 1.0E-8D ? outward.normalize() : new Vec3(0.0D, 1.0D, 0.0D);
         Vec3 offset = Vec3.atCenterOf(pos).subtract(center);
@@ -171,7 +166,7 @@ public final class ExplosionPhysics {
         }
         double speed = Mth.clamp(0.35D + power * 0.06D, 0.4D, 1.0D) * (0.85D + level.random.nextDouble() * 0.3D);
         Vec3 motion = axis.add(spread.normalize()).normalize().scale(speed);
-        // Ejecta fly up out of a crater, never down into the ground below it.
+        // Ejecta always go upward out of a crater, never down.
         return new Vec3(motion.x, Math.abs(motion.y) + 0.15D, motion.z);
     }
 

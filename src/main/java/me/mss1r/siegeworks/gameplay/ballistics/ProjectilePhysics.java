@@ -9,14 +9,14 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.LivingEntity;
 
-/** What a projectile does to creatures and siege engines it hits. */
+/** Effects of a projectile on entities and siege engines it hits. */
 public final class ProjectilePhysics {
-    /** A body as a material to go through: strength in pascals, drag in kg/m³, as for blocks. */
+    /** Body material for penetration: strength in Pa, drag in kg/m³, same as blocks. */
     private static final double BODY_STRENGTH = 300_000.0D;
     private static final double BODY_DRAG = 1000.0D;
-    /** What each point of armour adds to a body's strength, in pascals. */
+    /** Strength added per armor point, in Pa. */
     private static final double ARMOR_STRENGTH = 200_000.0D;
-    /** Slower than this, in metres per second, a projectile stays in the body it hit. */
+    /** Below this speed, in m/s, a projectile stays in the body it hit. */
     private static final double LEAST_FLIGHT_SPEED = 5.0D;
 
     private ProjectilePhysics() {
@@ -72,10 +72,7 @@ public final class ProjectilePhysics {
         //?}
     }
 
-    /**
-     * The speed, in blocks per tick like {@code currentSpeed}, a projectile keeps after passing through a body,
-     * or zero if the body stops it.
-     */
+    /** Remaining speed after passing through a body, in blocks/tick like {@code currentSpeed}; zero if stopped. */
     public static double remainingEntityPenetrationSpeed(SiegeProjectile projectile, LivingEntity target,
                                                          double currentSpeed) {
         ProjectilePhysicsProfile profile = projectile.getPhysicsProfile();

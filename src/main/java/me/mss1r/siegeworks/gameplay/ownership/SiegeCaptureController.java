@@ -18,8 +18,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * An enemy takes an engine left without its crew by holding its controls, seated or, where the
- * engine has no seat for a player, standing at it, until the time runs out without being hurt.
+ * An enemy captures an unattended engine by holding its controls (seated, or standing at it for engines without a
+ * player seat) until the timer runs out without taking damage.
  */
 public final class SiegeCaptureController {
     private static final double BAR_RANGE_SQR = 48.0D * 48.0D;
@@ -143,7 +143,9 @@ public final class SiegeCaptureController {
         }
     }
 
-    /** Found by seat rather than operator status, which the locked controls withhold from the capturer. */
+    /**
+     * Found by seat rather than operator status, since the locked controls don't give the capturer operator status.
+     */
     @Nullable
     private LivingEntity hostileCrew() {
         for (Entity passenger : siege.getPassengers()) {

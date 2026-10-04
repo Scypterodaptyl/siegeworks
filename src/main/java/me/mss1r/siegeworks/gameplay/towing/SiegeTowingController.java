@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class SiegeTowingController {
     private static final Set<String> WARNED_ABOUT_SETTINGS = ConcurrentHashMap.newKeySet();
-    /** How far from the lead animal a player may stand to take up the reins. */
+    /** Max distance from the lead animal to take the reins. */
     private static final double REINS_REACH = 2.0D;
 
     private final AbstractSiegeEntity siege;
@@ -120,8 +120,8 @@ public final class SiegeTowingController {
     }
 
     /**
-     * The mount whose rider holds the reins: the first one a player rides, else the first one anyone rides. Whoever
-     * sits on another mount of the team just pulls along, so it does not matter which of them a player climbs on.
+     * Mount whose rider holds the reins: the first one ridden by a player, else the first ridden at all. Other riders
+     * just pull along, so it doesn't matter which mount a player sits on.
      */
     @Nullable
     public AbstractHorse drivingMount() {
@@ -171,7 +171,7 @@ public final class SiegeTowingController {
             if (heldStack.is(Items.SHEARS)) {
                 return detachWithDroppedLead(player, primaryMount);
             }
-            // The reins are taken at the animal, not by reaching the engine from wherever one stands on it.
+            // Reins are taken at the animal, not from anywhere on the engine.
             if (!primaryMount.getBoundingBox().inflate(REINS_REACH).contains(player.position())) {
                 return null;
             }

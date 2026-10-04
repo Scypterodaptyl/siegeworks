@@ -62,8 +62,8 @@ public final class IncendiaryFuseGameTests {
     }
 
     /**
-     * Fire is a change to the terrain, so the tests that look for it run in a batch of their own that lets it take
-     * everywhere, whatever rule the test world was left with, and no other test changes the rule meanwhile.
+     * Fire tests change terrain, so they run in their own batch with the terrain rule set to EVERYWHERE, whatever the
+     * test world was saved with.
      */
     @BeforeBatch(batch = FIRE_BATCH)
     public static void letFireTakeEverywhere(ServerLevel level) {
@@ -347,7 +347,7 @@ public final class IncendiaryFuseGameTests {
                 "A pot with " + what + " bursts as " + burst);
     }
 
-    /** A pot with its base and then these additives, unsealed. */
+    /** Unsealed pot with the base followed by these additives. */
     private static PotFilling fill(Item... additives) {
         PotFilling filling = PotFilling.EMPTY.with(Items.CHARCOAL).orElseThrow().with(Items.HONEYCOMB).orElseThrow();
         for (Item additive : additives) {
@@ -377,7 +377,7 @@ public final class IncendiaryFuseGameTests {
         return level.getBlockState(pos).is(SiegeworksBlocks.FIRE_PROJECTILE.get());
     }
 
-    /** Whether the pot took one of {@code item} from a player holding a few. */
+    /** True if the pot took one {@code item} from a player holding several. */
     private static boolean takes(ServerLevel level, BlockPos pos, Player filler, Item item) {
         int before = pot(level, pos).filling().contents().size();
         boolean wick = pot(level, pos).filling().wick();
@@ -416,7 +416,7 @@ public final class IncendiaryFuseGameTests {
         });
     }
 
-    /** An engine loaded the way one loaded before pots were filled: a sealed pot holding the standard filling. */
+    /** Engine loaded as before hand filling existed: a sealed pot with the standard filling. */
     private static Player placeLoadedEngine(GameTestHelper helper, AbstractSiegeEntity engine, BlockPos at) {
         ServerLevel level = helper.getLevel();
         Vec3 position = helper.absoluteVec(Vec3.atBottomCenterOf(at));
@@ -446,12 +446,12 @@ public final class IncendiaryFuseGameTests {
         return pot;
     }
 
-    /** A sturdy neighbour for a pot to set alight; Recruits replaces a spawned iron golem. */
+    /** Fire target next to the pot. Not an iron golem: Recruits replaces spawned golems. */
     private static Ravager neighbour(GameTestHelper helper) {
         return helper.spawnWithNoFreeWill(EntityType.RAVAGER, new BlockPos(3, 1, 2));
     }
 
-    /** What decides whether fire can take, for a failure to report. */
+    /** Fire-related conditions, included in failure messages. */
     private static String conditions(ServerLevel level) {
         return " (terrain rule " + SiegeworksServerConfig.getBlockDamage() + ", raining " + level.isRaining() + ")";
     }

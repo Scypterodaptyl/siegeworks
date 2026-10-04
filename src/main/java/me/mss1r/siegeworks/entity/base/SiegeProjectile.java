@@ -50,13 +50,13 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
     private static final String TAG_FIRED_BY_SIEGE = "FiredBySiege";
     private static final String TAG_RESPONSIBLE_PLAYER = "ResponsiblePlayer";
     private static final double TICKS_PER_SECOND = 20.0D;
-    /** The share of its velocity the game lets a thrown projectile keep each tick in air. */
+    /** Per-tick velocity multiplier vanilla applies to thrown projectiles in air. */
     private static final double VANILLA_AIR_RETENTION = 0.99D;
-    /** Ticks a client runs a shot on past the newest server position before it waits for the next. */
+    /** Ticks a client extrapolates past the latest server position before waiting for the next one. */
     private static final int MAX_TICKS_AHEAD = 3;
     /**
-     * The velocity it was launched at, exactly: the spawn packet clips a shot's velocity to 3.9 blocks a tick,
-     * which a cannon ball leaves at five times over.
+     * Exact launch velocity. The spawn packet clamps velocity to 3.9 blocks/tick, and a cannon ball is about five times
+     * faster.
      */
     private static final EntityDataAccessor<Vector3f> LAUNCH_VELOCITY =
             SynchedEntityData.defineId(SiegeProjectile.class, EntityDataSerializers.VECTOR3);
@@ -74,14 +74,14 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
     private boolean firedBySiege;
     @Nullable
     private UUID responsiblePlayerId;
-    /** The game time of the last tick it flew, so a shot the level left untouched is flown on elsewhere. */
+    /** Game time of the last flight tick, used to detect shots the level stopped ticking (see DistantFlight). */
     private long lastFlownTick = Long.MIN_VALUE;
-    /** Where it went into the body it is stuck in, where what it still carries opens the crater. */
+    /** Entry point into the body it is stuck in; the remaining energy opens the crater there. */
     @Nullable
     private Vec3 craterMouth;
     @Nullable
     private Vec3 craterFace;
-    /** On a client, where the server last had the shot, and how far it moved in the server tick before that. */
+    /** Client only: last server position, and how far the shot moved in the server tick before it. */
     @Nullable
     private Vec3 serverPosition;
     private Vec3 serverStep = Vec3.ZERO;
@@ -118,8 +118,8 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
     }
 
     /**
-     * A shot moves itself and finds its own hits along its path; a moving engine's arm or frame must not carry or
-     * shove it, as it would a slow stone a low-tension throw has only just let go of.
+     * Shots move and collide on their own. A moving engine's arm or frame must not push or carry them, e.g. a slow
+     * stone just released from a low-power throw.
      */
     private void moveItself() {
         noPhysics = true;
@@ -130,7 +130,7 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
         return Items.STONE;
     }
 
-    // The game's own fall is left out: {@link #flyThroughAir} drags and drops the shot after it moves.
+    // Vanilla gravity is skipped: {@link #flyThroughAir} applies drag and gravity after the move.
     //? if forge {
     /*@Override
     protected float getGravity() {
@@ -179,7 +179,7 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
 
     @Override
     protected boolean canHitEntity(Entity target) {
-        // Debris thrown from the hole a shot just made flies out across its path and is no target for it.
+        // Ignore debris thrown from the hole this shot just made.
         if (target instanceof FallingBlockEntity || hasHitTarget(target) || !SiegeProjectileCombat.mayHit(this, target)) {
             return false;
         }
@@ -255,7 +255,7 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
         if (shouldPredictMotionOnClient()) {
             setPos(x, y, z);
         } else if (!target.equals(lerpTarget()) && !target.equals(position())) {
-            // A packet that only turns the shot hands back where it already is or is headed.
+            // A rotation-only packet resends the current position or target.
             startFollowingServer();
             serverStep = target.subtract(serverPosition);
             serverPosition = target;
@@ -268,7 +268,7 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
         return serverPosition != null ? serverPosition : position();
     }
 
-    /** Starts from where it was spawned, flying at the velocity it was launched at. */
+    /** Starts at the spawn position with the exact launch velocity. */
     private void startFollowingServer() {
         if (serverPosition == null) {
             serverPosition = position();
@@ -294,11 +294,10 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
     //?}
 
     /**
-     * Shows a client's shot where the server has it now: the newest position the server sent, carried on by
-     * the step the server made last for each tick that has passed since. Each server tick sends one position,
-     * but they come unevenly, none in one tick and two in the next, so the shot runs on by itself through a
-     * gap and the next positions catch it up instead of standing it still. A shot the server has stopped has
-     * no velocity left and stays where the server left it.
+     * Client: shows the shot where the server has it now, extrapolating from the latest server position by the last
+     * server step for each elapsed tick. Server updates arrive unevenly (none one tick, two the next), so the shot
+     * keeps moving through gaps and later positions correct it. A shot the server stopped has no velocity and stays
+     * put.
      */
     private void followServer() {
         startFollowingServer();
@@ -310,9 +309,8 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
     }
 
     /**
-     * Slows the shot by the air, as its mass, width and shape make it, and drops it by the earth's gravity, in
-     * place of the game's flat 1% a tick, which takes far more from a heavy ball than air does. In water the
-     * game's own heavy drag stays.
+     * Applies air drag from mass, diameter and drag coefficient, plus real gravity, instead of vanilla's flat 1% per
+     * tick, which slows heavy balls far too much. In water, vanilla's drag still applies.
      */
     private void flyThroughAir() {
         if (level() instanceof ServerLevel serverLevel) {
@@ -338,7 +336,7 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
         return lastFlownTick == gameTime;
     }
 
-    /** Whether it is still in the air, not stuck in or resting on anything. */
+    /** True while in the air, not stuck in or resting on anything. */
     public boolean isInFlight() {
         return !inGround && !isRemoved();
     }
@@ -413,8 +411,8 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
     }
 
     /**
-     * A burst no engine fired, such as a pot set down going off, still reaches the blocks around it, answered for
-     * by {@code responsible}.
+     * Lets a burst not fired by an engine (e.g. a placed pot) break blocks, with {@code responsible} as the player to
+     * blame.
      */
     public void reachBlocksAs(@Nullable UUID responsible) {
         firedBySiege = true;
@@ -426,7 +424,7 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
         return firedBySiege;
     }
 
-    /** Flies and strikes by another profile than the entity type's, for a variant such as an explosive one. */
+    /** Uses a different profile than the entity type's, for variants such as explosive rounds. */
     public void setPhysicsProfile(ResourceLocation profileId) {
         this.physicsProfileId = profileId;
     }
@@ -438,8 +436,8 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
     }
 
     /**
-     * Runs into the block it hit for as long as it can cut through. When it comes out the far side it is
-     * moved there and flies on at the speed it kept; otherwise the result says where it stopped.
+     * Penetrates the hit block as far as it can. If it exits the far side it is moved there and keeps flying at the
+     * remaining speed; otherwise the result says where it stopped.
      */
     protected ProjectileImpacts.Drive driveInto(ServerLevel level, BlockHitResult hit) {
         Vec3 velocity = getDeltaMovement();
@@ -468,8 +466,8 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
     }
 
     /**
-     * Spends what is left of it where it stopped, {@code speed} being its speed in the game: what it still
-     * carried breaks the material around it, and any charge and fire it has go off.
+     * Spends the remaining energy where the shot stopped: breaks the surrounding material, then sets off any charge and
+     * fire. {@code speed} is in blocks/tick.
      */
     protected void arrive(ServerLevel level, Vec3 at, double speed) {
         if (!firedBySiege) {
@@ -489,22 +487,22 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
         ProjectileImpacts.blast(level, at, outward, blastEnergy, breaker);
         ProjectileImpacts.ignite(level, at, fire, breaker);
         if (blastEnergy > 0.0D || fire.radius() > 0.0D) {
-            // A charge or a burst of fire going off sets off the pots it reaches, as TNT sets off TNT.
+            // A blast or fire burst detonates pots in range, like TNT setting off TNT.
             IncendiaryPotBlock.detonateAround(level, at, physics.shock().radius(), responsiblePlayerId);
         }
     }
 
-    /** The blast of the charge it carries, in joules. */
+    /** Blast energy of the payload, in joules. */
     protected double payloadBlastEnergy(ProjectilePhysicsProfile physics) {
         return physics.blast().energy();
     }
 
-    /** The fire it spreads where it goes off. */
+    /** Fire spread by the payload. */
     protected ProjectilePhysicsProfile.Fire payloadFire(ProjectilePhysicsProfile physics) {
         return physics.fire();
     }
 
-    /** How fast, in metres per second, a shot flying at {@code speed} blocks per tick strikes. */
+    /** Impact speed in m/s for a speed of {@code speed} blocks/tick. */
     public double realSpeed(double speed) {
         return speed * TICKS_PER_SECOND;
     }

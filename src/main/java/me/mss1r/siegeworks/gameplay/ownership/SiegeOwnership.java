@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
-/** The player a siege engine belongs to, kept by UUID so it holds while that player is offline. */
+/** The player an engine belongs to, stored by UUID so it persists while they're offline. */
 public final class SiegeOwnership {
     private static final String TAG_OWNER = "SiegeOwner";
 

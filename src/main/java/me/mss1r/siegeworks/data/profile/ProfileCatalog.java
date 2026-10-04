@@ -56,7 +56,7 @@ public final class ProfileCatalog<T> {
         publishListeners.forEach(Runnable::run);
     }
 
-    /** Takes the server's profiles on a client. Publish listeners are left out, since they serve the server. */
+    /** Applies the server's profiles on the client. Publish listeners are skipped; they only matter on the server. */
     public void acceptFromServer(Map<ResourceLocation, T> profiles) {
         snapshot.set(Map.copyOf(profiles));
     }

@@ -21,7 +21,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(LadderConstructionGameTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
 public final class LadderCarryGameTests {
-    // A carried ladder reaches well past its test, over the tests beside it.
+    // A carried ladder extends past its test area into neighbouring tests.
     private static final String BATCH = "ladder_carry";
 
     private LadderCarryGameTests() {
@@ -141,7 +141,7 @@ public final class LadderCarryGameTests {
         return carrier;
     }
 
-    /** Takes the ladder and its carrier away again, so they stand over no later test. */
+    /** Removes the ladder and its carrier so they don't overlap later tests. */
     private static void finish(GameTestHelper helper, Entity ladder, Player carrier) {
         if (ladder != null) {
             LadderCarry.drop((SiegeLadderEntity) ladder);

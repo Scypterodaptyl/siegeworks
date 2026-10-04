@@ -84,7 +84,7 @@ public abstract class TowedSiegeRenderer<T extends AbstractSiegeEntity & GeoAnim
         for (int index = 0; index < mounts.size() && index < profile.mountSlots().size(); index++) {
             AbstractHorse mount = mounts.get(index);
             TowingProfile.MountSlot slot = profile.mountSlots().get(index);
-            // The animal stands on its own ground, so the shafts reach down or up to where it really is.
+            // The animal stands on its own ground level, so the shafts angle up or down to reach it.
             double rise = Mth.lerp(partialTick, mount.yo, mount.getY())
                     - Mth.lerp(partialTick, animatable.yo, animatable.getY());
             Vec3 reach = new Vec3(slot.mountOffset().x, rise, slot.mountOffset().z);

@@ -21,8 +21,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.Supplier;
 
 /**
- * The pot a stone thrower holds ready to throw: what it holds, and its fuse once lit. A lit pot not thrown in time
- * bursts where it lies; a thrown one carries its filling and its fuse with it.
+ * Pot loaded in a mangonel or trebuchet: its filling and fuse. A lit pot that isn't thrown in time bursts in place; a
+ * thrown pot takes its filling and fuse with it.
  */
 public final class EnginePot {
     private static final String TAG_FILLING = "LoadedPot";
@@ -32,25 +32,25 @@ public final class EnginePot {
     private final EntityDataAccessor<Integer> fuse;
     private PotFilling filling = PotFilling.EMPTY;
 
-    /** {@code fuse} is the engine's own synced field for the ticks left, defined as {@link IncendiaryFuse#UNLIT}. */
+    /** {@code fuse} is the engine's synced fuse field, initialized to {@link IncendiaryFuse#UNLIT}. */
     public EnginePot(AbstractSiegeEntity engine, EntityDataAccessor<Integer> fuse) {
         this.engine = engine;
         this.fuse = fuse;
     }
 
-    /** Takes a pot in, and says what the engine has loaded: a pot with its wick or one without. */
+    /** Loads a pot and returns the ammo key: with or without a wick. */
     public String load(PotFilling loaded) {
         filling = loaded;
         setFuse(IncendiaryFuse.UNLIT);
         return loaded.wick() ? SiegeAmmo.AMMO_FIRE : SiegeAmmo.AMMO_POT;
     }
 
-    /** Whether a crew's stores hold a pot sealed with its wick, the only kind a crew loads and lights itself. */
+    /** True if the inventory holds a sealed pot. Crews only load and light sealed pots. */
     public static boolean hasSealed(Container inventory) {
         return sealedSlot(inventory) >= 0;
     }
 
-    /** Takes one sealed pot from a crew's stores, or null if there is none. */
+    /** Removes one sealed pot from the inventory, or returns null. */
     @Nullable
     public static PotFilling takeSealed(Container inventory) {
         int slot = sealedSlot(inventory);
@@ -74,7 +74,7 @@ public final class EnginePot {
         return -1;
     }
 
-    /** What the loaded pot holds; one loaded before pots were filled by hand holds the standard filling. */
+    /** Loaded pot contents. Pots loaded before hand filling existed get the standard filling. */
     public PotFilling filling() {
         return filling.isEmpty() && SiegeAmmo.isLightablePotKey(engine.getAmmoLoaded()) ? PotFilling.standard()
                 : filling;
@@ -92,12 +92,12 @@ public final class EnginePot {
         engine.getEntityData().set(fuse, ticks);
     }
 
-    /** Whether a sealed pot lies ready to throw, waiting to be lit. Known on both sides, from the synced load. */
+    /** True if a sealed pot is loaded, wound and not yet lit. Works on both sides via the synced ammo key. */
     public boolean awaitsFlame() {
         return SiegeAmmo.isLightablePotKey(engine.getAmmoLoaded()) && engine.isWindingComplete() && !isLit();
     }
 
-    /** Lights the pot with the flint and steel a player holds, the fuse's tip being at {@code fuseTip}. */
+    /** Lights the pot with the player's flint and steel. {@code fuseTip} is where the sound plays. */
     public boolean light(Player player, InteractionHand hand, Vec3 fuseTip) {
         if (!IncendiaryFuse.canStrike(player.getItemInHand(hand)) || !awaitsFlame()) {
             return false;
@@ -107,14 +107,13 @@ public final class EnginePot {
         return true;
     }
 
-    /** The crew lights its own pot before the throw. */
     public void lightByCrew() {
         if (awaitsFlame()) {
             setFuse(IncendiaryFuse.fullLength());
         }
     }
 
-    /** Burns the fuse down a tick; a pot not thrown in time bursts where it lies, at {@code where}. */
+    /** Ticks the fuse. A pot not thrown in time bursts at {@code where}. */
     public void burn(ServerLevel level, Supplier<Vec3> where, EntityType<TrebuchetProjectile> type,
                      ResourceLocation profile) {
         int left = fuseTicks();
@@ -137,7 +136,7 @@ public final class EnginePot {
         IncendiaryFuse.burst(level, at, burning, 0, type, profile, engine.getBaseDamage(), engine, null);
     }
 
-    /** Hands the pot to the shot that throws it, still burning if it was lit. */
+    /** Passes the pot to the projectile, still lit if it was. */
     public void throwWith(TrebuchetProjectile projectile) {
         projectile.setFilling(filling());
         if (isLit()) {
@@ -147,7 +146,7 @@ public final class EnginePot {
         filling = PotFilling.EMPTY;
     }
 
-    /** Sparks off a burning fuse, on the client; it runs from {@code tip} to {@code base}. */
+    /** Client: fuse sparks between {@code tip} and {@code base}. */
     public void sparkle(Level level, Vec3 tip, Vec3 base) {
         if (isLit()) {
             IncendiaryFuse.sparkle(level, tip, base, IncendiaryFuse.burnt(fuseTicks()));

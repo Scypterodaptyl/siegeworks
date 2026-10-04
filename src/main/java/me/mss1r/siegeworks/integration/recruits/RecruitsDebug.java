@@ -59,7 +59,7 @@ public final class RecruitsDebug {
                 recruit.getMountUUID());
     }
 
-    /** What a crewing engineer decided this tick; each decision is logged at most once a second. */
+    /** Crew engineer's decision this tick; each is logged at most once per second. */
     public static void engine(AbstractRecruitEntity engineer, String decision, String details) {
         if (!enabled()) {
             return;

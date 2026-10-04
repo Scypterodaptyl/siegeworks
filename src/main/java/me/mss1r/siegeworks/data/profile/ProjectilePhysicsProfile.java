@@ -92,8 +92,7 @@ public record ProjectilePhysicsProfile(
     }
 
     /**
-     * The share of its speed the air takes from it for each block it flies at a block a tick: quadratic drag,
-     * {@code ρ·Cd·A / 2m} per metre, a block being a metre.
+     * Speed lost per block travelled at 1 block/tick: quadratic drag, {@code ρ·Cd·A / 2m} per metre (1 block = 1 m).
      */
     public double airDrag(double diameter) {
         double area = Math.PI * diameter * diameter / 4.0D;
@@ -109,8 +108,8 @@ public record ProjectilePhysicsProfile(
     }
 
     /**
-     * Multiplier on the engine's base damage for a direct hit, how much of armor it ignores, and the share of
-     * that damage a siege engine takes.
+     * Direct-hit damage multiplier on the engine's base damage, armor penetration, and the multiplier applied when the
+     * target is a siege engine.
      */
     public record EntityHit(double damage, double armorPiercing, double structure) {
         public static final EntityHit DEFAULT = new EntityHit(1.0D, 0.0D, 0.7D);
@@ -147,7 +146,7 @@ public record ProjectilePhysicsProfile(
         ).apply(instance, Blast::new));
     }
 
-    /** Fire an incendiary sets around where it stops: how far, and the chance near the centre. */
+    /** Fire spread where the projectile stops: radius, and ignition chance near the centre. */
     public record Fire(double radius, double chance) {
         public static final Fire NONE = new Fire(0.0D, 0.0D);
         public static final Codec<Fire> CODEC = RecordCodecBuilder.create(instance -> instance.group(

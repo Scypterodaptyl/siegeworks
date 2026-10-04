@@ -181,7 +181,7 @@ public final class SiegeParticleEffects {
         blockDebris(level, center, 18, 0.42D, 150.0D);
     }
 
-    /** A clay pot breaking: its shards scatter, seen as far as the shot that threw it. */
+    /** Pot shatter particles, visible at the same range as the projectile. */
     public static void potShatter(ServerLevel level, Vec3 center, BlockState pot) {
         sendLongRange(level, new BlockParticleOption(ParticleTypes.BLOCK, pot), center, 40,
                 new Vec3(0.25D, 0.2D, 0.25D), 0.2D, 220.0D);

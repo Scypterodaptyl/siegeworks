@@ -7,9 +7,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.player.LocalPlayer;
 
-/** The client side of carrying a ladder: hands up on it, no running, and a click to set it down. */
+/** Client side of ladder carrying: raised arms, no sprinting, shift+use to put it down. */
 public final class LadderCarryClient {
-    /** Arms raised to the ladder over the head, a little apart. */
+    /** Arm pose for holding a ladder overhead. */
     private static final float ARMS_RAISED = (float) Math.toRadians(-170.0D);
     private static final float ARMS_APART = 0.22F;
 
@@ -17,8 +17,8 @@ public final class LadderCarryClient {
     }
 
     /**
-     * Before the game reads its keys: the hands are full, so clicks do nothing but a shift-click, which sets the
-     * ladder down, and the run key does nothing.
+     * Runs before key handling. While carrying, clicks are swallowed, shift+use sends the put-down request, and sprint
+     * is blocked.
      */
     public static void beforeTick(Minecraft minecraft) {
         LocalPlayer player = minecraft.player;
@@ -31,14 +31,14 @@ public final class LadderCarryClient {
             putDown |= player.isShiftKeyDown();
         }
         while (minecraft.options.keyAttack.consumeClick()) {
-            // Nothing to swing with.
+            // Attacks do nothing while carrying.
         }
         if (putDown && minecraft.screen == null) {
             SiegeworksNetworking.sendToServer(new LadderPutDownC2SPayload());
         }
     }
 
-    /** After the game has moved the player: a double tap of forward may have started a run, which ends here. */
+    /** Runs after movement: double-tapping forward can still start a sprint, so cancel it here. */
     public static void afterTick(Minecraft minecraft) {
         LocalPlayer player = minecraft.player;
         if (player != null && player.isSprinting() && LadderCarry.isCarrying(player)) {
@@ -46,7 +46,7 @@ public final class LadderCarryClient {
         }
     }
 
-    /** Leaving a world, or for another: the ladders seen carried there are gone with it. */
+    /** Clears client-side carry state on disconnect or dimension change. */
     public static void leaveWorld() {
         LadderCarry.forgetSeen();
     }

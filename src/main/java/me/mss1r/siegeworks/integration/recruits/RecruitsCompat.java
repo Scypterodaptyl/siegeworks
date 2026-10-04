@@ -69,7 +69,10 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class RecruitsCompat {
-    /** How far Recruits itself reaches with a command, so siege orders from its screen reach as far; map orders keep the RTS radius. */
+    /**
+     * Same range as Recruits' own commands, so siege orders from its screen reach as far. Map orders keep the RTS
+     * radius.
+     */
     static final double COMMAND_RANGE = 200.0D;
     private static final double COMMAND_RANGE_SQR = COMMAND_RANGE * COMMAND_RANGE;
     private static final ResourceLocation OPERATOR_TYPE = MinecraftVersionCompat.id(Siegeworks.MOD_ID, "recruits");
@@ -225,7 +228,7 @@ public final class RecruitsCompat {
         sendCommandFeedback(player, applied);
     }
 
-    /** Whether a recruit works, or rides in, on or behind, a machine of the selected type. */
+    /** Whether a recruit operates, rides, pushes or tows a machine of the selected type. */
     static boolean matchesSelectedMachine(AbstractRecruitEntity recruit, ResourceLocation siegeTypeId) {
         if (siegeTypeId == null) {
             return true;
@@ -280,7 +283,7 @@ public final class RecruitsCompat {
                         player.getBoundingBox().inflate(COMMAND_RANGE), chosen::test));
     }
 
-    /** Gives a fire zone to those of the recruits who work an artillery engine. */
+    /** Assigns a fire zone to the recruits operating artillery engines. */
     public static int applyFireZone(BlockPos center, int requestedRadiusX, int requestedRadiusZ,
                                     boolean rectangular, List<AbstractRecruitEntity> recruits) {
         int limit = SiegeworksServerConfig.getRecruitFireZoneMaxRadius();
@@ -1297,7 +1300,7 @@ public final class RecruitsCompat {
         );
     }
 
-    /** Brings the selected groups' recruits back into the towers they belong to. */
+    /** Sends the selected groups' recruits back into their towers. */
     private static int handleTowerReturn(ServerPlayer player, List<AbstractRecruitEntity> nearbyRecruits,
                                          Set<UUID> selectedGroups) {
         Set<SiegeTowerEntity> towers = new HashSet<>();
@@ -1364,8 +1367,8 @@ public final class RecruitsCompat {
     }
 
     /**
-     * Whether a tower's bridge can be had down for its crew: lowered by the player or their driver at the levers,
-     * or already lying on something they can step out onto.
+     * Whether a tower's bridge can be lowered for its crew: by the player or their driver at the levers, or it is
+     * already resting on something walkable.
      */
     static boolean bridgeWithinReach(ServerPlayer player, SiegeTowerEntity tower) {
         SiegeEngineerEntity engineer = operatorOf(tower);

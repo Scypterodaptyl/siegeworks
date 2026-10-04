@@ -18,7 +18,7 @@ public record SiegePoseRotation(float x, float y, float z) {
         return new SiegePoseRotation(x + other.x, y + other.y, z + other.z);
     }
 
-    /** A part turned by {@code child} inside a parent turned by this, as the single set of angles a model part takes. */
+    /** Combines a child rotation inside this parent rotation into one set of model part angles. */
     public SiegePoseRotation composedWith(SiegePoseRotation child) {
         return matrix().times(child.matrix()).toRotation();
     }
@@ -81,7 +81,7 @@ public record SiegePoseRotation(float x, float y, float z) {
             );
         }
 
-        /** Reads Z * Y * X angles back, the order a model part applies them in. */
+        /** Extracts Z*Y*X angles, the order model parts apply them in. */
         private SiegePoseRotation toRotation() {
             float y = (float) Math.asin(Mth.clamp(-m20, -1.0F, 1.0F));
             if (Math.abs(Mth.cos(y)) > 1.0E-6F) {

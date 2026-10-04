@@ -35,26 +35,26 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A player carrying a siege ladder in both hands. The ladder stays itself, an entity, and follows its carrier: a
- * short one level over the head, held at its middle, a long one held two thirds up with its foot dragging behind.
- * Carrying it takes the hands and the run out of the carrier; it is taken up at its foot and set down in front.
+ * Carrying a siege ladder with both hands. The ladder stays an entity and follows its carrier: ladders up to {@link
+ * #OVERHEAD_SECTIONS} sections are held level overhead at the middle, longer ones two thirds up with the foot dragging.
+ * While carrying, the player can't use items or sprint. Picked up at the foot, put down in front.
  */
 public final class LadderCarry {
     private static final String TAG_CARRIED = "SiegeworksCarriedLadder";
-    /** Where the raised hands hold a ladder: this high over the feet and this far before the body. */
+    /** Hand position: height above the feet and distance in front of the body. */
     private static final double HANDS_HEIGHT = 1.8D;
     private static final double HANDS_FORWARD = 0.25D;
-    /** A ladder this many sections long or shorter goes level over the head; a longer one drags its foot. */
+    /** Ladders with this many sections or fewer are carried level overhead; longer ones drag their foot. */
     public static final int OVERHEAD_SECTIONS = 2;
-    /** How far up a long ladder is held, as a share of its length from its foot. */
+    /** Grip position on a long ladder, as a fraction of its length from the foot. */
     private static final double GRIP_SHARE = 2.0D / 3.0D;
-    /** How near its foot a ladder has to be taken up. */
+    /** Max distance from the foot to pick a ladder up. */
     private static final double FOOT_REACH = 2.0D;
     private static final double FOOT_REACH_UP = 2.0D;
-    /** How far in front of its carrier a ladder is set down. */
+    /** Distance in front of the player where the ladder is put down. */
     private static final double PUT_DOWN_REACH = 1.0D;
     private static final double LADDER_HALF_WIDTH = 0.45D;
-    /** How much each part of a ladder, its base and every section, slows whoever carries it. */
+    /** Speed penalty per ladder part (the base and each section). */
     private static final double SLOWDOWN_PER_PART = 0.06D;
     //? if forge {
     /*private static final UUID SLOWDOWN_ID = UUID.fromString("5d0f4c8e-6c47-4b0b-9a3f-2f7f0a9f1c21");
@@ -68,7 +68,7 @@ public final class LadderCarry {
     private LadderCarry() {
     }
 
-    /** Where a carried ladder is: its foot, the way it points and how far it leans from upright, in degrees. */
+    /** Carried ladder pose: foot position, yaw, and lean from vertical in degrees. */
     public record Pose(Vec3 foot, float yaw, double leanDegrees) {
     }
 
@@ -84,14 +84,14 @@ public final class LadderCarry {
             lean = Math.toRadians(levelDegrees);
         } else {
             grip = length * GRIP_SHARE;
-            // Tilted so that the foot, below and behind the hands, rests on the ground the carrier walks on.
+            // Tilt so the foot, below and behind the hands, touches the ground.
             lean = Math.acos(Mth.clamp(HANDS_HEIGHT / grip, 0.0D, 1.0D));
         }
         Vec3 foot = hands.subtract(forward.scale(grip * Math.sin(lean))).subtract(0.0D, grip * Math.cos(lean), 0.0D);
         return new Pose(foot, yaw, Math.toDegrees(lean));
     }
 
-    /** Takes a ladder up into a player's hands, if the player stands at its foot with hands free for it. */
+    /** Picks the ladder up if the player is at its foot and not already carrying one. */
     public static boolean tryPickUp(Player player, SiegeLadderEntity ladder) {
         if (carried(player) != null) {
             player.displayClientMessage(Component.translatable("message.siegeworks.ladder.carrying_one"), true);
@@ -116,7 +116,7 @@ public final class LadderCarry {
         slow(player, ladder.getSections());
     }
 
-    /** Sets the ladder a player carries upright in front of them, to lean on what it falls against. */
+    /** Puts the carried ladder down upright in front of the player; it then leans onto whatever is ahead. */
     public static void putDown(Player player) {
         SiegeLadderEntity ladder = carried(player);
         if (ladder == null) {
@@ -136,7 +136,7 @@ public final class LadderCarry {
         player.level().playSound(null, ladder.blockPosition(), SoundEvents.WOOD_PLACE, SoundSource.PLAYERS, 1.0F, 0.8F);
     }
 
-    /** Lets go of a ladder where it is, as when its carrier falls: it drops from there and topples. */
+    /** Drops the ladder where it is, e.g. when the carrier dies; it falls and tips over. */
     public static void drop(SiegeLadderEntity ladder) {
         java.util.UUID carrier = ladder.carrierUuid();
         if (carrier != null && CARRIED.get(carrier) == ladder) {
@@ -154,7 +154,7 @@ public final class LadderCarry {
         ladder.endCarry();
     }
 
-    /** Forgets a carried ladder that is gone. */
+    /** Removes the carry entry for a ladder that was removed. */
     public static void forget(SiegeLadderEntity ladder) {
         java.util.UUID carrier = ladder.carrierUuid();
         if (carrier != null && CARRIED.get(carrier) == ladder) {
@@ -162,7 +162,7 @@ public final class LadderCarry {
         }
     }
 
-    /** The ladder a player carries, on the server, or null. */
+    /** Server: the ladder the player is carrying, or null. */
     @Nullable
     public static SiegeLadderEntity carried(Player player) {
         SiegeLadderEntity ladder = CARRIED.get(player.getUUID());
@@ -173,7 +173,7 @@ public final class LadderCarry {
         return ladder;
     }
 
-    /** Whether an entity carries a ladder, as either side knows it. */
+    /** True if the entity is carrying a ladder, on either side. */
     public static boolean isCarrying(Entity entity) {
         if (!entity.level().isClientSide) {
             return entity instanceof Player player && carried(player) != null;
@@ -182,7 +182,7 @@ public final class LadderCarry {
         return ladder != null && !ladder.isRemoved() && ladder.carrierId() == entity.getId();
     }
 
-    /** Notes on the client whom a ladder is carried by, as it learns so. */
+    /** Client: records who carries this ladder when it syncs. */
     public static void seen(SiegeLadderEntity ladder) {
         SEEN_CARRIED.values().removeIf(known -> known == ladder || known.isRemoved());
         if (ladder.isCarried() && !ladder.isRemoved()) {
@@ -190,12 +190,12 @@ public final class LadderCarry {
         }
     }
 
-    /** Forgets on the client every ladder it saw carried, as it leaves their world. */
+    /** Client: clears recorded carriers when leaving a world. */
     public static void forgetSeen() {
         SEEN_CARRIED.clear();
     }
 
-    /** A player leaving takes the ladder along, kept with them until they come back. */
+    /** On logout, stores the carried ladder in the player's data and removes it from the world. */
     public static void stash(Player player) {
         SiegeLadderEntity ladder = carried(player);
         if (ladder == null) {
@@ -208,7 +208,7 @@ public final class LadderCarry {
         ladder.discard();
     }
 
-    /** A player coming back, or into another world, carries again the ladder they left with. */
+    /** On login or dimension change, respawns the stored ladder in the player's hands. */
     public static void restore(Player player) {
         CompoundTag data = player.getPersistentData();
         if (!data.contains(TAG_CARRIED)) {
@@ -260,7 +260,7 @@ public final class LadderCarry {
         PlayerEvent.PLAYER_QUIT.register(LadderCarry::stash);
         PlayerEvent.PLAYER_JOIN.register(LadderCarry::restore);
         PlayerEvent.CHANGE_DIMENSION.register((player, from, to) -> {
-            // The ladder stayed behind in the world the player left; it goes with them.
+            // The ladder is still in the old dimension; move it with the player.
             if (carried(player) != null) {
                 stash(player);
                 restore(player);
@@ -280,7 +280,7 @@ public final class LadderCarry {
                 player.setSprinting(false);
             }
         });
-        // Both hands are on the ladder.
+        // Hands are busy: block interactions while carrying.
         InteractionEvent.RIGHT_CLICK_BLOCK.register((player, hand, pos, face) ->
                 isCarrying(player) ? EventResult.interruptFalse() : EventResult.pass());
         InteractionEvent.RIGHT_CLICK_ITEM.register((player, hand) -> isCarrying(player)

@@ -6,6 +6,6 @@ public enum SiegeBlockDamage {
     EVERYWHERE,
     /** Only where the player behind the engine could break the block by hand. */
     RESPECT_PROTECTION,
-    /** Nowhere: siege weapons harm creatures and engines but leave blocks whole. */
+    /** Nowhere: entities and engines still take damage, blocks don't. */
     NEVER
 }

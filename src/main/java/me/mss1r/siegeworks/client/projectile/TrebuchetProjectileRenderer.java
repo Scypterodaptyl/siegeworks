@@ -39,7 +39,7 @@ public class TrebuchetProjectileRenderer extends EntityRenderer<TrebuchetProject
         if (stoneState != null && (entity.getType() == SiegeworksEntities.MANGONEL_PROJECTILE.get()
                 || entity.getType() == SiegeworksEntities.TREBUCHET_PROJECTILE.get())) {
             poseStack.pushPose();
-            // A load leaves the arm turning over forwards with it, about the one axis across its flight.
+            // A load keeps tumbling forward after release, around the axis perpendicular to its flight.
             float heading = Mth.rotLerp(tickDelta, entity.yRotO, entity.getYRot());
             float spin = (entity.tickCount + tickDelta) * TrebuchetProjectile.SPIN_DEGREES_PER_TICK;
             float scale = entity.drawnSize();
@@ -72,15 +72,15 @@ public class TrebuchetProjectileRenderer extends EntityRenderer<TrebuchetProject
     }
 
     /**
-     * The fire pot's block model sits in the lower middle of its block at half its size; this stretches it over
-     * the whole block, so a pot is drawn as large and as centred as a stone.
+     * The fire pot model is half-size in the lower middle of its block. This scales it to fill the block, so it renders
+     * at the same size and position as a stone.
      */
     public static void fillBlockWithFirePot(PoseStack poseStack) {
         poseStack.translate(-0.5F, 0.0F, -0.5F);
         poseStack.scale(2.0F, 2.0F, 2.0F);
     }
 
-    /** Draws a loaded fire pot on a bone the way GeckoLib draws a block there, at a stone's size. */
+    /** Renders a loaded fire pot on a bone the way GeckoLib renders a block, at stone size. */
     public static void renderFirePot(PoseStack poseStack, BlockState state, MultiBufferSource bufferSource,
                                      int packedLight, int packedOverlay) {
         poseStack.pushPose();

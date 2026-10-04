@@ -75,7 +75,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity, SiegeClimbableControl {
-    /** A ladder may be its base alone, as it comes from the crafting table. */
+    /** A ladder can be just its base, as crafted. */
     public static final int MIN_SECTIONS = 0;
     public static final int MAX_SECTIONS = 4;
 
@@ -95,7 +95,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
     private static final String TAG_LEGACY_RELOCATION_OWNER = "RelocationOwner";
 
     private static final int DEPLOY_DELAY_TICKS = 35;
-    /** How long a ladder set down stands before it tips onto what is in front of it. */
+    /** Ticks a ladder stands upright after being put down before it tips forward. */
     private static final int PUT_DOWN_STAND_TICKS = 10;
     private static final double BLOCKBENCH_SECTION_LENGTH = 48.0D / 16.0D;
     private static final double LADDER_HALF_WIDTH = 7.5D / 16.0D;
@@ -140,7 +140,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
             });
     @Nullable
     private UUID carrierUuid;
-    /** The carrier itself, on the server, wherever it is kept. */
+    /** Server only: the carrying player. */
     @Nullable
     private Player carrier;
     private final LadderClimberSupport climberSupport = new LadderClimberSupport(
@@ -240,7 +240,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
             return;
         }
         if (!isFullyBuilt()) {
-            // A ladder being built stands upright where it is put; nobody climbs or leans it until it is done.
+            // While under construction the ladder stays upright in place: no climbing, no leaning.
             StructureMotionSystem.tickStructure(this);
             return;
         }
@@ -256,7 +256,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
 
     @Override
     public List<CollisionGroup> collisionGroups() {
-        // A ladder carried over the head stops nobody and holds nobody up.
+        // A carried ladder has no collision.
         return isCarried() ? List.of() : collisionGroups(builtStages(), getLeanAngleDegrees());
     }
 
@@ -283,7 +283,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         return carrier;
     }
 
-    /** Goes into a player's hands: nobody stays on it, and it stops leaning on anything. */
+    /** Starts carrying: ejects passengers and stops leaning. */
     public void beginCarry(Player carrier) {
         entityData.set(CARRIER_ID, carrier.getId());
         carrierUuid = carrier.getUUID();
@@ -293,7 +293,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         restingOnSurface = false;
     }
 
-    /** Leaves its carrier's hands where it is; it falls from there and topples as a ladder does. */
+    /** Stops carrying; the ladder falls and tips from where it is. */
     public void endCarry() {
         entityData.set(CARRIER_ID, -1);
         carrierUuid = null;
@@ -303,7 +303,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         setDeployTicks(DEPLOY_DELAY_TICKS);
     }
 
-    /** Stands upright at {@code foot}, facing {@code yaw}, to tip a moment later onto whatever is before it. */
+    /** Stands upright at {@code foot}, facing {@code yaw}, then tips forward shortly after. */
     public void standAt(Vec3 foot, float yaw) {
         setPos(foot);
         applyYaw(yaw);
@@ -313,7 +313,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         setDeployTicks(DEPLOY_DELAY_TICKS - PUT_DOWN_STAND_TICKS);
     }
 
-    /** Follows its carrier's hands; on the server it falls the moment its carrier is gone. */
+    /** Follows the carrier's hands. On the server, drops the ladder if the carrier is gone. */
     private void tickCarried() {
         Entity carrier = level().isClientSide ? level().getEntity(carrierId()) : this.carrier;
         if (!level().isClientSide && (carrier == null || carrier.isRemoved() || !carrier.isAlive()
@@ -344,7 +344,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         super.remove(reason);
     }
 
-    /** The parts of the ladder that stand: its base and built sections, all of it once finished. */
+    /** Number of standing parts: the base plus built sections, or all parts once finished. */
     private int builtStages() {
         int whole = 1 + getSections();
         return isFullyBuilt() ? whole : Math.min(whole, builtSections());
@@ -365,7 +365,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         return List.of();
     }
 
-    /** The collision of a ladder whose first {@code stages} parts stand: its base, then its sections in turn. */
+    /** Collision for a ladder whose first {@code stages} parts are built: base first, then sections. */
     private static List<CollisionGroup> collisionGroups(int stages, float leanDegrees) {
         if (stages <= 0) {
             return List.of();
@@ -389,7 +389,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         return List.copyOf(groups);
     }
 
-    /** A ladder build ended early stands as tall as the sections it got. */
+    /** An early-finished build keeps only the sections that were built. */
     @Override
     public void applyBuiltData(java.util.Map<String, Integer> data) {
         setSections(data.getOrDefault(SiegeLadderDeploymentItem.TAG_SECTIONS, MIN_SECTIONS));
@@ -606,7 +606,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        // In the hands it is out of harm: a low doorway or a ceiling it passes under does not break it.
+        // Carried ladders are invulnerable, so low ceilings and doorways don't break them.
         if (isCarried()) {
             return false;
         }
@@ -755,7 +755,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
             return InteractionResult.SUCCESS;
         }
 
-        // Taken up in the hands at its foot, not into a pocket.
+        // Picked up into the hands, not the inventory.
         if (LadderCarry.tryPickUp(player, this)) {
             claimOwnership(player.getUUID());
             if (getDeploymentOwnerUuid() == null) {

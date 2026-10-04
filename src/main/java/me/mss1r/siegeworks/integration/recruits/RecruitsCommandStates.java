@@ -26,18 +26,17 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 /**
- * Which siege commands the Recruits screen may offer the selected groups, and why the rest are refused. Each state
- * follows the rule its command is carried out by, so a button that lights up always does something.
+ * Which siege commands the Recruits screen can offer the selected groups, and why the others are unavailable. Each
+ * state uses the same rule as the command itself, so an enabled button always does something.
  *
- * <p>States are keyed by the screen's button: {@code target.<button>} for the machine looked at,
- * {@code <TYPE>.<button>} for a machine type's tab, and a bare {@code <button>} for the rest. A key that maps to
- * null may be used.</p>
+ * <p>States are keyed by button: {@code target.<button>} for the machine being looked at, {@code <TYPE>.<button>} for a
+ * machine type tab, and plain {@code <button>} otherwise. A null value means the button is usable.</p>
  */
 public final class RecruitsCommandStates {
     private RecruitsCommandStates() {
     }
 
-    /** The machine types the groups are tied to, and the state of every button the screen can show them. */
+    /** Machine types the groups are tied to, and the state of every button the screen can show. */
     public record States(List<SiegeCommandType> types, Map<String, Component> refusals) {
         public List<String> typeNames() {
             return types.stream().map(Enum::name).toList();
@@ -159,7 +158,7 @@ public final class RecruitsCommandStates {
                         && !(type.kind() == SiegeCommandType.Kind.LADDER))
                 ? null : reason("nobody_aboard"));
 
-        // Weapon, bridge and flap orders go to the selected groups' own man at the levers.
+        // Weapon, bridge and flap orders go to the recruit operating the selected group's machine.
         boolean manned = machines.stream().anyMatch(machine -> {
             SiegeEngineerEntity operator = RecruitsCompat.operatorOf(machine);
             return operator != null && chosen.test(operator);
@@ -192,7 +191,7 @@ public final class RecruitsCommandStates {
         }
     }
 
-    /** As the unload order picks its towers: those the groups ride in or drive. */
+    /** Towers chosen the same way as the unload order: ones the groups ride in or drive. */
     @Nullable
     private static Component towerUnload(ServerPlayer player, List<AbstractRecruitEntity> recruits) {
         Set<SiegeTowerEntity> towers = new LinkedHashSet<>();
@@ -207,7 +206,7 @@ public final class RecruitsCommandStates {
                 recruit -> RecruitsCompat.isCommandable(player, recruit)), reason("nobody_inside"));
     }
 
-    /** As the return order picks its towers: those the groups' men on foot belong to. */
+    /** Towers chosen the same way as the return order: ones the groups' recruits on foot belong to. */
     @Nullable
     private static Component towerReturn(ServerPlayer player, List<AbstractRecruitEntity> recruits,
                                          Predicate<AbstractRecruitEntity> chosen) {
@@ -241,7 +240,7 @@ public final class RecruitsCommandStates {
         return first;
     }
 
-    /** Every machine of a known type the groups work, ride in, push, draw or belong to. */
+    /** Every machine of a known type the groups operate, ride, push, tow or belong to. */
     private static Map<SiegeCommandType, List<AbstractSiegeEntity>> tiedMachines(
             ServerPlayer player, List<AbstractRecruitEntity> recruits) {
         Map<SiegeCommandType, List<AbstractSiegeEntity>> machines = new LinkedHashMap<>();

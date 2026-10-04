@@ -16,7 +16,7 @@ import java.util.List;
 
 public final class SiegeAmmo {
     public static final String AMMO_STONE = "stone";
-    /** A pot loaded with its wick in, which can be lit; {@link #AMMO_POT} is one without. */
+    /** Ammo key for a pot with a wick, which can be lit; {@link #AMMO_POT} is a pot without one. */
     public static final String AMMO_FIRE = "fire";
     public static final String AMMO_POT = "pot";
     public static final String AMMO_GRAPESHOT = "siegeworks:grapeshot";
@@ -53,7 +53,7 @@ public final class SiegeAmmo {
     }
 
     @Nullable
-    /** The block a loaded or flying stone, bag of grapeshot or fire pot is drawn as, or null for none. */
+    /** Block used to render a loaded or flying stone, grapeshot bag or pot, or null. */
     public static BlockState projectileBlockState(String ammo) {
         if (isGrapeshotAmmoKey(ammo)) {
             return SiegeworksBlocks.GRAPESHOT.get().defaultBlockState();
@@ -86,12 +86,12 @@ public final class SiegeAmmo {
                 || "minecraft:dripstone_block".equals(ammo);
     }
 
-    /** Whether the load is a pot sealed with its wick, which can be lit. */
+    /** True if the load is a sealed pot that can be lit. */
     public static boolean isLightablePotKey(String ammo) {
         return AMMO_FIRE.equals(ammo) || "siegeworks:fire_projectile".equals(ammo);
     }
 
-    /** Whether the load is a pot, with or without its wick. */
+    /** True if the load is a pot, sealed or not. */
     public static boolean isFireAmmoKey(String ammo) {
         return AMMO_FIRE.equals(ammo) || AMMO_POT.equals(ammo) || "siegeworks:fire_projectile".equals(ammo);
     }

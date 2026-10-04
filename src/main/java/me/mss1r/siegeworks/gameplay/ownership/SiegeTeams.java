@@ -24,7 +24,7 @@ public final class SiegeTeams {
         return teamOf(level.getServer(), playerUuid);
     }
 
-    /** Whether the player or anyone on their team is online to defend what they own. */
+    /** True if the player or a teammate is online to defend their property. */
     public static boolean sideOnline(Level level, UUID playerUuid) {
         MinecraftServer server = level.getServer();
         if (server == null) {

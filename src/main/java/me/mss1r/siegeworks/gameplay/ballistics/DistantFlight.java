@@ -10,9 +10,8 @@ import java.util.Set;
 import java.util.WeakHashMap;
 
 /**
- * Flies on shots that have gone past the simulation distance, where the server stops moving entities, through
- * the chunks still loaded beyond it, so a shot at a wall that far off gets there instead of hanging in the air.
- * A shot that leaves the loaded world is gone: nobody is there to see it land.
+ * Keeps simulating shots past the simulation distance, where the server stops ticking entities, as long as their chunks
+ * are loaded; otherwise a shot at a distant wall would hang in the air. Shots that leave loaded chunks are removed.
  */
 public final class DistantFlight {
     private static final Set<SiegeProjectile> SHOTS = Collections.newSetFromMap(new WeakHashMap<>());

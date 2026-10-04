@@ -18,7 +18,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 import java.util.Map;
 
-/** The server's projectile profiles, so clients fly predicted projectiles the way the server does. */
+/** Server projectile profiles, so clients predict projectiles the same way. */
 //? if forge {
 /*
 public record ProjectileProfilesS2CPayload(Map<ResourceLocation, ProjectilePhysicsProfile> profiles) {

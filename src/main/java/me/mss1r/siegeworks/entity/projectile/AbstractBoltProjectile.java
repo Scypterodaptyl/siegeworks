@@ -489,7 +489,7 @@ public abstract class AbstractBoltProjectile extends SiegeProjectile {
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
-        // Before its first tick a bolt has no earlier angle to turn from, so it appears already pointing its way.
+        // On its first tick a bolt has no previous rotation, so start it already aligned with its velocity.
         if (level().isClientSide && tickCount == 0 && (RENDER_YAW.equals(key) || RENDER_PITCH.equals(key))) {
             renderYawO = getRenderYaw();
             renderPitchO = getRenderPitch();

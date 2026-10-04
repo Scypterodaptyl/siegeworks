@@ -26,8 +26,8 @@ public final class MinecraftVersionCompat {
     }
 
     /**
-     * A resource location. Forge 1.20.1 only gained the 1.21 factory in 47.3 and OptiFine replaces the class without
-     * it, so 1.20.1 builds use the constructor every 1.20.1 has.
+     * Creates a resource location. Forge 1.20.1 only added the 1.21 factory in 47.3 and OptiFine replaces the class
+     * without it, so 1.20.1 uses the constructor.
      */
     @SuppressWarnings("removal")
     public static ResourceLocation id(String namespace, String path) {

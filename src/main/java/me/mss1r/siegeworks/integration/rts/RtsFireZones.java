@@ -37,7 +37,7 @@ final class RtsFireZones {
         });
     }
 
-    /** The recruits a map order names, wherever they are: the map commands them from any distance. */
+    /** Recruits named by a map order, at any distance: the map commands them from anywhere. */
     private static List<AbstractRecruitEntity> named(ServerPlayer commander, List<UUID> members) {
         List<AbstractRecruitEntity> recruits = new ArrayList<>(members.size());
         for (UUID id : new LinkedHashSet<>(members)) {

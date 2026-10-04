@@ -60,7 +60,7 @@ public final class SiegeImpactBalanceGameTests {
     private static final int HALF_WIDTH = 7;
     private static final int THICKNESS = 9;
     private static final String MAPS = "impact-balance-maps.txt";
-    /** How thick the stone walls people build are, which a siege has to breach. */
+    /** Typical thickness of player-built stone walls. */
     private static final int BREACHED_WALL = 6;
 
     private SiegeImpactBalanceGameTests() {
@@ -86,8 +86,8 @@ public final class SiegeImpactBalanceGameTests {
                             + " Mons Meg stone {}, terracotta {}, stone ground {}, sandstone ground {}, slope {}",
                     culverinStone, culverinEarth, culverinBricks, culverinSlope, monsMegStone, monsMegTerracotta,
                     monsMegGround, monsMegSand, monsMegSlope);
-            // A culverin reloads in about nineteen seconds, the trebuchet in twenty-six and Mons Meg in sixty-four:
-            // each breaches a stone wall of the thickness people build in four to ten minutes of fire.
+            // Reload times: culverin ~19 s, trebuchet 26 s, Mons Meg 64 s. Each should breach a typical stone wall in
+            // four to ten minutes of fire.
             int culverinBreach = shotsToBreach(helper, CANNON_BALL, CULVERIN_SPEED, BREACHED_WALL);
             int monsMegBreach = shotsToBreach(helper, GIANT_CANNON_BALL, MONS_MEG_SPEED, BREACHED_WALL);
             int trebuchetBreach = shotsToBreach(helper, TREBUCHET_STONE, TREBUCHET_SPEED, BREACHED_WALL);
@@ -126,9 +126,9 @@ public final class SiegeImpactBalanceGameTests {
     }
 
     /**
-     * Fires shot after shot at the middle of a stone wall {@code thickness} blocks thick, scattered within a block
-     * and a half of the aim as a laid gun scatters, until at least six openings go clean through it, a breach a man
-     * can get through; returns how many shots it took, or -1 past three hundred.
+     * Fires at the middle of a stone wall {@code thickness} blocks thick, with up to 1.5 blocks of scatter, until at
+     * least six blocks are open all the way through (a breach a player fits through). Returns the shot count, or -1
+     * after 300 shots.
      */
     static int shotsToBreach(GameTestHelper helper, ResourceLocation profileId, double speed, int thickness) {
         ServerLevel level = helper.getLevel();
@@ -147,8 +147,7 @@ public final class SiegeImpactBalanceGameTests {
         java.util.Random scatter = new java.util.Random(7L);
         int shots = -1;
         for (int shot = 1; shot <= 300 && shots < 0; shot++) {
-            // Laid on whichever of the six blocks of the breach still has the most wall behind it, as a gunner cuts
-            // one, within a gun's scatter.
+            // Aim at whichever of the six breach blocks has the most wall left behind it, plus scatter.
             int cell = 0;
             int mostWall = -1;
             for (int candidate = 0; candidate < 6; candidate++) {
@@ -202,7 +201,7 @@ public final class SiegeImpactBalanceGameTests {
         return shots;
     }
 
-    /** What a shot broke: blocks gone, how many layers in from the struck face, and how many of the face itself. */
+    /** Blocks a shot removed: total, depth in layers from the struck face, and on the face itself. */
     private record Crater(int gone, int deep, int across) {
         @Override
         public String toString() {
@@ -210,7 +209,7 @@ public final class SiegeImpactBalanceGameTests {
         }
     }
 
-    /** A wall of {@code block} struck square on in the middle of its face, drawn from that face inward. */
+    /** A wall of {@code block} hit square in the middle of its face, mapped from the face inward. */
     private static Crater wall(GameTestHelper helper, Block block, ResourceLocation profileId, double speed,
                                List<String> maps) {
         BlockPos face = helper.absolutePos(new BlockPos(HALF_WIDTH + 2, 1, 4));
@@ -221,8 +220,8 @@ public final class SiegeImpactBalanceGameTests {
     }
 
     /**
-     * Flat ground of {@code block}, or a slope climbing away from the gun in steps of two blocks, struck in the
-     * middle by a shot coming down at 45 degrees, drawn from the top down.
+     * Flat ground of {@code block}, or a slope rising away from the gun in two-block steps, hit in the middle by a shot
+     * descending at 45 degrees; mapped top down.
      */
     private static Crater ground(GameTestHelper helper, Block block, ResourceLocation profileId, double speed,
                                  boolean slope, List<String> maps) {
@@ -245,7 +244,7 @@ public final class SiegeImpactBalanceGameTests {
         for (BlockPos pos : BlockPos.betweenClosed(min.offset(-2, -2, -2), max.offset(2, 8, 2))) {
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), 2);
         }
-        // Let the cleared blocks' cracks be forgotten before the blocks go up in their place.
+        // Clear crack data for the removed blocks before they are rebuilt.
         StructuralDamageSystem.tick(level);
         Set<BlockPos> laid = new HashSet<>();
         for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
@@ -257,7 +256,7 @@ public final class SiegeImpactBalanceGameTests {
 
         ProjectilePhysicsProfile physics = SiegeProfileCatalogs.PROJECTILES.get(profileId);
         double diameter = physics.diameter().orElse(0.5D);
-        // Strike as a shot does: through what it can, then spend what it still carries where it stopped.
+        // Same as a real hit: penetrate as far as possible, then spend the remaining energy where it stopped.
         ProjectileImpacts.Drive drive = ProjectileImpacts.drive(level, physics, diameter, entry, struck, velocity,
                 null);
         if (!drive.passedThrough()) {
@@ -289,8 +288,8 @@ public final class SiegeImpactBalanceGameTests {
     }
 
     /**
-     * The crater around {@code struck}, one layer after another from the struck face inward: # whole, 1-9
-     * cracked, . gone, ? something else, blank where nothing was laid.
+     * Crater map around {@code struck}, layer by layer from the face inward: # intact, 1-9 cracked, . gone, ? other
+     * block, blank where nothing was placed.
      */
     private static List<String> draw(ServerLevel level, Block block, Set<BlockPos> laid, BlockPos struck,
                                      boolean fromAbove) {

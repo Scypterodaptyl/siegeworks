@@ -46,10 +46,10 @@ public final class ShotFlightGameTests {
         helper.succeed();
     }
 
-    /** The trebuchet throws its 100 kg stone 200 m, as far as its reconstruction at Castelnaud does. */
+    /** The trebuchet throws a 100 kg stone 200 m, matching the reconstruction at Castelnaud. */
     @GameTest(template = "empty")
     public static void trebuchetThrowsAsFarAsCastelnaudsReconstruction(GameTestHelper helper) {
-        // It lets go of its stone 25.65 blocks up, at 45 degrees.
+        // Release point: 25.65 blocks up, at 45 degrees.
         double trebuchet = SiegeBallistics.range(launchSpeed(SiegeworksEntities.TREBUCHET_ENTITY.get()), 45.0D,
                 25.65D, air(SiegeworksEntities.TREBUCHET_PROJECTILE.get()));
         helper.assertTrue(trebuchet >= 185.0D && trebuchet <= 215.0D,
@@ -91,13 +91,13 @@ public final class ShotFlightGameTests {
     }
 
     /**
-     * A Mons Meg ball tears through a screen of leaves and flies on, not stopped by the debris it throws up. Its own
-     * batch: the ball flies sixty blocks past its test, where the tests beside it would stand.
+     * A Mons Meg ball passes through a wall of leaves without being stopped by the debris. Own batch: the ball lands
+     * sixty blocks past the test area.
      */
     @GameTest(template = "empty", timeoutTicks = 40, batch = "long_flight")
     public static void aShotFliesOnThroughTheLeavesItTears(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        // The gun has no owner to answer for what its shot breaks, which only an everywhere rule allows.
+        // The gun has no owner, so block damage needs the EVERYWHERE rule.
         SiegeBlockDamage before = SiegeworksServerConfig.getBlockDamage();
         SiegeworksServerConfig.setBlockDamage(SiegeBlockDamage.EVERYWHERE);
         BlockPos origin = helper.absolutePos(new BlockPos(1, 2, 1));

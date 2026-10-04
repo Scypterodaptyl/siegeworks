@@ -100,8 +100,8 @@ public final class SiegeAimingController {
     }
 
     /**
-     * Starts a tick's glide from where the aim was drawn last, not from where it is now: an aim the server turns
-     * arrives before the tick begins, and starting from it would stand the aim still until the next one.
+     * Interpolates from the aim rendered last, not the current one: server aim updates arrive before the tick starts,
+     * and starting from them would freeze the aim until the next update.
      */
     public void capturePreviousRenderState() {
         float currentYaw = host.aimingRenderYaw();

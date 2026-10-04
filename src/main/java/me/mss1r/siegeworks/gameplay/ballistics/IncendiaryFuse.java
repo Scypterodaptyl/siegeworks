@@ -26,15 +26,14 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * The fuse of an incendiary pot. A pot only bursts into fire once lit: then it bursts where it strikes, or wherever
- * it is when the fuse burns down, whether placed, loaded in a stone thrower or in flight.
+ * Pot fuse. A pot only bursts into fire once lit: on impact, or wherever it is when the fuse runs out (placed, loaded
+ * or in flight).
  */
 public final class IncendiaryFuse {
-    /** A fuse that is not burning. */
     public static final int UNLIT = -1;
     /**
-     * Along a pot drawn as a stone-sized load, from the load's centre in units of its size: where the fuse ends,
-     * and where it leaves the pot's mouth.
+     * Positions along a stone-sized pot load, from its centre in units of load size: the wick tip, and where the wick
+     * leaves the pot.
      */
     public static final double WICK_TIP = 1.625D;
     public static final double WICK_BASE = 1.25D;
@@ -44,17 +43,15 @@ public final class IncendiaryFuse {
     private IncendiaryFuse() {
     }
 
-    /** How long a freshly lit fuse burns, in ticks. */
     public static int fullLength() {
         return SiegeworksServerConfig.getIncendiaryFuseTicks();
     }
 
-    /** Whether a player holds what lights a fuse. */
     public static boolean canStrike(ItemStack stack) {
         return stack.is(Items.FLINT_AND_STEEL);
     }
 
-    /** Strikes the flint and steel a player holds at a fuse, wearing it as lighting a fire does. */
+    /** Plays the lighting sounds at {@code at} and damages the flint and steel like lighting a fire. */
     public static void strike(Player player, InteractionHand hand, Level level, Vec3 at) {
         level.playSound(null, at.x, at.y, at.z, SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS,
                 1.0F, 0.9F + level.random.nextFloat() * 0.2F);
@@ -65,8 +62,8 @@ public final class IncendiaryFuse {
     }
 
     /**
-     * Sparks spitting off a burning fuse and its smoke, on the client, where it has burnt down to: from its tip at
-     * {@code burnt} 0 to the pot at 1. They fly out along the fuse, away from the pot.
+     * Client: fuse sparks and smoke at the burning point, from the tip at {@code burnt} = 0 to the pot at 1. Sparks fly
+     * outward along the wick.
      */
     public static void sparkle(Level level, Vec3 tip, Vec3 pot, double burnt) {
         Vec3 at = tip.lerp(pot, Mth.clamp(burnt, 0.0D, 1.0D));
@@ -86,14 +83,14 @@ public final class IncendiaryFuse {
         return (level.random.nextDouble() * 2.0D - 1.0D) * SPARK_SCATTER;
     }
 
-    /** How far down a fuse has burnt, from 0 when just lit to 1 when it reaches the pot. */
+    /** Fraction of the fuse burnt: 0 when just lit, 1 when it reaches the pot. */
     public static double burnt(int ticksLeft) {
         return ticksLeft < 0 ? 0.0D : 1.0D - (double) ticksLeft / Math.max(1, fullLength());
     }
 
     /**
-     * A pot bursting where it is, as one striking there would, after {@code delayTicks}: at once, or a moment later
-     * so a chain of them ripples. An engine that held it answers for it, else {@code responsible}.
+     * Bursts a pot at {@code at} after {@code delayTicks}: immediately, or slightly later so chained pots ripple. Blame
+     * goes to the owning engine, otherwise {@code responsible}.
      */
     public static void burst(ServerLevel level, Vec3 at, PotFilling filling, int delayTicks,
                              EntityType<TrebuchetProjectile> type, ResourceLocation profile, double baseDamage,
@@ -117,7 +114,7 @@ public final class IncendiaryFuse {
         level.addFreshEntity(pot);
     }
 
-    /** A pot set down bursting, as one thrown by a mangonel would. */
+    /** Bursts a placed pot using the mangonel pot's profile. */
     public static void burstPlaced(ServerLevel level, Vec3 at, PotFilling filling, int delayTicks,
                                    @Nullable UUID responsible) {
         burst(level, at, filling, delayTicks, SiegeworksEntities.MANGONEL_PROJECTILE.get(),

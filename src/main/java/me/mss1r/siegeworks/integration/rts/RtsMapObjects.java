@@ -108,7 +108,7 @@ final class RtsMapObjects {
                 && SiegeAccess.relationOf(player.getUUID(), siege) != SiegeRelation.HOSTILE;
     }
 
-    /** Other sides' engines appear only where the player or one of their recruits can see them. */
+    /** Other teams' engines are only shown where the player or one of their recruits can see them. */
     private static boolean scouted(ServerPlayer player, AbstractSiegeEntity siege,
                                    List<AbstractRecruitEntity> scouts) {
         if (player.distanceToSqr(siege) <= SCOUTING_RANGE_SQR) {

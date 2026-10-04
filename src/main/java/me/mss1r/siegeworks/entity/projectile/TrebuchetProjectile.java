@@ -38,12 +38,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
-/** The load of a mangonel or trebuchet: a stone, or a fire pot when its profile carries fire. */
+/** Mangonel or trebuchet load: a stone, or a pot once {@link #setFilling} is called. */
 public class TrebuchetProjectile extends SiegeProjectile {
     private static final String TAG_TEXTURE_NAME = "TextureName";
     private static final String TAG_FUSE = "Fuse";
     private static final String TAG_FILLING = "Filling";
-    /** How fast a load turns over in flight, as it is drawn. */
+    /** Tumble speed in flight, used for rendering. */
     public static final float SPIN_DEGREES_PER_TICK = 12.0F;
 
     protected static final EntityDataAccessor<String> TEXTURE_NAME;
@@ -69,11 +69,11 @@ public class TrebuchetProjectile extends SiegeProjectile {
         data.define(FUSE, IncendiaryFuse.UNLIT);
     }
 
-    /** What the pot it is holds, or null for a stone. */
+    /** Pot contents, or null for a stone. */
     @Nullable
     private PotFilling filling;
 
-    /** Makes it a pot holding this, drawn with its wick or without. */
+    /** Makes this a pot with the given filling, rendered with or without a wick. */
     public void setFilling(PotFilling filling) {
         this.filling = filling;
         setTextureName(filling.wick() ? SiegeAmmo.AMMO_FIRE : SiegeAmmo.AMMO_POT);
@@ -96,13 +96,13 @@ public class TrebuchetProjectile extends SiegeProjectile {
     @Override
     public void tick() {
         super.tick();
-        // Only a fire pot is ever lit; the client knows the fuse but not the pot's profile.
+        // Only pots are ever lit. The client knows the fuse but not the profile.
         if (isRemoved() || !isLit()) {
             return;
         }
         int left = entityData.get(FUSE);
         if (level().isClientSide) {
-            // The fuse turns over with the pot as it is drawn.
+            // Rotate the wick with the pot's tumble.
             double heading = getYRot() * Mth.DEG_TO_RAD;
             double spin = tickCount * SPIN_DEGREES_PER_TICK * Mth.DEG_TO_RAD;
             Vec3 fuse = new Vec3(Math.sin(heading) * Math.sin(spin), Math.cos(spin),
@@ -118,12 +118,12 @@ public class TrebuchetProjectile extends SiegeProjectile {
         entityData.set(FUSE, left - 1);
     }
 
-    /** The size of the stone-sized block this load is drawn as. */
+    /** Render size of the load's block. */
     public float drawnSize() {
         return getType() == SiegeworksEntities.TREBUCHET_PROJECTILE.get() ? 0.75F : 0.5F;
     }
 
-    /** Bursts a lit fire pot where it is now, as it would on striking. */
+    /** Bursts a lit pot at its current position, as on impact. */
     public void burstWhereItIs(ServerLevel serverLevel) {
         burst(serverLevel, position(), getDeltaMovement().length());
     }
@@ -156,7 +156,7 @@ public class TrebuchetProjectile extends SiegeProjectile {
         if (tag.contains(TAG_FILLING)) {
             filling = PotFilling.load(tag.getCompound(TAG_FILLING));
         } else if (SiegeAmmo.isFireAmmoKey(getTextureName())) {
-            // A pot thrown before pots were filled by hand carries the standard filling.
+            // Pots thrown before hand filling existed carry the standard filling.
             filling = PotFilling.standard();
         }
     }
@@ -173,7 +173,7 @@ public class TrebuchetProjectile extends SiegeProjectile {
         return filling != null;
     }
 
-    /** Whether it bursts into fire where it lands: a lit pot with a base in it. Any other pot just breaks. */
+    /** True for a lit pot with a base; any other pot just shatters. */
     private boolean bursts() {
         return filling != null && filling.hasBase() && isLit();
     }
@@ -256,7 +256,7 @@ public class TrebuchetProjectile extends SiegeProjectile {
         this.discard();
     }
 
-    /** A pot breaking unlit: it shatters like any clay pot, and what it held is lost unburnt. */
+    /** Unlit pot: shatters like a clay pot and its contents are lost. */
     private void shatter(ServerLevel serverLevel, Vec3 impact) {
         serverLevel.playSound(null, impact.x, impact.y, impact.z,
                 SoundEvents.DECORATED_POT_SHATTER, SoundSource.PLAYERS, 2.5F, 0.8F + random.nextFloat() * 0.2F);
@@ -264,14 +264,14 @@ public class TrebuchetProjectile extends SiegeProjectile {
         this.discard();
     }
 
-    /** A lit pot breaking open: it spreads fire and sets alight whoever its splash reaches. */
+    /** Lit pot: spreads fire and sets entities in the splash radius on fire. */
     private void burst(ServerLevel serverLevel, Vec3 impact, double speed) {
         ProjectilePhysicsProfile physics = getPhysicsProfile();
         PotFilling.Burst payload = (filling != null ? filling : PotFilling.standard()).burst();
         arrive(serverLevel, impact, speed);
         Set<LivingEntity> burned = new HashSet<>(
                 ProjectileBlastResolver.applyShock(serverLevel, impact, this, physics, null, speed));
-        // The burning fill splashes over whoever it can reach, however gently the pot broke.
+        // Burn every entity within the fire radius that has line of sight, regardless of impact speed.
         double splash = payload.fireRadius();
         for (LivingEntity reached : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 new AABB(impact, impact).inflate(splash), LivingEntity::isAlive)) {
@@ -288,10 +288,7 @@ public class TrebuchetProjectile extends SiegeProjectile {
         this.discard();
     }
 
-    /**
-     * The pot cracking open and its fill catching, and its powder, if it holds any, going off with a bang that grows
-     * louder and deeper with how much there is.
-     */
+    /** Shatter and ignition sounds, plus an explosion that gets louder and deeper with more gunpowder. */
     private void playBurstSounds(ServerLevel serverLevel, Vec3 at, double blastEnergy) {
         serverLevel.playSound(null, at.x, at.y, at.z, SoundEvents.DECORATED_POT_SHATTER, SoundSource.PLAYERS,
                 2.5F, 0.8F + random.nextFloat() * 0.15F);

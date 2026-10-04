@@ -6,7 +6,7 @@ import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
-/** Keeps every client's projectile profiles equal to the server's: on joining and after each reload. */
+/** Syncs projectile profiles to clients on join and after each reload. */
 public final class ProjectileProfileSync {
     private ProjectileProfileSync() {
     }

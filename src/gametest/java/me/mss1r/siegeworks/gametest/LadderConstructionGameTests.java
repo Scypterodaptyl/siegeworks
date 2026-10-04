@@ -56,7 +56,7 @@ import java.util.UUID;
 public final class LadderConstructionGameTests {
     public static final String NAMESPACE = Siegeworks.MOD_ID + "_ladder";
     private static final String LADDER = "siegeworks:siege_ladder";
-    // Shared with the other construction tests: a ladder stands taller than the tests beside it leave room for.
+    // Same batch as the other construction tests: a ladder is taller than the gap between tests.
     private static final String BATCH = "axiomata_construction";
 
     private LadderConstructionGameTests() {
@@ -204,7 +204,7 @@ public final class LadderConstructionGameTests {
         return stage == null ? "none" : stage.materials() + " in " + stage.hits() + " blows";
     }
 
-    /** Takes the ladder away again: it stands taller than its test, over the tests run after it. */
+    /** Removes the ladder; it is taller than its test area and would overlap later tests. */
     private static void succeed(GameTestHelper helper, SiegeLadderEntity ladder) {
         ladder.discard();
         helper.succeed();

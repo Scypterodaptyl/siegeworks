@@ -5,7 +5,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
-/** Shows block cracks to the players near enough to see them. */
+/** Sends block crack overlays to nearby players. */
 final class BlockCrackOverlay {
     private static final double RANGE = 64.0D;
 

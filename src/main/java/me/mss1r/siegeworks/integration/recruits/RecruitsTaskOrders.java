@@ -3,7 +3,9 @@ package me.mss1r.siegeworks.integration.recruits;
 import com.talhanation.recruits.entities.AbstractRecruitEntity;
 import net.minecraft.nbt.CompoundTag;
 
-/** Puts a recruit on a siege task and gives back the follow order it had before, instead of leaving it holding. */
+/**
+ * Assigns a siege task to a recruit and restores its previous follow order afterwards, instead of leaving it on hold.
+ */
 final class RecruitsTaskOrders {
     private static final String PREVIOUS_FOLLOW_STATE_TAG = "SiegeworksPreviousFollowState";
     private static final int TASK_FOLLOW_STATE = 6;

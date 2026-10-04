@@ -64,9 +64,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * An incendiary pot set down. It behaves as a vanilla decorated pot does: it breaks at a touch, whole by hand and in
- * shards by a tool or a projectile, and a piston crushes it. It is filled and sealed by hand, see {@link PotFilling},
- * and once filled it goes off like TNT: lit, caught by fire or a burning shot, or reached by an explosion.
+ * Placed incendiary pot. Breaks like a vanilla decorated pot: instantly, whole by hand, into shards by a tool or
+ * projectile, and crushed by pistons. Filled and sealed by hand (see {@link PotFilling}). Once it has a base it
+ * detonates like TNT when lit, set on fire, hit by a burning projectile or caught in an explosion.
  */
 public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements SimpleWaterloggedBlock, EntityBlock {
     //? if neoforge {
@@ -82,12 +82,12 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
     public static final Vec3 WICK_TIP = new Vec3(0.5D, 17.0D / 16.0D, 0.53D);
     public static final Vec3 WICK_BASE = new Vec3(0.5D, 14.0D / 16.0D, 0.53D);
-    /** The bricks a pot is made of, which it breaks back into. */
+    /** Bricks dropped when a pot shatters. */
     private static final int BRICKS = 5;
-    /** Like TNT's: how readily fire takes to a filled pot, and how fast it spreads from it. */
+    /** Same values as TNT. */
     private static final int FLAMMABILITY = 15;
     private static final int FIRE_SPREAD_SPEED = 100;
-    /** The ticks a pot set off by its neighbour waits, at most, so a store of them goes up in a rapid ripple. */
+    /** Max random delay for pots set off by a neighbour, so a stack of them goes off in quick succession. */
     private static final int CHAIN_DELAY = 3;
     private static final VoxelShape SHAPE = Shapes.or(
             Block.box(3.0, 0.0, 3.0, 13.0, 11.0, 13.0), Block.box(5.0, 11.0, 5.0, 11.0, 14.0, 11.0));
@@ -149,7 +149,7 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
     }
     //?}
 
-    /** Fills, seals or lights the pot with what a player holds; false when it has nothing to do with the pot. */
+    /** Fills, seals or lights the pot. Returns false if the held item doesn't apply. */
     private boolean interact(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand) {
         IncendiaryPotBlockEntity pot = pot(level, pos);
         ItemStack held = player.getItemInHand(hand);
@@ -158,7 +158,7 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
         }
         PotFilling filling = pot.filling();
         if (IncendiaryFuse.canStrike(held)) {
-            // Without a wick the flint and steel strikes as it would anywhere else.
+            // Without a wick, flint and steel behaves normally.
             if (!filling.canLight() || state.getValue(WATERLOGGED)) {
                 return false;
             }
@@ -201,7 +201,6 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
         }
     }
 
-    /** Tells a player why the pot took nothing. */
     private static void refuse(Player player, PotFilling filling) {
         String reason = filling.wick() ? "sealed"
                 : !filling.hasBase() ? "needs_base"
@@ -240,8 +239,8 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
     //?}
 
     /**
-     * As a decorated pot drops: whole, with what it holds, unless a tool or a blast breaks it, when it falls apart
-     * into its bricks and what it held. A lit pot, or a filled one caught in a blast, leaves nothing: it goes off.
+     * Drops like a decorated pot: whole with its contents, or bricks plus contents when broken by a tool or explosion.
+     * Lit pots, and filled pots caught in an explosion, drop nothing because they detonate.
      */
     @Override
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
@@ -274,7 +273,7 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
         return shards;
     }
 
-    /** A projectile breaks a pot as it breaks a decorated pot, and a burning one sets a filled pot off. */
+    /** Projectiles shatter a pot like a decorated pot; a burning projectile detonates a filled one. */
     @Override
     public void onProjectileHit(Level level, BlockState state, BlockHitResult hit, Projectile projectile) {
         BlockPos pos = hit.getBlockPos();
@@ -329,8 +328,8 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
     }
 
     /**
-     * Sets off the pot here after {@code delay} ticks: one with a base in it bursts, an empty one shatters.
-     * {@code responsible} answers for the fire, else whoever lit it.
+     * Detonates the pot after {@code delay} ticks: a pot with a base bursts, others shatter. Blame goes to {@code
+     * responsible}, or else the player who lit it.
      */
     public static void detonate(ServerLevel level, BlockPos pos, int delay, @Nullable UUID responsible) {
         IncendiaryPotBlockEntity pot = pot(level, pos);
@@ -348,14 +347,14 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
         IncendiaryFuse.burstPlaced(level, Vec3.atCenterOf(pos), filling, delay, answers);
     }
 
-    /** Breaks a pot into its bricks and what it held, as a projectile breaks a decorated pot. */
+    /** Drops bricks and contents, like a decorated pot hit by a projectile. */
     private static void shatter(ServerLevel level, BlockPos pos) {
         IncendiaryPotBlockEntity pot = pot(level, pos);
         if (pot == null || pot.isDetonating()) {
             return;
         }
         if (pot.isLit()) {
-            // A lit pot bursts as it is taken away.
+            // Removing a lit pot makes it burst (see onRemove).
             level.removeBlock(pos, false);
             return;
         }
@@ -368,10 +367,7 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
         level.removeBlock(pos, false);
     }
 
-    /**
-     * Sets off every pot that an explosion at {@code center} reaching {@code radius} blocks touches: within that
-     * reach and not shielded from it by a solid block.
-     */
+    /** Detonates every pot within {@code radius} of {@code center} that has line of sight to it. */
     public static void detonateAround(ServerLevel level, Vec3 center, double radius, @Nullable UUID responsible) {
         if (!(radius > 0.0D)) {
             return;

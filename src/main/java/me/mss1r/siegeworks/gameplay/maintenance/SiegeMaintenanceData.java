@@ -15,8 +15,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * What repairing and dismantling a machine cost and give back, worked out from the blueprint it is built by, as
- * Axiomata loaded it. A material given as a tag counts as the item that shows that tag.
+ * Repair and dismantle costs, derived from the blueprint as loaded by Axiomata. Tag materials count as the tag's first
+ * item.
  */
 public final class SiegeMaintenanceData {
     private static final int HITS_PER_RESOURCE = 4;
@@ -44,7 +44,7 @@ public final class SiegeMaintenanceData {
             return MaintenanceRecipe.empty();
         }
 
-        // A ladder is its base and as many sections as it has: only those stages of its build went into it.
+        // A ladder only cost its base and the sections it has.
         int stages = siege instanceof SiegeLadderEntity ladder ? 1 + ladder.getSections() : Integer.MAX_VALUE;
         Map<ResourceLocation, Integer> ingredients = collectIngredients(recipe, stages);
         int authoredHits = collectConstructionHits(recipe, stages);
@@ -130,7 +130,7 @@ public final class SiegeMaintenanceData {
         if (spawnerId == null) {
             return null;
         }
-        // The first blueprint by id that makes the machine, so the answer does not depend on load order.
+        // Use the first matching blueprint by id so the result doesn't depend on load order.
         for (Map.Entry<String, BlueprintDefinition> entry : new TreeMap<>(BlueprintDefinitions.allById()).entrySet()) {
             if (spawnerId.equals(entry.getValue().result().item().toString())) {
                 return entry.getValue();

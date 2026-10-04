@@ -77,7 +77,7 @@ public class MangonelRenderer extends TowedSiegeRenderer<MangonelEntity> {
                 poseStack.translate(0.0D, yOffset, 0.0D);
                 poseStack.scale(scale, scale, scale);
                 if (SiegeAmmo.isFireAmmoKey(mangonel.getAmmoLoaded())) {
-                    // The pot lies with its bottom on the floor of the cup and its fuse out of the mouth.
+                    // The pot sits bottom-down in the cup with the wick pointing out.
                     poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
                     poseStack.translate(0.0F, -0.25F, 0.0F);
                     poseStack.scale(MangonelEntity.POT_IN_CUP_SCALE, MangonelEntity.POT_IN_CUP_SCALE,

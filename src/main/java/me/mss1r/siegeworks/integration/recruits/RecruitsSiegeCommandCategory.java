@@ -253,7 +253,7 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
         private record Entry(String key, String stateKey, boolean enabled, Runnable action) {
         }
 
-        /** The prefix the server keys the next buttons' states by: the target, a machine type, or none. */
+        /** State key prefix for the following buttons: the target, a machine type, or none. */
         private void scope(String scope) {
             this.scope = scope;
         }
@@ -341,9 +341,9 @@ final class RecruitsSiegeCommandCategory implements ICommandCategory {
     }
 
     /**
-     * What the server last said the selected groups may do from this screen. It is asked again whenever the groups,
-     * the machine looked at or the block looked at change, and after every order; until it answers every siege
-     * button stays off.
+     * Last server reply on what the selected groups can do from this screen. Requested again when the groups, the
+     * targeted machine or the targeted block change, and after every order; siege buttons stay disabled until it
+     * arrives.
      */
     private record ScreenStates(boolean answered, List<SiegeCommandType> types, Map<String, Component> refusals) {
         private static final ScreenStates PENDING = new ScreenStates(false, List.of(), Map.of());

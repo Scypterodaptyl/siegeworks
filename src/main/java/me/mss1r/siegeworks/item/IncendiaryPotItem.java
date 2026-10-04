@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.Block;
 
 import java.util.List;
 
-/** A pot, empty, being filled, or sealed with its wick; it shows what it holds. */
+/** Clay or incendiary pot item; the tooltip shows its contents. */
 public class IncendiaryPotItem extends BlockItem {
     public IncendiaryPotItem(Block block, Properties properties) {
         super(block, properties);

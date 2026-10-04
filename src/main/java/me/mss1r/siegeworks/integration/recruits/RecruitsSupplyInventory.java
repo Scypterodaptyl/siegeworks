@@ -27,7 +27,7 @@ final class RecruitsSupplyInventory {
         return supply == null ? engineerInventory : new CompoundContainer(supply, engineerInventory);
     }
 
-    /** Rechecked on every use: the upkeep point can also be set through Recruits' own command, which checks nothing. */
+    /** Checked on every use: the upkeep point can also be set by Recruits' own command, which does no checks. */
     private static Container findSupply(SiegeEngineerEntity engineer, Vec3 workPosition) {
         BlockPos supplyPos = engineer.getUpkeepPos();
         if (supplyPos == null || workPosition.distanceToSqr(Vec3.atCenterOf(supplyPos)) > SUPPLY_RANGE_SQR

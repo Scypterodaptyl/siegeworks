@@ -106,11 +106,11 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     private static final Vec3 ARM_PIVOT = new Vec3(0.0D, 9.0D / 16.0D, -7.0D / 16.0D);
     private static final Vec3 LOAD_CENTER = new Vec3(0.0D, 44.0D / 16.0D, -6.0D / 16.0D);
     private static final Vec3 ROOT_COLLISION_PIVOT = new Vec3(0.0D, 6.0D / 16.0D, 0.0D);
-    /** The size of a stone-sized block drawn in the cup, as the renderer draws a pot there. */
+    /** Size of the block a load is rendered as in the cup. */
     private static final double LOAD_DRAWN_SIZE = 0.96D * 0.5D;
     /**
-     * How much smaller than a stone a pot is drawn in the cup, about its bottom: its body, ten pixels of its block
-     * across, is drawn twice that over a stone and so 9.6 pixels wide, and the cup is eight across.
+     * Scale of a pot in the cup, about its bottom. The pot body is 10 px wide in its block model and is rendered at 9.6
+     * px over a stone-sized load; the cup is 8 px wide.
      */
     public static final float POT_IN_CUP_SCALE = 8.0F / 9.6F;
     private static final double LAUNCH_SLOPE = 0.60D;
@@ -136,7 +136,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
             SynchedEntityData.defineId(MangonelEntity.class, EntityDataSerializers.OPTIONAL_UUID);
     private static final EntityDataAccessor<Integer> SHOOT_ANIMATION_TICK =
             SynchedEntityData.defineId(MangonelEntity.class, EntityDataSerializers.INT);
-    /** Ticks left on the fuse of a fire pot waiting in the cup, or {@link IncendiaryFuse#UNLIT}. */
+    /** Fuse ticks left on a pot waiting in the cup, or {@link IncendiaryFuse#UNLIT}. */
     private static final EntityDataAccessor<Integer> POT_FUSE =
             SynchedEntityData.defineId(MangonelEntity.class, EntityDataSerializers.INT);
     private static final ScalarAnimationCurve RELOAD_ARM = ScalarAnimationCurve.of(
@@ -152,9 +152,8 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
             key(5.834F, 0.0D, ScalarAnimationCurve.Interpolation.LINEAR),
             key(17.5F, 0.0D, ScalarAnimationCurve.Interpolation.LINEAR));
     /**
-     * When in its swing the cup lets its load go, in shoot animation ticks: where the cup's path runs along the
-     * launch line, as a load leaves a throwing arm along the way it is going. The load is spawned on the next
-     * whole tick, as far along as it has flown since.
+     * Shoot-animation tick at which the cup releases its load: where the cup's path is parallel to the launch line. The
+     * load spawns on the next whole tick, advanced by the distance flown since.
      */
     private static final float RELEASE_SHOOT_TICK = releaseShootTick();
     private static final int PROJECTILE_RELEASE_TICK = Mth.ceil(RELEASE_SHOOT_TICK);
@@ -678,8 +677,8 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     }
 
     /**
-     * A point of the pot in the cup now, {@code along} blocks from its centre towards the cup's mouth: the pot lies
-     * with its bottom on the floor of the cup and its fuse out of the mouth.
+     * World position of a point on the pot in the cup, {@code along} blocks from its centre toward the cup's mouth. The
+     * pot sits bottom-down with the wick pointing out.
      */
     private Vec3 potPoint(double along) {
         Vec3 inCup = armPointForAuthoredAngle(LOAD_CENTER.add(0.0D, 0.0D, -along), getCurrentArmAngle());
@@ -837,13 +836,16 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         return armPointForAuthoredAngle(LOAD_CENTER, armAngleDegrees);
     }
 
-    /** How far from the load's centre a point lies that is {@code along} from it on a pot drawn as a stone. */
+    /**
+     * Offset from the load centre of the point {@code along} from the centre of a stone-sized pot, after the in-cup
+     * scale.
+     */
     private static double alongPotInCup(double along) {
         double bottom = -0.5D;
         return LOAD_DRAWN_SIZE * (bottom + POT_IN_CUP_SCALE * (along - bottom));
     }
 
-    /** Where a point of the arm, given in the model with the arm upright, is with the arm at this angle. */
+    /** Position of an arm point, given with the arm upright in the model, at the given arm angle. */
     private static Vec3 armPointForAuthoredAngle(Vec3 point, double armAngleDegrees) {
         double angle = -armAngleDegrees * Mth.DEG_TO_RAD;
         double relativeY = point.y - ARM_PIVOT.y;
@@ -858,7 +860,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         return applyRootAngle(getLoadOffsetForAuthoredAngle(getShootArmAngle(tick)), SHOOT_ROOT.sample(tick));
     }
 
-    /** How steeply the cup is climbing at {@code tick} of the swing, in degrees above level, the way it throws. */
+    /** Cup climb angle at {@code tick} of the swing, in degrees above horizontal, in the throw direction. */
     private static double cupClimbAt(float tick) {
         Vec3 path = getLoadOffsetAtShootTick(tick + 0.01F).subtract(getLoadOffsetAtShootTick(tick - 0.01F));
         // The model faces its own negative z.
@@ -880,7 +882,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         return (early + late) * 0.5F;
     }
 
-    /** Where the load is when it is spawned: where it left the cup, flown on since at {@code velocity}. */
+    /** Load position at spawn: the release point, advanced by {@code velocity} for the time since release. */
     private Vec3 releasedLoadPosition(Vec3 velocity) {
         return getReleasePoint().add(velocity.scale(PROJECTILE_RELEASE_TICK - RELEASE_SHOOT_TICK));
     }

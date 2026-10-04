@@ -94,26 +94,26 @@ public class SingijeonProjectile extends SiegeProjectile {
         }
     }
 
-    /** The profile a plain or an explosive rocket flies by. */
+    /** Profile for a plain or explosive rocket. */
     public static ProjectilePhysicsProfile physics(boolean explosive) {
         return explosive
                 ? SiegeProfileCatalogs.PROJECTILES.get(ProjectileVariants.EXPLOSIVE_SINGIJEON)
                 : SiegeProfileCatalogs.PROJECTILES.forEntity(SiegeworksEntities.SINGIJEON_PROJECTILE.get());
     }
 
-    /** How a rocket launched by {@link #launchWithMotor} flies once off its rack, for aiming. */
+    /** Flight after leaving the rack, used for aiming. */
     public static SiegeBallistics.Flight flight(ProjectilePhysicsProfile physics) {
         double diameter = physics.diameterOf(SiegeworksEntities.SINGIJEON_PROJECTILE.get());
         return new SiegeBallistics.Flight(SiegeBallistics.GRAVITY, physics.airDrag(diameter),
                 motorAcceleration(physics), motorBurnTicks(physics));
     }
 
-    /** How fast, in blocks per tick, a rocket leaves its rack: its motor has driven it the rack's length. */
+    /** Speed, in blocks/tick, when leaving the rack after being pushed its full length. */
     public static double launchSpeed(ProjectilePhysicsProfile physics) {
         return Math.sqrt(2.0D * motorAcceleration(physics) * RACK_LENGTH);
     }
 
-    /** What the motor adds to its speed each tick, in blocks per tick: thrust over mass. */
+    /** Speed added by the motor per tick, in blocks/tick: thrust / mass. */
     private static double motorAcceleration(ProjectilePhysicsProfile physics) {
         return physics.motor().map(motor -> motor.thrust() / physics.mass() / 400.0D).orElse(0.0D);
     }
@@ -122,7 +122,7 @@ public class SingijeonProjectile extends SiegeProjectile {
         return physics.motor().map(motor -> (int) Math.round(motor.burnTime() * 20.0D)).orElse(0);
     }
 
-    /** Fires it off its rack along {@code direction}, its motor pushing {@code thrustScale} as hard as usual. */
+    /** Launches along {@code direction} with the motor at {@code thrustScale} times normal thrust. */
     public void launchWithMotor(Vec3 direction, double thrustScale) {
         ProjectilePhysicsProfile physics = getPhysicsProfile();
         Vec3 normalizedDirection = direction.normalize();

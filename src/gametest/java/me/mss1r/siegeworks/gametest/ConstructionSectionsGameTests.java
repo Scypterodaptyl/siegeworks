@@ -33,8 +33,8 @@ public final class ConstructionSectionsGameTests {
     }
 
     /**
-     * An engine whose build sections disagree with its model is drawn finished while it is still being built, so
-     * every engine's sections must count the cubes its model really has.
+     * If an engine's build sections don't match its model's cube count, it renders as finished while still under
+     * construction. Checks every engine.
      */
     @GameTest(template = "empty")
     public static void everyEngineBuildsInTheStagesItsModelHas(GameTestHelper helper) {

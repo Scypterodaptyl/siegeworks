@@ -12,7 +12,9 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 //?}
 
-/** A player carrying a ladder asks to set it down. Hands full, the client has no item use to send instead. */
+/**
+ * Sent when a player carrying a ladder asks to put it down. With both hands busy there is no item use to send instead.
+ */
 //? if forge {
 /*public record LadderPutDownC2SPayload() {
 *///?} else {
