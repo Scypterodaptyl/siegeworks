@@ -119,18 +119,37 @@ public final class SiegeTowingController {
         return primaryMount() == null;
     }
 
+    /**
+     * The mount whose rider holds the reins: the first one a player rides, else the first one anyone rides. Whoever
+     * sits on another mount of the team just pulls along, so it does not matter which of them a player climbs on.
+     */
+    @Nullable
+    public AbstractHorse drivingMount() {
+        AbstractHorse ridden = null;
+        for (AbstractHorse mount : mounts()) {
+            Entity rider = mount.getFirstPassenger();
+            if (rider instanceof Player) {
+                return mount;
+            }
+            if (ridden == null && rider instanceof LivingEntity) {
+                ridden = mount;
+            }
+        }
+        return ridden;
+    }
+
     public boolean isDrivenDraftMount(Entity passenger) {
-        return passenger == primaryMount() && passenger.getFirstPassenger() instanceof LivingEntity;
+        return passenger != null && passenger == drivingMount();
     }
 
     public boolean isPlayerControlledDraftMount(Entity passenger) {
-        return passenger == primaryMount() && passenger.getFirstPassenger() instanceof Player;
+        return isDrivenDraftMount(passenger) && passenger.getFirstPassenger() instanceof Player;
     }
 
     @Nullable
     public LivingEntity reinsHolder() {
-        AbstractHorse lead = primaryMount();
-        return lead != null && lead.getFirstPassenger() instanceof LivingEntity rider ? rider : null;
+        AbstractHorse driving = drivingMount();
+        return driving != null && driving.getFirstPassenger() instanceof LivingEntity rider ? rider : null;
     }
 
     public InteractionResult interact(Player player, InteractionHand hand, ServerLevel level) {

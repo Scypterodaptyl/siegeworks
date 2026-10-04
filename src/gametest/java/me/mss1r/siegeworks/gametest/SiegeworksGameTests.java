@@ -86,6 +86,7 @@ import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.animal.horse.Horse;
 import net.minecraft.world.entity.projectile.Arrow;
@@ -560,6 +561,29 @@ public final class SiegeworksGameTests {
         helper.assertTrue(!ram.canAddPassenger(extra), "Ram accepted more than two draft mounts");
         helper.assertTrue(ram.getTowingMount() == first,
                 "The first ram mount was not retained as the reins/control mount");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void aPlayerOnAnyMountOfTheTeamHoldsTheReins(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BatteringRamEntity ram = SiegeworksEntities.BATTERING_RAM_ENTITY.get().create(level);
+        Horse first = EntityType.HORSE.create(level);
+        Horse second = EntityType.HORSE.create(level);
+        helper.assertTrue(ram != null && first != null && second != null, "Failed to create the ram team");
+        helper.assertTrue(first.startRiding(ram, true) && second.startRiding(ram, true),
+                "The ram did not take its two mounts");
+
+        Player driver = SiegeGameTestPlayers.createRideable(level);
+        helper.assertTrue(driver.startRiding(second, true), "The player could not climb on the second mount");
+        helper.assertTrue(ram.getReinsHolder() == driver && ram.shouldPassengerControlMovement(second)
+                        && !ram.shouldPassengerControlMovement(first),
+                "A player on the second mount does not drive the ram");
+
+        Villager rider = EntityType.VILLAGER.create(level);
+        helper.assertTrue(rider != null && rider.startRiding(first, true), "Nobody could sit on the first mount");
+        helper.assertTrue(ram.getReinsHolder() == driver,
+                "Someone else on the first mount took the reins from the player");
         helper.succeed();
     }
 
