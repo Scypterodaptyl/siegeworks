@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.0-beta.7
+
+### Added
+
+- Added a “Return to tower” order to the Recruits command screen.
+
+### Changed
+
+- Unavailable siege commands are disabled and show the reason in both the Recruits screen and the RTS map.
+- Taking control of a draft mount now requires standing near the animal.
+- Requires Axiomata 0.1.0-beta.6 or newer.
+- Optional Recruits RTS Command integration now requires 0.1.0-beta.2 or newer.
+
+### Fixed
+
+- Bolts appear aligned with their flight direction instead of rotating into place after firing.
+- Fixed migration of old singijeon item IDs in Forge saves.
+- RTS fire-zone orders now reach distant siege crews.
+- The Recruits “Leave” order now also applies to siege tower passengers.
+- Recruits ordered across a tower’s bridge stay aboard if there is no surface to disembark onto.
+- Fixed startup crashes with OptiFine.
+
 ## 0.1.0-beta.6
 
 ### Added
