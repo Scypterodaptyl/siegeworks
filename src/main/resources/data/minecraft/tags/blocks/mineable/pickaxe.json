@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "siegeworks:cannon_ball",
+    "siegeworks:giant_cannon_ball",
+    "siegeworks:grapeshot"
+  ]
+}

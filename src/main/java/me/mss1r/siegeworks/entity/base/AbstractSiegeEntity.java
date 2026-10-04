@@ -53,6 +53,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -1643,6 +1644,26 @@ public abstract class AbstractSiegeEntity extends LivingEntity
     @Override
     public boolean dismountsUnderwater() {
         return true;
+    }
+
+    /** A machine does not freeze in powder snow. */
+    @Override
+    public boolean canFreeze() {
+        return false;
+    }
+
+    //? if forge {
+    /*// A machine does not drown; on 1.21 the vanilla can_breathe_under_water tag says so.
+    @Override
+    public boolean canBreatheUnderwater() {
+        return true;
+    }
+    *///?}
+
+    /** Potions, poison and withering work on the living, not on timber and iron. */
+    @Override
+    public boolean canBeAffected(MobEffectInstance effect) {
+        return false;
     }
 
     @Override

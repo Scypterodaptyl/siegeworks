@@ -90,8 +90,11 @@ public final class ShotFlightGameTests {
                 SingijeonProjectile.flight(rocket));
     }
 
-    /** A Mons Meg ball tears through a screen of leaves and flies on, not stopped by the debris it throws up. */
-    @GameTest(template = "empty", timeoutTicks = 40)
+    /**
+     * A Mons Meg ball tears through a screen of leaves and flies on, not stopped by the debris it throws up. Its own
+     * batch: the ball flies sixty blocks past its test, where the tests beside it would stand.
+     */
+    @GameTest(template = "empty", timeoutTicks = 40, batch = "long_flight")
     public static void aShotFliesOnThroughTheLeavesItTears(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         // The gun has no owner to answer for what its shot breaks, which only an everywhere rule allows.

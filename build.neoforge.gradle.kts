@@ -181,6 +181,7 @@ tasks.named<ProcessResources>("processResources") {
             .replace("/structures/", "/structure/")
             .replace("/tags/blocks/", "/tags/block/")
             .replace("/tags/items/", "/tags/item/")
+            .replace("/tags/entity_types/", "/tags/entity_type/")
     }
 }
 
