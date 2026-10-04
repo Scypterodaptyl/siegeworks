@@ -1911,6 +1911,36 @@ public final class SiegeworksGameTests {
         }));
     }
 
+    @GameTest(template = "empty", timeoutTicks = 40)
+    public static void towedTowerHandsTheReinsOnlyToAPlayerAtTheHorse(GameTestHelper helper) {
+        buildFloor(helper);
+        ServerLevel level = helper.getLevel();
+        SiegeTowerEntity tower = SiegeworksEntities.SIEGE_TOWER_ENTITY.get().create(level);
+        net.minecraft.world.entity.animal.horse.Horse horse = EntityType.HORSE.create(level);
+        helper.assertTrue(tower != null && horse != null, "Failed to create the towed tower");
+        moveToRelative(helper, tower, 16.0D, 1.0D, 16.0D);
+        level.addFreshEntity(tower);
+        horse.setTamed(true);
+        horse.moveTo(tower.getX(), tower.getY(), tower.getZ());
+        level.addFreshEntity(horse);
+        helper.assertTrue(horse.startRiding(tower, true), "The tower rejected its draft horse");
+
+        helper.runAfterDelay(2, () -> {
+            net.minecraft.world.entity.player.Player up = SiegeGameTestPlayers.createRideable(level);
+            Vec3 aloft = tower.collisionTransform().toWorld(new Vec3(0.0D, 16.6D, 4.2D));
+            up.setPos(aloft.x, aloft.y, aloft.z);
+            tower.interact(up, InteractionHand.MAIN_HAND);
+            helper.assertTrue(up.getVehicle() == null,
+                    "Clicking the tower from its top floor put the player on the draft horse");
+
+            net.minecraft.world.entity.player.Player driver = SiegeGameTestPlayers.createRideable(level);
+            driver.setPos(horse.getX() + 1.2D, horse.getY(), horse.getZ());
+            tower.interact(driver, InteractionHand.MAIN_HAND);
+            helper.assertTrue(driver.getVehicle() == horse, "A player at the horse could not take the reins");
+            helper.succeed();
+        });
+    }
+
     @GameTest(template = "empty", timeoutTicks = 80)
     public static void towerUsesModelCollisionWithoutBoundingBoxPush(GameTestHelper helper) {
         buildFloor(helper);

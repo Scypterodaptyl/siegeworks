@@ -29,6 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class SiegeTowingController {
     private static final Set<String> WARNED_ABOUT_SETTINGS = ConcurrentHashMap.newKeySet();
+    /** How far from the lead animal a player may stand to take up the reins. */
+    private static final double REINS_REACH = 2.0D;
 
     private final AbstractSiegeEntity siege;
 
@@ -149,6 +151,10 @@ public final class SiegeTowingController {
         if (primaryMount != null) {
             if (heldStack.is(Items.SHEARS)) {
                 return detachWithDroppedLead(player, primaryMount);
+            }
+            // The reins are taken at the animal, not by reaching the engine from wherever one stands on it.
+            if (!primaryMount.getBoundingBox().inflate(REINS_REACH).contains(player.position())) {
+                return null;
             }
             player.startRiding(primaryMount);
             return InteractionResult.SUCCESS;
