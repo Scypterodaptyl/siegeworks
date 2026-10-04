@@ -1911,6 +1911,42 @@ public final class SiegeworksGameTests {
         }));
     }
 
+    @GameTest(template = "empty", timeoutTicks = 260)
+    public static void towedTowerRollsToAStopWhenItsDriverGetsOff(GameTestHelper helper) {
+        buildFloor(helper);
+        ServerLevel level = helper.getLevel();
+        SiegeTowerEntity tower = SiegeworksEntities.SIEGE_TOWER_ENTITY.get().create(level);
+        net.minecraft.world.entity.animal.horse.Horse horse = EntityType.HORSE.create(level);
+        ArmorStand driver = EntityType.ARMOR_STAND.create(level);
+        helper.assertTrue(tower != null && horse != null && driver != null, "Failed to create the towed tower");
+        moveToRelative(helper, tower, 16.0D, 1.0D, 6.0D);
+        level.addFreshEntity(tower);
+        horse.setTamed(true);
+        horse.moveTo(tower.getX(), tower.getY(), tower.getZ());
+        driver.moveTo(tower.getX(), tower.getY(), tower.getZ());
+        level.addFreshEntity(horse);
+        level.addFreshEntity(driver);
+        helper.assertTrue(horse.startRiding(tower, true) && driver.startRiding(horse, true),
+                "The tower took no driven draft horse");
+        double[] stoppedAt = {Double.NaN};
+        helper.onEachTick(() -> {
+            if (driver.isPassenger()) {
+                tower.setMovementInput(1.0F, 0.0F);
+            }
+        });
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(Math.abs(tower.getCurrentDriveSpeed()) > 1.0E-3D, "The towed tower never got moving");
+            driver.stopRiding();
+        });
+        helper.runAfterDelay(200, () -> stoppedAt[0] = tower.getZ());
+        helper.runAfterDelay(240, () -> {
+            helper.assertTrue(Math.abs(tower.getCurrentDriveSpeed()) < 1.0E-4D
+                            && Math.abs(tower.getZ() - stoppedAt[0]) < 1.0E-3D,
+                    "The tower rolled on after its driver got off: speed " + tower.getCurrentDriveSpeed());
+            helper.succeed();
+        });
+    }
+
     @GameTest(template = "empty", timeoutTicks = 40)
     public static void towedTowerHandsTheReinsOnlyToAPlayerAtTheHorse(GameTestHelper helper) {
         buildFloor(helper);

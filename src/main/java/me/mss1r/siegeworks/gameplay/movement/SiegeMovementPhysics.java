@@ -209,6 +209,11 @@ public final class SiegeMovementPhysics {
                 speedStep = abstractSiegeEntity.getDriveAcceleration(operator);
             }
         }
+        // Slowing down needs no team: whatever drives it may give out, but it still rolls to a stop.
+        boolean slowing = Math.abs(targetSpeed) < Math.abs(currentSpeed) || targetSpeed * currentSpeed < 0.0D;
+        if (slowing) {
+            speedStep = Math.max(speedStep, abstractSiegeEntity.getRollingDeceleration());
+        }
         currentSpeed = approach(currentSpeed, targetSpeed, speedStep);
         if (Math.abs(currentSpeed) < 1.0E-5D) {
             currentSpeed = 0.0D;

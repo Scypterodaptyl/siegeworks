@@ -1760,6 +1760,11 @@ public abstract class AbstractSiegeEntity extends LivingEntity
         return SiegeworksServerConfig.getMovementDeceleration(getType(), isDraftMount(operator));
     }
 
+    /** How fast it slows of itself, however weak the team that drove it: what it takes to roll to a stop. */
+    public final double getRollingDeceleration() {
+        return SiegeworksServerConfig.getMovementDeceleration(getType(), false);
+    }
+
     public double getReverseSpeedMultiplier() {
         return SiegeworksServerConfig.getReverseSpeedMultiplier(getType());
     }
