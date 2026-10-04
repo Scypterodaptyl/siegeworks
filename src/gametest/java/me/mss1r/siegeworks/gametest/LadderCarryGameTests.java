@@ -3,7 +3,6 @@ package me.mss1r.siegeworks.gametest;
 import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
 import me.mss1r.siegeworks.gameplay.ladder.LadderCarry;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
-import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;

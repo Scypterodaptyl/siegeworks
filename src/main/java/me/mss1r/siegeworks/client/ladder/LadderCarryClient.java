@@ -46,6 +46,11 @@ public final class LadderCarryClient {
         }
     }
 
+    /** Leaving a world, or for another: the ladders seen carried there are gone with it. */
+    public static void leaveWorld() {
+        LadderCarry.forgetSeen();
+    }
+
     public static void raiseArms(HumanoidModel<?> model) {
         model.rightArm.xRot = ARMS_RAISED;
         model.leftArm.xRot = ARMS_RAISED;

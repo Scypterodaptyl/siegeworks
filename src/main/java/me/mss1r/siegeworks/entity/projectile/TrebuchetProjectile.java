@@ -256,7 +256,7 @@ public class TrebuchetProjectile extends SiegeProjectile {
         this.discard();
     }
 
-    /** A pot breaking unlit: it shatters like any clay pot and what it held spills unburnt. */
+    /** A pot breaking unlit: it shatters like any clay pot, and what it held is lost unburnt. */
     private void shatter(ServerLevel serverLevel, Vec3 impact) {
         serverLevel.playSound(null, impact.x, impact.y, impact.z,
                 SoundEvents.DECORATED_POT_SHATTER, SoundSource.PLAYERS, 2.5F, 0.8F + random.nextFloat() * 0.2F);

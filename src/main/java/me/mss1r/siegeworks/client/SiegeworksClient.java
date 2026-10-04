@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.client;
 
 import me.mss1r.siegeworks.client.ladder.LadderCarryClient;
+import dev.architectury.event.events.client.ClientPlayerEvent;
 import dev.architectury.event.events.client.ClientTickEvent;
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry;
 import dev.architectury.registry.client.level.entity.EntityRendererRegistry;
@@ -49,6 +50,8 @@ public final class SiegeworksClient {
         ClientTickEvent.CLIENT_POST.register(SiegeUpdateNotifier::tick);
         ClientTickEvent.CLIENT_PRE.register(LadderCarryClient::beforeTick);
         ClientTickEvent.CLIENT_POST.register(LadderCarryClient::afterTick);
+        ClientPlayerEvent.CLIENT_PLAYER_QUIT.register(player -> LadderCarryClient.leaveWorld());
+        ClientPlayerEvent.CLIENT_PLAYER_RESPAWN.register((oldPlayer, newPlayer) -> LadderCarryClient.leaveWorld());
     }
 
     private static void registerEntityRenderers() {

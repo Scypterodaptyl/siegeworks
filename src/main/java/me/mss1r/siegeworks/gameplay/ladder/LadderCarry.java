@@ -12,7 +12,6 @@ import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -189,6 +188,11 @@ public final class LadderCarry {
         if (ladder.isCarried() && !ladder.isRemoved()) {
             SEEN_CARRIED.put(ladder.carrierId(), ladder);
         }
+    }
+
+    /** Forgets on the client every ladder it saw carried, as it leaves their world. */
+    public static void forgetSeen() {
+        SEEN_CARRIED.clear();
     }
 
     /** A player leaving takes the ladder along, kept with them until they come back. */

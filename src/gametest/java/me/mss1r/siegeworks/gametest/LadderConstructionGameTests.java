@@ -8,7 +8,9 @@ import me.mss1r.axiomata.blueprint.api.construction.BuildProgress;
 import me.mss1r.axiomata.blueprint.api.construction.ConstructionDeployer;
 import me.mss1r.axiomata.blueprint.api.construction.ConstructionWork;
 import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinition;
+import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinition.Material;
 import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinitions;
+import me.mss1r.axiomata.blueprint.internal.construction.MaterialAllocation;
 import me.mss1r.axiomata.blueprint.internal.definition.BlueprintFormat;
 import me.mss1r.axiomata.blueprint.item.BlueprintItem;
 import me.mss1r.siegeworks.Siegeworks;
@@ -27,6 +29,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -43,6 +46,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -163,6 +168,24 @@ public final class LadderConstructionGameTests {
             helper.assertTrue(expected.equals(actual),
                     "Blueprint " + id + " changed in the new format:\n was " + expected + "\n now " + actual);
         }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20, batch = BATCH)
+    public static void materialsThatShareItemsAreNotPaidWithTheSameOnes(GameTestHelper helper) {
+        List<ItemStack> stacks = new ArrayList<>(List.of(new ItemStack(Items.OAK_LOG, 6),
+                new ItemStack(Items.SPRUCE_LOG, 2)));
+        Material anyLogs = Material.ofTag(ResourceLocation.tryParse("minecraft:logs"), 4);
+        Material oakLogs = Material.ofItem(ResourceLocation.tryParse("minecraft:oak_log"), 6);
+        List<Material> stage = List.of(anyLogs, oakLogs);
+        Map<Material, Integer> missing = MaterialAllocation.shortfall(stacks, stage);
+        helper.assertTrue(missing.equals(Map.of(anyLogs, 2)),
+                "Six oak and two spruce logs should leave any logs two short, not " + missing);
+        stacks.add(new ItemStack(Items.BIRCH_LOG, 2));
+        helper.assertTrue(MaterialAllocation.shortfall(stacks, stage).isEmpty(),
+                "Ten logs, six of them oak, did not pay for six oak and four of any");
+        MaterialAllocation.take(stacks, stage);
+        helper.assertTrue(stacks.stream().allMatch(ItemStack::isEmpty), "Not every log was taken: " + stacks);
         helper.succeed();
     }
 

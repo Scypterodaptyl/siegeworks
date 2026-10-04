@@ -5,7 +5,6 @@ import me.mss1r.axiomata.blueprint.api.BlueprintTags;
 import me.mss1r.axiomata.blueprint.api.construction.ConstructionWork;
 import me.mss1r.axiomata.blueprint.api.construction.UnderConstruction;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -16,8 +15,6 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-
-import java.util.UUID;
 
 final class RecruitsConstructionController {
     private static final String SITE_TAG = "SiegeworksConstructionSite";
