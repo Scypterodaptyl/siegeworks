@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks.client;
 
+import me.mss1r.siegeworks.gameplay.ladder.LadderCarry;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.client.aim.SiegeAimController;
 import me.mss1r.siegeworks.client.aim.SiegeAimView;
@@ -149,7 +150,9 @@ public final class SiegeworksClientGameEvents {
     @SubscribeEvent
     public static void onRenderHand(RenderHandEvent event) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null && player.getVehicle() instanceof AbstractBoltThrowerEntity) {
+        // Hands raised to a carried ladder are out of view.
+        if (player != null && (player.getVehicle() instanceof AbstractBoltThrowerEntity
+                || LadderCarry.isCarrying(player))) {
             event.setCanceled(true);
         }
     }

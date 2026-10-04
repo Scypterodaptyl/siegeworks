@@ -1,5 +1,7 @@
 package me.mss1r.siegeworks.mixin.client;
 
+import me.mss1r.siegeworks.client.ladder.LadderCarryClient;
+import me.mss1r.siegeworks.gameplay.ladder.LadderCarry;
 import me.mss1r.siegeworks.client.pose.ResolvedSiegePose;
 import me.mss1r.siegeworks.client.pose.SiegePoseApplicator;
 import me.mss1r.siegeworks.client.pose.SiegePoseRenderContext;
@@ -31,6 +33,10 @@ public abstract class HumanoidModelMixin<T extends LivingEntity> {
     private void siegeworks$applySiegePose(T entity, float limbAngle, float limbDistance, float age,
                                           float headYaw, float headPitch, CallbackInfo ci) {
         if (SiegePoseRenderContext.isRenderingFirstPersonHand()) {
+            return;
+        }
+        if (LadderCarry.isCarrying(entity)) {
+            LadderCarryClient.raiseArms((HumanoidModel<?>) (Object) this);
             return;
         }
         AbstractSiegeEntity siege = entity.getVehicle() instanceof AbstractSiegeEntity mountedSiege

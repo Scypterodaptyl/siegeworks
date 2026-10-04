@@ -130,6 +130,10 @@ public class SiegeLadderDeploymentItem extends SiegeDeploymentItem {
                                 //?}
                                 List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
         tooltipComponents.add(Component.translatable("item.siegeworks.siege_ladder_spawner.sections", getSections(stack)));
+        if (getSections(stack) < SiegeLadderEntity.MAX_SECTIONS) {
+            tooltipComponents.add(Component.translatable("item.siegeworks.siege_ladder_spawner.extend")
+                    .withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+        }
     }
 
 }

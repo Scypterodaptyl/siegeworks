@@ -11,6 +11,7 @@ import me.mss1r.axiomata.collision.system.StructureMotionSystem;
 import me.mss1r.axiomata.collision.system.StructureCollisionSystem;
 import me.mss1r.siegeworks.gameplay.collision.generated.GeneratedCollisionShapes;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
+import me.mss1r.siegeworks.gameplay.ladder.LadderCarry;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeAccess;
 import me.mss1r.siegeworks.gameplay.ownership.SiegeRelation;
 import me.mss1r.siegeworks.gameplay.audio.SiegeSoundProfile;
@@ -33,6 +34,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -45,6 +47,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
 //? if forge {
 /*import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
@@ -73,7 +76,8 @@ import java.util.List;
 import java.util.UUID;
 
 public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity, SiegeClimbableControl {
-    public static final int MIN_SECTIONS = 1;
+    /** A ladder may be its base alone, as it comes from the crafting table. */
+    public static final int MIN_SECTIONS = 0;
     public static final int MAX_SECTIONS = 4;
 
     private static final EntityDataAccessor<Integer> SECTIONS =
@@ -82,6 +86,9 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
             SynchedEntityData.defineId(SiegeLadderEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> DEPLOY_TICKS =
             SynchedEntityData.defineId(SiegeLadderEntity.class, EntityDataSerializers.INT);
+    /** The entity id of whoever carries the ladder in their hands, or -1. */
+    private static final EntityDataAccessor<Integer> CARRIER_ID =
+            SynchedEntityData.defineId(SiegeLadderEntity.class, EntityDataSerializers.INT);
 
     private static final String TAG_SECTIONS = "Sections";
     private static final String TAG_LEAN_PROGRESS = "LeanProgress";
@@ -89,6 +96,8 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
     private static final String TAG_LEGACY_RELOCATION_OWNER = "RelocationOwner";
 
     private static final int DEPLOY_DELAY_TICKS = 35;
+    /** How long a ladder set down stands before it tips onto what is in front of it. */
+    private static final int PUT_DOWN_STAND_TICKS = 10;
     private static final double BLOCKBENCH_SECTION_LENGTH = 48.0D / 16.0D;
     private static final double LADDER_HALF_WIDTH = 7.5D / 16.0D;
     private static final double LADDER_HALF_THICKNESS = 1.5D / 16.0D;
@@ -130,6 +139,11 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
                 }
                 @Override public Vec3 uphillVector() { return getUphillVector(); }
             });
+    @Nullable
+    private UUID carrierUuid;
+    /** The carrier itself, on the server, wherever it is kept. */
+    @Nullable
+    private Player carrier;
     private final LadderClimberSupport climberSupport = new LadderClimberSupport(
             new LadderClimberSupport.Host() {
                 @Override public SiegeLadderEntity ladder() { return SiegeLadderEntity.this; }
@@ -162,7 +176,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
     private int nextSurfaceRestProbeTick;
     private final SyncedFloatInterpolator clientLeanProgress = new SyncedFloatInterpolator();
     private float previousCollisionLeanDegrees;
-    private int previousCollisionSections;
+    private int previousCollisionStages;
 
     public SiegeLadderEntity(EntityType<? extends LivingEntity> type, Level level) {
         super(type, level);
@@ -188,6 +202,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         data.define(SECTIONS, 1);
         data.define(LEAN_PROGRESS, 0.0F);
         data.define(DEPLOY_TICKS, 0);
+        data.define(CARRIER_ID, -1);
     }
 
     @Override
@@ -219,8 +234,17 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
     @Override
     public void tick() {
         previousCollisionLeanDegrees = getLeanAngleDegrees();
-        previousCollisionSections = getSections();
+        previousCollisionStages = builtStages();
         super.tick();
+        if (isCarried()) {
+            tickCarried();
+            return;
+        }
+        if (!isFullyBuilt()) {
+            // A ladder being built stands upright where it is put; nobody climbs or leans it until it is done.
+            StructureMotionSystem.tickStructure(this);
+            return;
+        }
         if (level() instanceof ServerLevel) {
             tickDeployAndLean();
             automatedTraversal.tick();
@@ -233,12 +257,98 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
 
     @Override
     public List<CollisionGroup> collisionGroups() {
-        return collisionGroups(getSections(), getLeanAngleDegrees());
+        // A ladder carried over the head stops nobody and holds nobody up.
+        return isCarried() ? List.of() : collisionGroups(builtStages(), getLeanAngleDegrees());
     }
 
     @Override
     public List<CollisionGroup> previousCollisionGroups() {
-        return collisionGroups(previousCollisionSections, previousCollisionLeanDegrees);
+        return isCarried() ? List.of() : collisionGroups(previousCollisionStages, previousCollisionLeanDegrees);
+    }
+
+    public boolean isCarried() {
+        return entityData.get(CARRIER_ID) >= 0;
+    }
+
+    public int carrierId() {
+        return entityData.get(CARRIER_ID);
+    }
+
+    @Nullable
+    public UUID carrierUuid() {
+        return carrierUuid;
+    }
+
+    @Nullable
+    public Player carrier() {
+        return carrier;
+    }
+
+    /** Goes into a player's hands: nobody stays on it, and it stops leaning on anything. */
+    public void beginCarry(Player carrier) {
+        entityData.set(CARRIER_ID, carrier.getId());
+        carrierUuid = carrier.getUUID();
+        this.carrier = carrier;
+        ejectPassengers();
+        leanVelocity = 0.0F;
+        restingOnSurface = false;
+    }
+
+    /** Leaves its carrier's hands where it is; it falls from there and topples as a ladder does. */
+    public void endCarry() {
+        entityData.set(CARRIER_ID, -1);
+        carrierUuid = null;
+        carrier = null;
+        leanVelocity = 0.0F;
+        restingOnSurface = false;
+        setDeployTicks(DEPLOY_DELAY_TICKS);
+    }
+
+    /** Stands upright at {@code foot}, facing {@code yaw}, to tip a moment later onto whatever is before it. */
+    public void standAt(Vec3 foot, float yaw) {
+        setPos(foot);
+        applyYaw(yaw);
+        setLeanProgress(0.0F);
+        leanVelocity = 0.0F;
+        restingOnSurface = false;
+        setDeployTicks(DEPLOY_DELAY_TICKS - PUT_DOWN_STAND_TICKS);
+    }
+
+    /** Follows its carrier's hands; on the server it falls the moment its carrier is gone. */
+    private void tickCarried() {
+        Entity carrier = level().isClientSide ? level().getEntity(carrierId()) : this.carrier;
+        if (!level().isClientSide && (carrier == null || carrier.isRemoved() || !carrier.isAlive()
+                || carrier.level() != level())) {
+            LadderCarry.drop(this);
+            return;
+        }
+        if (carrier == null) {
+            return;
+        }
+        LadderCarry.Pose pose = LadderCarry.pose(carrier, getSections(), getLadderLength(), MAX_LEAN_DEGREES);
+        setPos(pose.foot());
+        setDeltaMovement(Vec3.ZERO);
+        fallDistance = 0.0F;
+        applyYaw(pose.yaw());
+        setLeanProgress((float) (pose.leanDegrees() / MAX_LEAN_DEGREES));
+        if (level().isClientSide) {
+            clientLeanProgress.tick(getLeanProgress());
+            LadderCarry.seen(this);
+        }
+    }
+
+    @Override
+    public void remove(RemovalReason reason) {
+        if (!level().isClientSide && isCarried()) {
+            LadderCarry.forget(this);
+        }
+        super.remove(reason);
+    }
+
+    /** The parts of the ladder that stand: its base and built sections, all of it once finished. */
+    private int builtStages() {
+        int whole = 1 + getSections();
+        return isFullyBuilt() ? whole : Math.min(whole, builtSections());
     }
 
     @Override
@@ -256,7 +366,12 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         return List.of();
     }
 
-    private static List<CollisionGroup> collisionGroups(int sections, float leanDegrees) {
+    /** The collision of a ladder whose first {@code stages} parts stand: its base, then its sections in turn. */
+    private static List<CollisionGroup> collisionGroups(int stages, float leanDegrees) {
+        if (stages <= 0) {
+            return List.of();
+        }
+        int sections = stages - 1;
         CollisionPose pose = CollisionPose.fromGeckoBoneX(
                 GeneratedCollisionShapes.SIEGE_LADDER_BASE.pivot(),
                 (float) Math.toRadians(-leanDegrees));
@@ -273,6 +388,12 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
             groups.add(new CollisionGroup("section_" + section, shapes.get(section), pose));
         }
         return List.copyOf(groups);
+    }
+
+    /** A ladder build ended early stands as tall as the sections it got. */
+    @Override
+    public void applyBuiltData(java.util.Map<String, Integer> data) {
+        setSections(data.getOrDefault(SiegeLadderDeploymentItem.TAG_SECTIONS, MIN_SECTIONS));
     }
 
     public int getSections() {
@@ -423,7 +544,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
         return false;
     }
 
-    private double getLadderLength() {
+    public double getLadderLength() {
         return (1.0D + getSections()) * BLOCKBENCH_SECTION_LENGTH;
     }
 
@@ -486,6 +607,10 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        // In the hands it is out of harm: a low doorway or a ceiling it passes under does not break it.
+        if (isCarried()) {
+            return false;
+        }
         applyHitImpulse(source, amount);
         return super.hurt(source, amount);
     }
@@ -496,7 +621,7 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
 
     @Override
     public boolean isPickable() {
-        return true;
+        return !isCarried();
     }
 
     @Override
@@ -542,6 +667,8 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
 
     public boolean canBeRelocated() {
         return isAlive()
+                && isFullyBuilt()
+                && !isCarried()
                 && getPassengers().isEmpty()
                 && !automatedTraversal.hasClimbers()
                 && !isDismantling();
@@ -629,23 +756,15 @@ public class SiegeLadderEntity extends AbstractSiegeEntity implements GeoEntity,
             return InteractionResult.SUCCESS;
         }
 
-        claimOwnership(player.getUUID());
-        if (getDeploymentOwnerUuid() == null) {
-            SiegeDeploymentLimits.Deployment deployment =
-                    SiegeDeploymentLimits.forOwner(serverLevel, player.getUUID());
-            setDeploymentIdentity(deployment.ownerUuid(), deployment.groupKey());
+        // Taken up in the hands at its foot, not into a pocket.
+        if (LadderCarry.tryPickUp(player, this)) {
+            claimOwnership(player.getUUID());
+            if (getDeploymentOwnerUuid() == null) {
+                SiegeDeploymentLimits.Deployment deployment =
+                        SiegeDeploymentLimits.forOwner(serverLevel, player.getUUID());
+                setDeploymentIdentity(deployment.ownerUuid(), deployment.groupKey());
+            }
         }
-        ItemStack ladderStack = createRelocationItem();
-        if (!player.getInventory().add(ladderStack)) {
-            player.displayClientMessage(
-                    Component.translatable("message.siegeworks.ladder.pickup_inventory_full"), true);
-            return InteractionResult.SUCCESS;
-        }
-
-        player.getInventory().setChanged();
-        serverLevel.playSound(null, blockPosition(), SoundEvents.ITEM_PICKUP,
-                SoundSource.PLAYERS, 0.8F, 0.9F);
-        discard();
         return InteractionResult.SUCCESS;
     }
 

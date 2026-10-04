@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks;
 
+import me.mss1r.siegeworks.gameplay.ladder.LadderCarry;
 import me.mss1r.siegeworks.registry.SiegeworksBlockEntities;
 import me.mss1r.siegeworks.registry.SiegeworksBlocks;
 import me.mss1r.siegeworks.client.SiegeworksClient;
@@ -48,6 +49,7 @@ public final class Siegeworks {
       SiegeworksSounds.register();
       SiegeworksParticles.register();
       SiegeworksNetworking.register();
+      LadderCarry.register();
       CommandRegistrationEvent.EVENT.register(SiegeworksCommands::register);
       LifecycleEvent.SERVER_BEFORE_START.register(server -> SiegeworksDebug.reset());
       SiegeDeploymentLimitEvents.register();

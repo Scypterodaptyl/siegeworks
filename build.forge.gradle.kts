@@ -139,7 +139,7 @@ legacyForge {
             systemProperty(
                 "forge.enabledGameTestNamespaces",
                 providers.gradleProperty("gameTestNamespaces")
-                    .getOrElse("$modId,${modId}_collision,${modId}_tower")
+                    .getOrElse("$modId,${modId}_collision,${modId}_tower,${modId}_ladder")
             )
         }
         register("data") {

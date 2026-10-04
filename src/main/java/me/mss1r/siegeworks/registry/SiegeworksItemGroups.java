@@ -63,6 +63,7 @@ public interface SiegeworksItemGroups {
                             itemStack(SiegeworksItems.MONS_MEG_SPAWNER.get()),
                             itemStack(SiegeworksItems.SIEGE_TOWER_SPAWNER.get()),
                             itemStack(SiegeworksItems.HWACHA_SPAWNER.get()),
+                            itemStack(SiegeworksItems.SIEGE_LADDER_SPAWNER.get()),
                             ladderStack(1),
                             ladderStack(2),
                             ladderStack(3),

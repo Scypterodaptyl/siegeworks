@@ -24,6 +24,7 @@ public final class SiegeworksNetworking {
     private static final ResourceLocation MANGONEL_FIRE = id("mangonel_fire");
     private static final ResourceLocation MANTLET_ACTION = id("mantlet_action");
     private static final ResourceLocation MAINTENANCE_ACTION = id("maintenance_action");
+    private static final ResourceLocation LADDER_PUT_DOWN = id("ladder_put_down");
     private static final ResourceLocation OPEN_MAINTENANCE = id("open_maintenance");
     private static final ResourceLocation PROJECTILE_PROFILES = id("projectile_profiles");
 
@@ -44,6 +45,8 @@ public final class SiegeworksNetworking {
                 MantletActionC2SPayload::decode, MantletActionC2SPayload::handle);
         register(NetworkManager.c2s(), MAINTENANCE_ACTION,
                 MaintenanceActionC2SPayload::decode, MaintenanceActionC2SPayload::handle);
+        register(NetworkManager.c2s(), LADDER_PUT_DOWN,
+                LadderPutDownC2SPayload::decode, LadderPutDownC2SPayload::handle);
         *///?} else {
         NetworkManager.registerReceiver(NetworkManager.c2s(), SiegeYawC2SPayload.TYPE,
                 SiegeYawC2SPayload.STREAM_CODEC, SiegeYawC2SPayload::handle);
@@ -57,6 +60,8 @@ public final class SiegeworksNetworking {
                 MantletActionC2SPayload.STREAM_CODEC, MantletActionC2SPayload::handle);
         NetworkManager.registerReceiver(NetworkManager.c2s(), MaintenanceActionC2SPayload.TYPE,
                 MaintenanceActionC2SPayload.STREAM_CODEC, MaintenanceActionC2SPayload::handle);
+        NetworkManager.registerReceiver(NetworkManager.c2s(), LadderPutDownC2SPayload.TYPE,
+                LadderPutDownC2SPayload.STREAM_CODEC, LadderPutDownC2SPayload::handle);
         // A client learns client-bound types from its receivers; a dedicated server has to be told.
         if (Platform.getEnvironment() == Env.SERVER) {
             NetworkManager.registerS2CPayloadType(OpenMaintenanceS2CPayload.TYPE,
@@ -116,6 +121,9 @@ public final class SiegeworksNetworking {
         } else if (packet instanceof MaintenanceActionC2SPayload value) {
             MaintenanceActionC2SPayload.encode(value, buffer);
             id = MAINTENANCE_ACTION;
+        } else if (packet instanceof LadderPutDownC2SPayload value) {
+            LadderPutDownC2SPayload.encode(value, buffer);
+            id = LADDER_PUT_DOWN;
         } else {
             throw new IllegalArgumentException("Unsupported client packet: " + packet.getClass().getName());
         }

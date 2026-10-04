@@ -1,0 +1,171 @@
+package me.mss1r.siegeworks.gametest;
+
+import me.mss1r.axiomata.blueprint.api.ConstructionStarters;
+import me.mss1r.axiomata.blueprint.api.construction.BlueprintConstructionPlan;
+import me.mss1r.axiomata.blueprint.api.construction.BuildProgress;
+import me.mss1r.axiomata.blueprint.api.construction.ConstructionDeployer;
+import me.mss1r.axiomata.blueprint.api.construction.ConstructionWork;
+import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinition;
+import me.mss1r.axiomata.blueprint.api.definition.BlueprintDefinitions;
+import me.mss1r.axiomata.blueprint.item.BlueprintItem;
+import me.mss1r.siegeworks.Siegeworks;
+import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
+import me.mss1r.siegeworks.gameplay.maintenance.SiegeMaintenanceData;
+import me.mss1r.siegeworks.gameplay.deployment.SiegeDeploymentLimits;
+import me.mss1r.siegeworks.item.SiegeLadderDeploymentItem;
+import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
+import me.mss1r.siegeworks.registry.SiegeworksItems;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+//? if forge {
+/*import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
+*///?} else {
+import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+//?}
+
+import java.util.Map;
+import java.util.UUID;
+
+@GameTestHolder(LadderConstructionGameTests.NAMESPACE)
+@PrefixGameTestTemplate(false)
+public final class LadderConstructionGameTests {
+    public static final String NAMESPACE = Siegeworks.MOD_ID + "_ladder";
+    private static final String LADDER = "siegeworks:siege_ladder";
+    // Shared with the other construction tests: a ladder stands taller than the tests beside it leave room for.
+    private static final String BATCH = "axiomata_construction";
+
+    private LadderConstructionGameTests() {
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20, batch = BATCH)
+    public static void craftedLadderBaseStartsTheLadderBuildWithItsBaseStanding(GameTestHelper helper) {
+        ItemStack base = new ItemStack(SiegeworksItems.SIEGE_LADDER_SPAWNER.get());
+        helper.assertTrue(SiegeLadderDeploymentItem.getSections(base) == 0,
+                "A ladder from the crafting table is not its base alone");
+        helper.assertTrue(LADDER.equals(ConstructionStarters.definitionFor(base)),
+                "The ladder base does not start the ladder build");
+        BlueprintDefinition ladder = BlueprintDefinitions.get(LADDER);
+        helper.assertTrue(ladder != null && ladder.isExtendable(), "The ladder build cannot end early");
+        helper.assertTrue(ConstructionStarters.builtStages(ladder, base) == 1,
+                "The ladder base does not stand for the base stage");
+        ItemStack twoSections = SiegeLadderDeploymentItem.withSections(
+                new ItemStack(SiegeworksItems.SIEGE_LADDER_SPAWNER.get()), 2);
+        helper.assertTrue(ConstructionStarters.builtStages(ladder, twoSections) == 3,
+                "A two-section ladder taken up again does not carry on from its third stage");
+
+        SiegeLadderEntity built = deploy(helper, base);
+        helper.assertTrue(built.buildProgress().stage() == 1 && !built.isFullyBuilt(),
+                "The ladder build did not begin with its base standing");
+        BlueprintConstructionPlan.Stage section = built.buildProgress().currentStage();
+        helper.assertTrue(section != null && section.hits() == 12 && section.materials().size() == 2
+                        && section.materials().get(0).is(Items.OAK_LOG) && section.materials().get(0).getCount() == 4
+                        && section.materials().get(1).is(Items.STICK) && section.materials().get(1).getCount() == 3,
+                "A ladder section does not take four logs, three sticks and twelve blows: " + describe(section));
+        succeed(helper, built);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20, batch = BATCH)
+    public static void ladderBuildEndsWithTheSectionsBuiltSoFar(GameTestHelper helper) {
+        SiegeLadderEntity ladder = deploy(helper, new ItemStack(SiegeworksItems.SIEGE_LADDER_SPAWNER.get()));
+        BuildProgress progress = ladder.buildProgress();
+        while (progress.stage() < 3) {
+            ConstructionWork.strike(ladder, null);
+        }
+        helper.assertTrue(progress.canEndHere(), "A ladder with two sections up cannot be finished there");
+
+        ConstructionWork.Result ended = ConstructionWork.endHere(ladder, null);
+        helper.assertTrue(ended.status() == ConstructionWork.Status.DONE && ladder.isFullyBuilt(),
+                "Ending the ladder build did not finish it");
+        helper.assertTrue(ladder.getSections() == 2,
+                "The finished ladder does not stand as tall as its two built sections: " + ladder.getSections());
+        succeed(helper, ladder);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 60, batch = BATCH)
+    public static void ladderBeingBuiltStandsStillAndOnlyItsBuiltPartsCollide(GameTestHelper helper) {
+        SiegeLadderEntity ladder = deploy(helper, new ItemStack(SiegeworksItems.SIEGE_LADDER_SPAWNER.get()));
+        Vec3 placed = ladder.position();
+        helper.assertTrue(ladder.collisionGroups().size() == 1,
+                "A ladder build with its base standing collides with " + ladder.collisionGroups().size() + " parts");
+        while (ladder.buildProgress().stage() < 2) {
+            ConstructionWork.strike(ladder, null);
+        }
+        helper.assertTrue(ladder.collisionGroups().size() == 2,
+                "A ladder build with one section up collides with " + ladder.collisionGroups().size() + " parts");
+        helper.runAfterDelay(40, () -> {
+            helper.assertTrue(ladder.getLeanProgress() == 0.0F && ladder.position().equals(placed),
+                    "A ladder being built leaned or moved: lean " + ladder.getLeanProgress()
+                            + ", moved by " + ladder.position().subtract(placed));
+            succeed(helper, ladder);
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20, batch = BATCH)
+    public static void ladderBaseAloneCanBeFinished(GameTestHelper helper) {
+        SiegeLadderEntity ladder = deploy(helper, new ItemStack(SiegeworksItems.SIEGE_LADDER_SPAWNER.get()));
+        helper.assertTrue(ConstructionWork.endHere(ladder, null).status() == ConstructionWork.Status.DONE,
+                "A ladder build could not be finished as its base alone");
+        helper.assertTrue(ladder.isFullyBuilt() && ladder.getSections() == 0,
+                "The base-only ladder is not a finished ladder without sections");
+        succeed(helper, ladder);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20, batch = BATCH)
+    public static void ladderMaintenanceCountsOnlyTheSectionsItHas(GameTestHelper helper) {
+        SiegeLadderEntity ladder = deploy(helper, new ItemStack(SiegeworksItems.SIEGE_LADDER_SPAWNER.get()));
+        while (ladder.buildProgress().stage() < 3) {
+            ConstructionWork.strike(ladder, null);
+        }
+        ConstructionWork.endHere(ladder, null);
+        Map<ResourceLocation, Integer> resources = SiegeMaintenanceData.forSiege(ladder).ingredients();
+        int logs = resources.getOrDefault(ResourceLocation.tryParse("minecraft:oak_log"), 0);
+        int sticks = resources.getOrDefault(ResourceLocation.tryParse("minecraft:stick"), 0);
+        helper.assertTrue(logs == 14 && sticks == 9,
+                "A two-section ladder is reckoned at " + logs + " logs and " + sticks + " sticks, not 14 and 9");
+        succeed(helper, ladder);
+    }
+
+    private static String describe(BlueprintConstructionPlan.Stage stage) {
+        return stage == null ? "none" : stage.materials() + " in " + stage.hits() + " blows";
+    }
+
+    /** Takes the ladder away again: it stands taller than its test, over the tests run after it. */
+    private static void succeed(GameTestHelper helper, SiegeLadderEntity ladder) {
+        ladder.discard();
+        helper.succeed();
+    }
+
+    private static SiegeLadderEntity deploy(GameTestHelper helper, ItemStack starter) {
+        ServerLevel level = helper.getLevel();
+        BlueprintDefinition definition = BlueprintDefinitions.get(LADDER);
+        helper.assertTrue(definition != null, "The ladder build is missing");
+        BlockPos floor = helper.absolutePos(new BlockPos(16, 0, 16));
+        for (BlockPos pos : BlockPos.betweenClosed(floor.offset(-4, 0, -4), floor.offset(4, 0, 4))) {
+            level.setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState());
+        }
+        for (BlockPos pos : BlockPos.betweenClosed(floor.offset(-4, 1, -4), floor.offset(4, 20, 4))) {
+            level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        }
+        level.getEntitiesOfClass(Entity.class, new AABB(floor).inflate(6.0D, 20.0D, 6.0D))
+                .forEach(Entity::discard);
+        ItemStack result = BlueprintItem.createResultStack(definition);
+        MinecraftVersionCompat.editCustomData(result, tag -> tag.putUUID(
+                SiegeDeploymentLimits.TAG_CONSTRUCTION_OWNER, UUID.randomUUID()));
+        Entity entity = ConstructionDeployer.deploy(level, LADDER, starter, result, floor, Direction.UP,
+                Vec3.atCenterOf(floor).add(0.0D, 0.5D, 0.0D), 0.0F);
+        helper.assertTrue(entity instanceof SiegeLadderEntity, "The ladder build was not placed: " + entity);
+        return (SiegeLadderEntity) entity;
+    }
+}

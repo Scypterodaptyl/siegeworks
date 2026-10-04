@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks.client;
 
+import me.mss1r.siegeworks.client.ladder.LadderCarryClient;
 import dev.architectury.event.events.client.ClientTickEvent;
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry;
 import dev.architectury.registry.client.level.entity.EntityRendererRegistry;
@@ -46,6 +47,8 @@ public final class SiegeworksClient {
         ClientTickEvent.CLIENT_POST.register(ProjectileFlightSoundController::tick);
         ClientTickEvent.CLIENT_POST.register(SiegeworksClientGameEvents::onClientTick);
         ClientTickEvent.CLIENT_POST.register(SiegeUpdateNotifier::tick);
+        ClientTickEvent.CLIENT_PRE.register(LadderCarryClient::beforeTick);
+        ClientTickEvent.CLIENT_POST.register(LadderCarryClient::afterTick);
     }
 
     private static void registerEntityRenderers() {

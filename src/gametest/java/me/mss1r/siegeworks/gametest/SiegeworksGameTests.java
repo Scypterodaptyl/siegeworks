@@ -1466,7 +1466,7 @@ public final class SiegeworksGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 40)
-    public static void playerPicksUpLadderWithoutLosingState(GameTestHelper helper) {
+    public static void playerTakesUpLadderWithoutLosingState(GameTestHelper helper) {
         buildFloor(helper);
         ServerLevel level = helper.getLevel();
         SiegeLadderEntity ladder = SiegeworksEntities.SIEGE_LADDER_ENTITY.get().create(level);
@@ -1486,29 +1486,15 @@ public final class SiegeworksGameTests {
         player.setShiftKeyDown(true);
         ladder.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND);
 
-        ItemStack pickedUp = ItemStack.EMPTY;
-        for (ItemStack stack : player.getInventory().items) {
-            if (stack.is(SiegeworksItems.SIEGE_LADDER_SPAWNER.get())) {
-                pickedUp = stack;
-                break;
-            }
-        }
-        helper.assertTrue(ladder.isRemoved(), "Shift-right-click did not remove the placed ladder");
-        helper.assertTrue(!pickedUp.isEmpty(), "Shift-right-click did not return a ladder item");
-        helper.assertTrue(
-                me.mss1r.siegeworks.item.SiegeLadderDeploymentItem.getSections(pickedUp) == 4,
-                "Picked-up ladder lost its section count");
-        helper.assertTrue(Math.abs(
-                        me.mss1r.siegeworks.item.SiegeLadderDeploymentItem.getStoredHealth(pickedUp)
-                                - 42.0F) < 0.01F,
-                "Picked-up ladder lost its health");
-        helper.assertTrue(MinecraftVersionCompat.hasCustomName(pickedUp)
-                        && "Test ladder".equals(pickedUp.getHoverName().getString()),
-                "Picked-up ladder lost its custom name");
-        helper.assertTrue(player.getUUID().equals(
-                        me.mss1r.siegeworks.item.SiegeLadderDeploymentItem
-                                .getRelocationOwner(pickedUp)),
-                "Picked-up ladder lost its owner");
+        helper.assertTrue(ladder.isCarried() && !ladder.isRemoved(),
+                "Shift-right-click at its foot did not take the ladder up into the hands");
+        helper.assertTrue(ladder.getSections() == 4 && Math.abs(ladder.getHealth() - 42.0F) < 0.01F,
+                "The ladder taken up lost its sections or its health");
+        helper.assertTrue("Test ladder".equals(ladder.getCustomName() == null ? null
+                        : ladder.getCustomName().getString()), "The ladder taken up lost its custom name");
+        helper.assertTrue(player.getUUID().equals(ladder.getOwnerUuid()), "The ladder taken up lost its owner");
+        me.mss1r.siegeworks.gameplay.ladder.LadderCarry.drop(ladder);
+        ladder.discard();
         helper.succeed();
     }
 

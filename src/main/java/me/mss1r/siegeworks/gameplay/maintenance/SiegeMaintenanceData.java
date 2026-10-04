@@ -68,8 +68,10 @@ public final class SiegeMaintenanceData {
             return MaintenanceRecipe.empty();
         }
 
-        Map<ResourceLocation, Integer> ingredients = collectIngredients(recipe);
-        int authoredHits = collectConstructionHits(recipe);
+        // A ladder is its base and as many sections as it has: only those stages of its build went into it.
+        int stages = siege instanceof SiegeLadderEntity ladder ? 1 + ladder.getSections() : Integer.MAX_VALUE;
+        Map<ResourceLocation, Integer> ingredients = collectIngredients(recipe, stages);
+        int authoredHits = collectConstructionHits(recipe, stages);
         int totalHits = authoredHits > 0
                 ? authoredHits
                 : Math.max(1, ingredients.values().stream().mapToInt(Integer::intValue).sum()
@@ -143,8 +145,8 @@ public final class SiegeMaintenanceData {
     @Nullable
     private static BlueprintRecipe findRecipe(AbstractSiegeEntity siege) {
         String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(siege.getType()).toString();
-        if (siege instanceof SiegeLadderEntity ladder) {
-            BlueprintRecipe ladderRecipe = recipesById.get("siege_ladder_" + ladder.getSections());
+        if (siege instanceof SiegeLadderEntity) {
+            BlueprintRecipe ladderRecipe = recipesById.get("siege_ladder");
             if (ladderRecipe != null) {
                 return ladderRecipe;
             }
@@ -154,14 +156,15 @@ public final class SiegeMaintenanceData {
         return spawnerId == null ? null : recipesByResult.get(spawnerId);
     }
 
-    private static Map<ResourceLocation, Integer> collectIngredients(BlueprintRecipe recipe) {
+    private static Map<ResourceLocation, Integer> collectIngredients(BlueprintRecipe recipe, int stages) {
         Map<ResourceLocation, Integer> result = new LinkedHashMap<>();
         if (recipe.key == null) {
             return result;
         }
 
         if (recipe.construction != null && !recipe.construction.isEmpty()) {
-            for (ConstructionStageSpec stage : recipe.construction) {
+            for (ConstructionStageSpec stage : recipe.construction.subList(0,
+                    Math.min(stages, recipe.construction.size()))) {
                 if (stage == null || stage.materials == null) {
                     continue;
                 }
@@ -205,11 +208,12 @@ public final class SiegeMaintenanceData {
         }
     }
 
-    private static int collectConstructionHits(BlueprintRecipe recipe) {
+    private static int collectConstructionHits(BlueprintRecipe recipe, int stages) {
         if (recipe.construction == null) {
             return 0;
         }
         return recipe.construction.stream()
+                .limit(stages)
                 .filter(stage -> stage != null)
                 .mapToInt(stage -> Math.max(0, stage.hits))
                 .sum();

@@ -35,7 +35,7 @@ public class SiegeLadderModel extends GeoModel<SiegeLadderEntity> {
                         -animatable.getRenderedLeanAngleDegrees(animationState.getPartialTick()))));
 
         int sections = animatable.getSections();
-        for (int i = SiegeLadderEntity.MIN_SECTIONS; i <= SiegeLadderEntity.MAX_SECTIONS; i++) {
+        for (int i = 1; i <= SiegeLadderEntity.MAX_SECTIONS; i++) {
             int sectionIndex = i;
             getBone("section_" + sectionIndex).ifPresent(geoBone -> geoBone.setHidden(sectionIndex > sections));
         }
