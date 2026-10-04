@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.client.entity.mangonel;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import java.util.Optional;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.api.SiegeOperationState;
@@ -76,6 +77,12 @@ public class MangonelRenderer extends TowedSiegeRenderer<MangonelEntity> {
                 poseStack.translate(0.0D, yOffset, 0.0D);
                 poseStack.scale(scale, scale, scale);
                 if (SiegeAmmo.isFireAmmoKey(mangonel.getAmmoLoaded())) {
+                    // The pot lies with its bottom on the floor of the cup and its fuse out of the mouth.
+                    poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
+                    poseStack.translate(0.0F, -0.25F, 0.0F);
+                    poseStack.scale(MangonelEntity.POT_IN_CUP_SCALE, MangonelEntity.POT_IN_CUP_SCALE,
+                            MangonelEntity.POT_IN_CUP_SCALE);
+                    poseStack.translate(0.0F, 0.25F, 0.0F);
                     TrebuchetProjectileRenderer.renderFirePot(poseStack, state, bufferSource, packedLight, packedOverlay);
                 } else {
                     super.renderBlockForBone(poseStack, bone, state, mangonel, bufferSource,

@@ -27,7 +27,6 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 //?}
 
 public class TrebuchetProjectileRenderer extends EntityRenderer<TrebuchetProjectile> {
-    private static final float SPIN_DEGREES_PER_TICK = 12.0F;
     private final EntityModel<Entity> model;
 
     public TrebuchetProjectileRenderer(EntityRendererProvider.Context context) {
@@ -42,8 +41,8 @@ public class TrebuchetProjectileRenderer extends EntityRenderer<TrebuchetProject
             poseStack.pushPose();
             // A load leaves the arm turning over forwards with it, about the one axis across its flight.
             float heading = Mth.rotLerp(tickDelta, entity.yRotO, entity.getYRot());
-            float spin = (entity.tickCount + tickDelta) * SPIN_DEGREES_PER_TICK;
-            float scale = entity.getType() == SiegeworksEntities.TREBUCHET_PROJECTILE.get() ? 0.75F : 0.5F;
+            float spin = (entity.tickCount + tickDelta) * TrebuchetProjectile.SPIN_DEGREES_PER_TICK;
+            float scale = entity.drawnSize();
             poseStack.mulPose(Axis.YP.rotationDegrees(heading));
             poseStack.mulPose(Axis.XP.rotationDegrees(spin));
             poseStack.translate(-scale / 2.0F, -scale / 2.0F, -scale / 2.0F);

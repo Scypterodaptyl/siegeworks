@@ -13,6 +13,9 @@ import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import me.mss1r.siegeworks.entity.projectile.MangonelPassengerProjectile;
 import me.mss1r.siegeworks.entity.projectile.TrebuchetProjectile;
+import me.mss1r.siegeworks.gameplay.ballistics.EnginePot;
+import me.mss1r.siegeworks.gameplay.ballistics.IncendiaryFuse;
+import me.mss1r.siegeworks.item.PotFilling;
 import me.mss1r.siegeworks.gameplay.ballistics.ScattershotVolley;
 import me.mss1r.axiomata.collision.CollisionGroup;
 import me.mss1r.axiomata.collision.CollisionPose;
@@ -103,6 +106,13 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     private static final Vec3 ARM_PIVOT = new Vec3(0.0D, 9.0D / 16.0D, -7.0D / 16.0D);
     private static final Vec3 LOAD_CENTER = new Vec3(0.0D, 44.0D / 16.0D, -6.0D / 16.0D);
     private static final Vec3 ROOT_COLLISION_PIVOT = new Vec3(0.0D, 6.0D / 16.0D, 0.0D);
+    /** The size of a stone-sized block drawn in the cup, as the renderer draws a pot there. */
+    private static final double LOAD_DRAWN_SIZE = 0.96D * 0.5D;
+    /**
+     * How much smaller than a stone a pot is drawn in the cup, about its bottom: its body, ten pixels of its block
+     * across, is drawn twice that over a stone and so 9.6 pixels wide, and the cup is eight across.
+     */
+    public static final float POT_IN_CUP_SCALE = 8.0F / 9.6F;
     private static final double LAUNCH_SLOPE = 0.60D;
     private static final Set<SiegeAmmunitionMode> AUTOMATED_AMMUNITION_MODES = Set.of(
             SiegeAmmunitionMode.AUTO, SiegeAmmunitionMode.STANDARD, SiegeAmmunitionMode.INCENDIARY);
@@ -126,6 +136,9 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
             SynchedEntityData.defineId(MangonelEntity.class, EntityDataSerializers.OPTIONAL_UUID);
     private static final EntityDataAccessor<Integer> SHOOT_ANIMATION_TICK =
             SynchedEntityData.defineId(MangonelEntity.class, EntityDataSerializers.INT);
+    /** Ticks left on the fuse of a fire pot waiting in the cup, or {@link IncendiaryFuse#UNLIT}. */
+    private static final EntityDataAccessor<Integer> POT_FUSE =
+            SynchedEntityData.defineId(MangonelEntity.class, EntityDataSerializers.INT);
     private static final ScalarAnimationCurve RELOAD_ARM = ScalarAnimationCurve.of(
             key(0.0F, UNLOADED_ARM_ANGLE, ScalarAnimationCurve.Interpolation.LINEAR),
             key(RELOAD_ANIMATION_TICKS, LOADED_ARM_ANGLE, ScalarAnimationCurve.Interpolation.LINEAR));
@@ -148,6 +161,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
 
     private final AnimatableInstanceCache animatableInstanceCache = GeckoLibUtil.createInstanceCache(this);
     private final AutomatedLoadingSession automatedLoading = new AutomatedLoadingSession();
+    private final EnginePot pot = new EnginePot(this, POT_FUSE);
     private boolean transferringLaunchPayload;
     private final RawAnimation shootAnim = RawAnimation.begin().then("shoot", Animation.LoopType.PLAY_ONCE);
     private final RawAnimation reloadingAnim = RawAnimation.begin().thenPlayAndHold("reloading");
@@ -179,6 +193,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     //?}
         data.define(LAUNCH_PAYLOAD, Optional.empty());
         data.define(SHOOT_ANIMATION_TICK, -1);
+        data.define(POT_FUSE, IncendiaryFuse.UNLIT);
     }
 
     @Override
@@ -186,6 +201,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         super.addAdditionalSaveData(tag);
         entityData.get(LAUNCH_PAYLOAD).ifPresent(uuid -> tag.putUUID(TAG_LAUNCH_PAYLOAD, uuid));
         tag.putInt(TAG_SHOOT_ANIMATION_TICK, getShootAnimationTick());
+        pot.save(tag);
     }
 
     @Override
@@ -196,6 +212,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         setShootAnimationTick(tag.contains(TAG_SHOOT_ANIMATION_TICK)
                 ? Mth.clamp(tag.getInt(TAG_SHOOT_ANIMATION_TICK), -1, SHOOT_ANIMATION_TICKS - 1)
                 : -1);
+        pot.load(tag);
     }
 
     @Override
@@ -219,6 +236,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
 
         ItemStack itemStack = player.getItemInHand(hand);
         boolean hasLaunchLoad = hasLaunchLoad();
+        if (pot.light(player, hand, potPoint(alongPotInCup(IncendiaryFuse.WICK_TIP)))) return InteractionResult.SUCCESS;
 
         LivingEntity operator = getControllingPassenger();
         if (operator != null && operator != player) return InteractionResult.FAIL;
@@ -293,6 +311,9 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         if (hasLoadingAction()) {
             return stack.is(getActiveLoadingItem());
         }
+        if (IncendiaryFuse.canStrike(stack) && pot.awaitsFlame()) {
+            return true;
+        }
         return !hasAmmoLoaded() && findMatchingAmmo(stack) != null;
     }
 
@@ -311,6 +332,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
             return SiegeActionResult.IN_PROGRESS;
         }
         if (hasLaunchLoad()) {
+            pot.lightByCrew();
             beginShot(serverLevel, operator);
             return SiegeActionResult.FIRED;
         }
@@ -327,12 +349,20 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         if (!automatedLoading.tickComplete()) {
             return SiegeActionResult.IN_PROGRESS;
         }
-        if (!AutomatedLoadingSession.finishStage(inventory, ammo.stage(), ammo.item(), operator)) {
+        String loaded = ammo.ammoKey();
+        if (SiegeAmmo.isFireAmmoKey(loaded)) {
+            PotFilling sealed = EnginePot.takeSealed(inventory);
+            if (sealed == null) {
+                automatedLoading.reset();
+                return SiegeActionResult.MISSING_AMMUNITION;
+            }
+            loaded = pot.load(sealed);
+        } else if (!AutomatedLoadingSession.finishStage(inventory, ammo.stage(), ammo.item(), operator)) {
             automatedLoading.reset();
             return SiegeActionResult.MISSING_AMMUNITION;
         }
 
-        setAmmoLoaded(ammo.ammoKey());
+        setAmmoLoaded(loaded);
         setWindingTime(getLoadingRequirementTicks("winding"));
         setOperator(operator);
         automatedLoading.reset();
@@ -379,7 +409,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
 
     private AutomatedAmmo findAutomatedFireAmmo(Container inventory) {
         Item fireProjectile = SiegeworksItems.FIRE_PROJECTILE.get();
-        if (AutomatedLoadingSession.hasRequiredItem(inventory, AMMO_LOADS[1], fireProjectile)) {
+        if (EnginePot.hasSealed(inventory)) {
             return new AutomatedAmmo(AMMO_LOADS[1], fireProjectile, SiegeAmmo.AMMO_FIRE);
         }
         return null;
@@ -409,6 +439,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     @Override
     protected void completeLoadingAction(ServerLevel serverLevel, Player player, InteractionHand hand, int stageIndex) {
         ItemStack itemStack = player.getItemInHand(hand);
+        PotFilling held = PotFilling.of(itemStack);
 
         if (itemStack.is(PASSENGER_LOADING_ITEMS) && itemStack.is(getActiveLoadingItem())) {
             if (!boardLaunchPayload(player)) {
@@ -431,7 +462,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         } else if (match.item() == SiegeworksItems.GRAPESHOT.get()) {
             setAmmoLoaded(SiegeAmmo.AMMO_GRAPESHOT);
         } else {
-            setAmmoLoaded(SiegeAmmo.AMMO_FIRE);
+            setAmmoLoaded(pot.load(held));
         }
         setWindingTime(getLoadingRequirementTicks("winding"));
         setOperator(player);
@@ -440,6 +471,9 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     private LoadingRequirement findMatchingAmmo(ItemStack stack) {
         if (SiegeAmmo.isStoneProjectile(stack)) {
             return LoadingRequirement.consume(stack.getItem()).timedBy("stone");
+        }
+        if (PotFilling.isPot(stack)) {
+            return LoadingRequirement.consume(stack.getItem()).timedBy("fireProjectile");
         }
         for (LoadingRequirement stage : AMMO_LOADS) {
             if (stack.is(stage.item())) return stage;
@@ -456,6 +490,8 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
 
     @Override
     public void onSiegeTick(ServerLevel serverLevel) {
+        pot.burn(serverLevel, () -> potPoint(0.0D), SiegeworksEntities.MANGONEL_PROJECTILE.get(),
+                ProjectileVariants.MANGONEL_FIRE_PROJECTILE);
         int animationTick = getShootAnimationTick();
         if (animationTick < 0) {
             return;
@@ -504,7 +540,7 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
             projectile.setTextureName(ammo);
         } else if (SiegeAmmo.isFireAmmoKey(ammo)) {
             projectile.setPhysicsProfile(ProjectileVariants.MANGONEL_FIRE_PROJECTILE);
-            projectile.setTextureName(SiegeAmmo.AMMO_FIRE);
+            pot.throwWith(projectile);
         }
 
         serverLevel.addFreshEntity(projectile);
@@ -632,6 +668,19 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
         previousCollisionArmAngle = getCurrentArmAngle();
         super.tick();
         StructureMotionSystem.tickStructure(this);
+        if (level().isClientSide && pot.isLit()) {
+            pot.sparkle(level(), potPoint(alongPotInCup(IncendiaryFuse.WICK_TIP)),
+                    potPoint(alongPotInCup(IncendiaryFuse.WICK_BASE)));
+        }
+    }
+
+    /**
+     * A point of the pot in the cup now, {@code along} blocks from its centre towards the cup's mouth: the pot lies
+     * with its bottom on the floor of the cup and its fuse out of the mouth.
+     */
+    private Vec3 potPoint(double along) {
+        Vec3 inCup = armPointForAuthoredAngle(LOAD_CENTER.add(0.0D, 0.0D, -along), getCurrentArmAngle());
+        return position().add(rotateModelOffset(applyRootAngle(inCup, getCurrentRootAngle())));
     }
 
     public int getShootAnimationTick() {
@@ -782,11 +831,22 @@ public class MangonelEntity extends AbstractSiegeEntity implements GeoEntity, Si
     }
 
     private static Vec3 getLoadOffsetForAuthoredAngle(double armAngleDegrees) {
+        return armPointForAuthoredAngle(LOAD_CENTER, armAngleDegrees);
+    }
+
+    /** How far from the load's centre a point lies that is {@code along} from it on a pot drawn as a stone. */
+    private static double alongPotInCup(double along) {
+        double bottom = -0.5D;
+        return LOAD_DRAWN_SIZE * (bottom + POT_IN_CUP_SCALE * (along - bottom));
+    }
+
+    /** Where a point of the arm, given in the model with the arm upright, is with the arm at this angle. */
+    private static Vec3 armPointForAuthoredAngle(Vec3 point, double armAngleDegrees) {
         double angle = -armAngleDegrees * Mth.DEG_TO_RAD;
-        double relativeY = LOAD_CENTER.y - ARM_PIVOT.y;
-        double relativeZ = LOAD_CENTER.z - ARM_PIVOT.z;
+        double relativeY = point.y - ARM_PIVOT.y;
+        double relativeZ = point.z - ARM_PIVOT.z;
         return new Vec3(
-                LOAD_CENTER.x,
+                point.x,
                 ARM_PIVOT.y + relativeY * Math.cos(angle) - relativeZ * Math.sin(angle),
                 ARM_PIVOT.z + relativeY * Math.sin(angle) + relativeZ * Math.cos(angle));
     }

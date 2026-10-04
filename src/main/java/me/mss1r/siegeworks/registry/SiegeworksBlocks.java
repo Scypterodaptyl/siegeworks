@@ -1,7 +1,7 @@
 package me.mss1r.siegeworks.registry;
 
 import me.mss1r.siegeworks.Siegeworks;
-import me.mss1r.siegeworks.block.HorizontalProjectileBlock;
+import me.mss1r.siegeworks.block.IncendiaryPotBlock;
 import me.mss1r.siegeworks.block.StackedProjectileBlock;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
@@ -9,6 +9,8 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -25,7 +27,12 @@ public interface SiegeworksBlocks {
             new StackedProjectileBlock(projectileProperties().strength(3.0F, 4.0F), largeProjectileShapes()));
 
     RegistrySupplier<Block> FIRE_PROJECTILE = BLOCKS.register("fire_projectile", () ->
-            new HorizontalProjectileBlock(projectileProperties().strength(3.0F, 4.0F)));
+            new IncendiaryPotBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.TERRACOTTA_RED)
+                    .strength(0.0F, 0.0F)
+                    .sound(SoundType.DECORATED_POT)
+                    .pushReaction(PushReaction.DESTROY)
+                    .noOcclusion()));
 
     private static BlockBehaviour.Properties projectileProperties() {
         return BlockBehaviour.Properties.of()

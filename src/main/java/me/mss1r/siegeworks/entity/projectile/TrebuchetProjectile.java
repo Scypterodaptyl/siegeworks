@@ -1,5 +1,8 @@
 package me.mss1r.siegeworks.entity.projectile;
 
+import me.mss1r.siegeworks.gameplay.ballistics.IncendiaryFuse;
+import me.mss1r.siegeworks.item.PotFilling;
+import me.mss1r.siegeworks.item.SiegeAmmo;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectilePhysics;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileBlastResolver;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileImpactEffects;
@@ -7,6 +10,8 @@ import me.mss1r.siegeworks.gameplay.ballistics.ProjectileImpacts;
 import me.mss1r.siegeworks.particle.SiegeParticleEffects;
 import me.mss1r.siegeworks.entity.base.SiegeProjectile;
 import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
+import me.mss1r.siegeworks.registry.SiegeworksBlocks;
+import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -19,20 +24,32 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /** The load of a mangonel or trebuchet: a stone, or a fire pot when its profile carries fire. */
 public class TrebuchetProjectile extends SiegeProjectile {
     private static final String TAG_TEXTURE_NAME = "TextureName";
-    private static final int BURN_SECONDS = 12;
+    private static final String TAG_FUSE = "Fuse";
+    private static final String TAG_FILLING = "Filling";
+    /** How fast a load turns over in flight, as it is drawn. */
+    public static final float SPIN_DEGREES_PER_TICK = 12.0F;
 
     protected static final EntityDataAccessor<String> TEXTURE_NAME;
+    /** Ticks left on a fire pot's burning fuse, or {@link IncendiaryFuse#UNLIT}. */
+    private static final EntityDataAccessor<Integer> FUSE;
 
     static {
         TEXTURE_NAME = SynchedEntityData.defineId(TrebuchetProjectile.class, EntityDataSerializers.STRING);
+        FUSE = SynchedEntityData.defineId(TrebuchetProjectile.class, EntityDataSerializers.INT);
     }
 
     @Override
@@ -46,6 +63,66 @@ public class TrebuchetProjectile extends SiegeProjectile {
         var data = builder;
     //?}
         data.define(TEXTURE_NAME, "");
+        data.define(FUSE, IncendiaryFuse.UNLIT);
+    }
+
+    /** What the pot it is holds, or null for a stone. */
+    @Nullable
+    private PotFilling filling;
+
+    /** Makes it a pot holding this, drawn with its wick or without. */
+    public void setFilling(PotFilling filling) {
+        this.filling = filling;
+        setTextureName(filling.wick() ? SiegeAmmo.AMMO_FIRE : SiegeAmmo.AMMO_POT);
+    }
+
+    @Nullable
+    public PotFilling filling() {
+        return filling;
+    }
+
+    /** Lights a fire pot's fuse with {@code ticks} left to burn. */
+    public void lightFuse(int ticks) {
+        entityData.set(FUSE, Math.max(0, ticks));
+    }
+
+    public boolean isLit() {
+        return entityData.get(FUSE) >= 0;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        // Only a fire pot is ever lit; the client knows the fuse but not the pot's profile.
+        if (isRemoved() || !isLit()) {
+            return;
+        }
+        int left = entityData.get(FUSE);
+        if (level().isClientSide) {
+            // The fuse turns over with the pot as it is drawn.
+            double heading = getYRot() * Mth.DEG_TO_RAD;
+            double spin = tickCount * SPIN_DEGREES_PER_TICK * Mth.DEG_TO_RAD;
+            Vec3 fuse = new Vec3(Math.sin(heading) * Math.sin(spin), Math.cos(spin),
+                    Math.cos(heading) * Math.sin(spin)).scale(drawnSize());
+            IncendiaryFuse.sparkle(level(), position().add(fuse.scale(IncendiaryFuse.WICK_TIP)),
+                    position().add(fuse.scale(IncendiaryFuse.WICK_BASE)), IncendiaryFuse.burnt(left));
+            return;
+        }
+        if (left <= 0 && level() instanceof ServerLevel serverLevel) {
+            burst(serverLevel, position(), getDeltaMovement().length());
+            return;
+        }
+        entityData.set(FUSE, left - 1);
+    }
+
+    /** The size of the stone-sized block this load is drawn as. */
+    public float drawnSize() {
+        return getType() == SiegeworksEntities.TREBUCHET_PROJECTILE.get() ? 0.75F : 0.5F;
+    }
+
+    /** Bursts a lit fire pot where it is now, as it would on striking. */
+    public void burstWhereItIs(ServerLevel serverLevel) {
+        burst(serverLevel, position(), getDeltaMovement().length());
     }
 
     public void setTextureName(String textureName) {
@@ -60,6 +137,10 @@ public class TrebuchetProjectile extends SiegeProjectile {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putString(TAG_TEXTURE_NAME, getTextureName());
+        tag.putInt(TAG_FUSE, entityData.get(FUSE));
+        if (filling != null) {
+            tag.put(TAG_FILLING, filling.save());
+        }
     }
 
     @Override
@@ -67,6 +148,13 @@ public class TrebuchetProjectile extends SiegeProjectile {
         super.readAdditionalSaveData(tag);
         if (tag.contains(TAG_TEXTURE_NAME)) {
             setTextureName(tag.getString(TAG_TEXTURE_NAME));
+        }
+        entityData.set(FUSE, tag.contains(TAG_FUSE) ? tag.getInt(TAG_FUSE) : IncendiaryFuse.UNLIT);
+        if (tag.contains(TAG_FILLING)) {
+            filling = PotFilling.load(tag.getCompound(TAG_FILLING));
+        } else if (SiegeAmmo.isFireAmmoKey(getTextureName())) {
+            // A pot thrown before pots were filled by hand carries the standard filling.
+            filling = PotFilling.standard();
         }
     }
 
@@ -78,8 +166,27 @@ public class TrebuchetProjectile extends SiegeProjectile {
         super(cannonProjectile, shooter, level);
     }
 
-    private boolean isIncendiary() {
-        return getPhysicsProfile().fire().radius() > 0.0D;
+    private boolean isPot() {
+        return filling != null;
+    }
+
+    /** Whether it bursts into fire where it lands: a lit pot with a base in it. Any other pot just breaks. */
+    private boolean bursts() {
+        return filling != null && filling.hasBase() && isLit();
+    }
+
+    @Override
+    protected double payloadBlastEnergy(ProjectilePhysicsProfile physics) {
+        return filling != null ? filling.burst().blastEnergy() : super.payloadBlastEnergy(physics);
+    }
+
+    @Override
+    protected ProjectilePhysicsProfile.Fire payloadFire(ProjectilePhysicsProfile physics) {
+        if (filling == null) {
+            return super.payloadFire(physics);
+        }
+        PotFilling.Burst burst = filling.burst();
+        return new ProjectilePhysicsProfile.Fire(burst.fireRadius(), burst.fireChance());
     }
 
     @Override
@@ -87,8 +194,12 @@ public class TrebuchetProjectile extends SiegeProjectile {
         if (!(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
-        if (isIncendiary()) {
-            burst(serverLevel, blockHitResult.getLocation(), getDeltaMovement().length());
+        if (isPot()) {
+            if (bursts()) {
+                burst(serverLevel, blockHitResult.getLocation(), getDeltaMovement().length());
+            } else {
+                shatter(serverLevel, blockHitResult.getLocation());
+            }
             return;
         }
 
@@ -115,8 +226,16 @@ public class TrebuchetProjectile extends SiegeProjectile {
             return;
         }
         double speed = getDeltaMovement().length();
-        if (isIncendiary()) {
+        if (bursts()) {
             burst(serverLevel, entityHitResult.getLocation(), speed);
+            return;
+        }
+        if (isPot()) {
+            if (target != null) {
+                damageTarget(hitTarget, ProjectilePhysics.entityDamage(getPhysicsProfile(), (float) getBaseDamage(),
+                        speed, target));
+            }
+            shatter(serverLevel, entityHitResult.getLocation());
             return;
         }
 
@@ -134,16 +253,36 @@ public class TrebuchetProjectile extends SiegeProjectile {
         this.discard();
     }
 
-    /** A fire pot breaking open: it spreads fire and sets alight whoever its splash reaches. */
+    /** A pot breaking unlit: it shatters like any clay pot and what it held spills unburnt. */
+    private void shatter(ServerLevel serverLevel, Vec3 impact) {
+        serverLevel.playSound(null, impact.x, impact.y, impact.z,
+                SoundEvents.DECORATED_POT_SHATTER, SoundSource.PLAYERS, 1.5F, 0.8F + random.nextFloat() * 0.2F);
+        SiegeParticleEffects.potShatter(serverLevel, impact, SiegeworksBlocks.FIRE_PROJECTILE.get().defaultBlockState());
+        this.discard();
+    }
+
+    /** A lit pot breaking open: it spreads fire and sets alight whoever its splash reaches. */
     private void burst(ServerLevel serverLevel, Vec3 impact, double speed) {
         ProjectilePhysicsProfile physics = getPhysicsProfile();
+        PotFilling.Burst payload = (filling != null ? filling : PotFilling.standard()).burst();
         arrive(serverLevel, impact, speed);
-        for (LivingEntity burned : ProjectileBlastResolver.applyShock(serverLevel, impact, this, physics, null, speed)) {
-            burned.setRemainingFireTicks(Math.max(burned.getRemainingFireTicks(), BURN_SECONDS * 20));
+        Set<LivingEntity> burned = new HashSet<>(
+                ProjectileBlastResolver.applyShock(serverLevel, impact, this, physics, null, speed));
+        // The burning fill splashes over whoever it can reach, however gently the pot broke.
+        double splash = payload.fireRadius();
+        for (LivingEntity reached : serverLevel.getEntitiesOfClass(LivingEntity.class,
+                new AABB(impact, impact).inflate(splash), LivingEntity::isAlive)) {
+            if (reached.getBoundingBox().distanceToSqr(impact) <= splash * splash
+                    && Explosion.getSeenPercent(impact, reached) > 0.0F) {
+                burned.add(reached);
+            }
+        }
+        for (LivingEntity target : burned) {
+            target.setRemainingFireTicks(Math.max(target.getRemainingFireTicks(), payload.burnSeconds() * 20));
         }
         serverLevel.playSound(null, impact.x, impact.y, impact.z,
                 SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 4.0F, 0.65F + random.nextFloat() * 0.15F);
-        SiegeParticleEffects.incendiaryImpact(serverLevel, impact, Mth.ceil(physics.fire().radius()));
+        SiegeParticleEffects.incendiaryImpact(serverLevel, impact, Mth.ceil(payload.fireRadius()));
         this.discard();
     }
 

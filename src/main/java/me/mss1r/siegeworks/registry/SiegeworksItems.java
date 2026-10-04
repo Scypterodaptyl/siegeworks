@@ -10,6 +10,7 @@ import me.mss1r.siegeworks.item.SiegeLadderDeploymentItem;
 import me.mss1r.siegeworks.item.SiegeDeploymentItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
+import me.mss1r.siegeworks.item.IncendiaryPotItem;
 import net.minecraft.world.item.Item;
 
 public interface SiegeworksItems {
@@ -45,7 +46,11 @@ public interface SiegeworksItems {
     RegistrySupplier<Item> GIANT_CANNON_BALL = ITEMS.register("giant_cannon_ball", () -> new BlockItem(SiegeworksBlocks.GIANT_CANNON_BALL.get(), new Item.Properties().stacksTo(2)));
     RegistrySupplier<Item> GRAPESHOT = ITEMS.register("grapeshot", () ->
             new BlockItem(SiegeworksBlocks.GRAPESHOT.get(), new Item.Properties().stacksTo(2)));
-    RegistrySupplier<Item> FIRE_PROJECTILE = ITEMS.register("fire_projectile", () -> new BlockItem(SiegeworksBlocks.FIRE_PROJECTILE.get(), new Item.Properties().stacksTo(1)));
+    /** An incendiary pot sealed with its wick; without one it is a {@link #CLAY_POT}, empty or partly filled. */
+    RegistrySupplier<Item> FIRE_PROJECTILE = ITEMS.register("fire_projectile", () ->
+            new IncendiaryPotItem(SiegeworksBlocks.FIRE_PROJECTILE.get(), new Item.Properties().stacksTo(1)));
+    RegistrySupplier<Item> CLAY_POT = ITEMS.register("clay_pot", () ->
+            new IncendiaryPotItem(SiegeworksBlocks.FIRE_PROJECTILE.get(), new Item.Properties().stacksTo(1)));
     RegistrySupplier<Item> RAMROD = ITEMS.register("ramrod", () -> new Item(new Item.Properties().stacksTo(1).durability(256)));
 
     static void registerItems() {

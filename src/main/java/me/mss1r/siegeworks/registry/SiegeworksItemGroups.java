@@ -42,6 +42,7 @@ public interface SiegeworksItemGroups {
                             itemStack(SiegeworksItems.CANNON_BALL.get()),
                             itemStack(SiegeworksItems.GIANT_CANNON_BALL.get()),
                             itemStack(SiegeworksItems.GRAPESHOT.get()),
+                            itemStack(SiegeworksItems.CLAY_POT.get()),
                             itemStack(SiegeworksItems.FIRE_PROJECTILE.get())
                     )))
                     .build());

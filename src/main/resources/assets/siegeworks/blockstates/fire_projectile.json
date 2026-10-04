@@ -1,12 +1,34 @@
 {
   "variants": {
-    "facing=north,waterlogged=false": { "model": "siegeworks:block/fire_projectile" },
-    "facing=north,waterlogged=true": { "model": "siegeworks:block/fire_projectile" },
-    "facing=east,waterlogged=false": { "model": "siegeworks:block/fire_projectile", "y": 90 },
-    "facing=east,waterlogged=true": { "model": "siegeworks:block/fire_projectile", "y": 90 },
-    "facing=south,waterlogged=false": { "model": "siegeworks:block/fire_projectile", "y": 180 },
-    "facing=south,waterlogged=true": { "model": "siegeworks:block/fire_projectile", "y": 180 },
-    "facing=west,waterlogged=false": { "model": "siegeworks:block/fire_projectile", "y": 270 },
-    "facing=west,waterlogged=true": { "model": "siegeworks:block/fire_projectile", "y": 270 }
+    "facing=north,wick=false": {
+      "model": "siegeworks:block/clay_pot"
+    },
+    "facing=north,wick=true": {
+      "model": "siegeworks:block/fire_projectile"
+    },
+    "facing=east,wick=false": {
+      "model": "siegeworks:block/clay_pot",
+      "y": 90
+    },
+    "facing=east,wick=true": {
+      "model": "siegeworks:block/fire_projectile",
+      "y": 90
+    },
+    "facing=south,wick=false": {
+      "model": "siegeworks:block/clay_pot",
+      "y": 180
+    },
+    "facing=south,wick=true": {
+      "model": "siegeworks:block/fire_projectile",
+      "y": 180
+    },
+    "facing=west,wick=false": {
+      "model": "siegeworks:block/clay_pot",
+      "y": 270
+    },
+    "facing=west,wick=true": {
+      "model": "siegeworks:block/fire_projectile",
+      "y": 270
+    }
   }
 }

@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks.item;
 
+import me.mss1r.siegeworks.block.IncendiaryPotBlock;
 import me.mss1r.siegeworks.registry.SiegeworksBlocks;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -15,7 +16,9 @@ import java.util.List;
 
 public final class SiegeAmmo {
     public static final String AMMO_STONE = "stone";
+    /** A pot loaded with its wick in, which can be lit; {@link #AMMO_POT} is one without. */
     public static final String AMMO_FIRE = "fire";
+    public static final String AMMO_POT = "pot";
     public static final String AMMO_GRAPESHOT = "siegeworks:grapeshot";
     public static final String AMMO_IRON_SCATTERSHOT = "minecraft:iron_nugget";
 
@@ -56,7 +59,8 @@ public final class SiegeAmmo {
             return SiegeworksBlocks.GRAPESHOT.get().defaultBlockState();
         }
         if (isFireAmmoKey(ammo)) {
-            return SiegeworksBlocks.FIRE_PROJECTILE.get().defaultBlockState();
+            return SiegeworksBlocks.FIRE_PROJECTILE.get().defaultBlockState()
+                    .setValue(IncendiaryPotBlock.WICK, !AMMO_POT.equals(ammo));
         }
 
         Item projectile = AMMO_STONE.equals(ammo) ? Items.STONE : null;
@@ -82,8 +86,14 @@ public final class SiegeAmmo {
                 || "minecraft:dripstone_block".equals(ammo);
     }
 
-    public static boolean isFireAmmoKey(String ammo) {
+    /** Whether the load is a pot sealed with its wick, which can be lit. */
+    public static boolean isLightablePotKey(String ammo) {
         return AMMO_FIRE.equals(ammo) || "siegeworks:fire_projectile".equals(ammo);
+    }
+
+    /** Whether the load is a pot, with or without its wick. */
+    public static boolean isFireAmmoKey(String ammo) {
+        return AMMO_FIRE.equals(ammo) || AMMO_POT.equals(ammo) || "siegeworks:fire_projectile".equals(ammo);
     }
 
     public static boolean isGrapeshot(ItemStack stack) {

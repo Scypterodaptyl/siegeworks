@@ -6,7 +6,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "siegeworks:fire_projectile"
+          "name": "siegeworks:clay_pot"
         }
       ],
       "conditions": [

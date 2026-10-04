@@ -27,6 +27,14 @@ public final class SiegeworksServerConfig {
     private static final SiegeworksConfigSpec.IntValue ABANDON_AFTER_DAYS;
     private static final SiegeworksConfigSpec.EnumValue<SiegeBlockDamage> BLOCK_DAMAGE;
     private static final SiegeworksConfigSpec.DoubleValue STONE_FRACTURE_ENERGY;
+    private static final SiegeworksConfigSpec.IntValue INCENDIARY_FUSE_TICKS;
+    private static final SiegeworksConfigSpec.DoubleValue INCENDIARY_BASE_FIRE_RADIUS;
+    private static final SiegeworksConfigSpec.DoubleValue INCENDIARY_BASE_FIRE_CHANCE;
+    private static final SiegeworksConfigSpec.IntValue INCENDIARY_BASE_BURN_SECONDS;
+    private static final SiegeworksConfigSpec.DoubleValue INCENDIARY_CHARCOAL_FIRE_RADIUS;
+    private static final SiegeworksConfigSpec.IntValue INCENDIARY_HONEYCOMB_BURN_SECONDS;
+    private static final SiegeworksConfigSpec.DoubleValue INCENDIARY_BLAZE_POWDER_FIRE_CHANCE;
+    private static final SiegeworksConfigSpec.DoubleValue INCENDIARY_GUNPOWDER_BLAST_ENERGY;
 
     static {
         SiegeworksConfigSpec.Builder builder = new SiegeworksConfigSpec.Builder();
@@ -137,6 +145,36 @@ public final class SiegeworksServerConfig {
                         "Other materials scale from stone. A datapack's fractureEnergy overrides this value for its blocks.",
                         "This changes craters and accumulated cracks, not flight, penetration resistance or entity damage.")
                 .defineInRange("stoneFractureEnergy", 50_000.0D, 1.0D, 1.0E9D);
+        builder.pop();
+
+        builder.comment("Incendiary pots, which burst only once lit.")
+                .push("incendiary");
+        INCENDIARY_FUSE_TICKS = builder
+                .comment("How long a lit pot's fuse burns, in ticks, before it bursts wherever it is:",
+                        "where it was placed, loaded in a stone thrower, or in flight.")
+                .defineInRange("fuseTicks", 140, 20, 1200);
+        INCENDIARY_BASE_FIRE_RADIUS = builder
+                .comment("What the base of a filled pot, a piece of charcoal and a honeycomb, does when it bursts:",
+                        "how far round the ground catches fire, in blocks.")
+                .defineInRange("baseFireRadius", 5.0D, 0.0D, 32.0D);
+        INCENDIARY_BASE_FIRE_CHANCE = builder
+                .comment("The share of the ground within that reach the base sets alight, from 0 to 1.")
+                .defineInRange("baseFireChance", 0.7D, 0.0D, 1.0D);
+        INCENDIARY_BASE_BURN_SECONDS = builder
+                .comment("How long creatures caught by the base burn, in seconds.")
+                .defineInRange("baseBurnSeconds", 8, 0, 300);
+        INCENDIARY_CHARCOAL_FIRE_RADIUS = builder
+                .comment("Each extra piece of charcoal: blocks added to the reach of the fire.")
+                .defineInRange("charcoalFireRadius", 1.5D, 0.0D, 16.0D);
+        INCENDIARY_HONEYCOMB_BURN_SECONDS = builder
+                .comment("Each extra honeycomb: seconds added to how long creatures burn.")
+                .defineInRange("honeycombBurnSeconds", 2, 0, 120);
+        INCENDIARY_BLAZE_POWDER_FIRE_CHANCE = builder
+                .comment("Each blaze powder: share added to the ground that catches fire.")
+                .defineInRange("blazePowderFireChance", 0.075D, 0.0D, 1.0D);
+        INCENDIARY_GUNPOWDER_BLAST_ENERGY = builder
+                .comment("Each gunpowder: blast energy in joules. An explosive singijeon carries 30000.")
+                .defineInRange("gunpowderBlastEnergy", 20_000.0D, 0.0D, 1.0E7D);
         builder.pop(2);
 
         builder.push("movement");
@@ -279,6 +317,38 @@ public final class SiegeworksServerConfig {
 
     public static void setBlockDamage(SiegeBlockDamage blockDamage) {
         BLOCK_DAMAGE.set(blockDamage);
+    }
+
+    public static int getIncendiaryFuseTicks() {
+        return INCENDIARY_FUSE_TICKS.get();
+    }
+
+    public static double getIncendiaryBaseFireRadius() {
+        return INCENDIARY_BASE_FIRE_RADIUS.get();
+    }
+
+    public static double getIncendiaryBaseFireChance() {
+        return INCENDIARY_BASE_FIRE_CHANCE.get();
+    }
+
+    public static int getIncendiaryBaseBurnSeconds() {
+        return INCENDIARY_BASE_BURN_SECONDS.get();
+    }
+
+    public static double getIncendiaryCharcoalFireRadius() {
+        return INCENDIARY_CHARCOAL_FIRE_RADIUS.get();
+    }
+
+    public static int getIncendiaryHoneycombBurnSeconds() {
+        return INCENDIARY_HONEYCOMB_BURN_SECONDS.get();
+    }
+
+    public static double getIncendiaryBlazePowderFireChance() {
+        return INCENDIARY_BLAZE_POWDER_FIRE_CHANCE.get();
+    }
+
+    public static double getIncendiaryGunpowderBlastEnergy() {
+        return INCENDIARY_GUNPOWDER_BLAST_ENERGY.get();
     }
 
     public static double getStoneFractureEnergy() {

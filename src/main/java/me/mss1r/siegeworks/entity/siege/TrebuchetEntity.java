@@ -8,6 +8,9 @@ import me.mss1r.siegeworks.api.SiegeBallistics;
 import me.mss1r.siegeworks.api.SiegeOperationState;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
 import me.mss1r.siegeworks.entity.projectile.TrebuchetProjectile;
+import me.mss1r.siegeworks.gameplay.ballistics.EnginePot;
+import me.mss1r.siegeworks.gameplay.ballistics.IncendiaryFuse;
+import me.mss1r.siegeworks.item.PotFilling;
 import me.mss1r.siegeworks.gameplay.ballistics.ScattershotVolley;
 import me.mss1r.axiomata.collision.CollisionGroup;
 import me.mss1r.axiomata.collision.CollisionPose;
@@ -96,6 +99,15 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
             SiegeAmmunitionMode.INCENDIARY);
     private static final EntityDataAccessor<Integer> SHOOT_ANIMATION_TICK =
             SynchedEntityData.defineId(TrebuchetEntity.class, EntityDataSerializers.INT);
+    /** Ticks left on the fuse of a fire pot waiting in the sling, or {@link IncendiaryFuse#UNLIT}. */
+    private static final EntityDataAccessor<Integer> POT_FUSE =
+            SynchedEntityData.defineId(TrebuchetEntity.class, EntityDataSerializers.INT);
+    /** The sling's pivot on the arm and the load's centre in it, in structure coordinates at rest. */
+    private static final Vec3 SLING_PIVOT = new Vec3(0.0D, 114.0D / 16.0D, -253.0D / 16.0D);
+    private static final Vec3 LOAD_CENTER = new Vec3(0.0D, 114.0D / 16.0D, -367.0D / 16.0D);
+    private static final double LOADED_SLING_ANGLE = -157.5D;
+    /** The size of a stone-sized block drawn in the sling, as the renderer draws a pot there. */
+    private static final double LOAD_DRAWN_SIZE = 1.44D * 0.5D;
     private static final ScalarAnimationCurve RELOAD_ARM = ScalarAnimationCurve.of(
             key(0.0F, 90.0D), key(280.0F, -3.0D), key(320.0F, -22.5D),
             key(RELOAD_ANIMATION_TICKS, -22.5D));
@@ -127,6 +139,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
 
     private final AnimatableInstanceCache animatableInstanceCache = GeckoLibUtil.createInstanceCache(this);
     private final AutomatedLoadingSession automatedLoading = new AutomatedLoadingSession();
+    private final EnginePot pot = new EnginePot(this, POT_FUSE);
     private final RawAnimation shootAnim = RawAnimation.begin().then("shoot", Animation.LoopType.PLAY_ONCE);
     private final RawAnimation reloadAnim = RawAnimation.begin().thenPlayAndHold("reload");
     private final RawAnimation loadedAnim = RawAnimation.begin().thenPlayAndHold("loaded");
@@ -150,6 +163,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
         var data = builder;
     //?}
         data.define(SHOOT_ANIMATION_TICK, -1);
+        data.define(POT_FUSE, IncendiaryFuse.UNLIT);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -181,6 +195,9 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
     public InteractionResult handleSiegeInteraction(Player player, InteractionHand hand, ServerLevel serverLevel) {
         if (continueLoadingAction(player)) return showLoadingProgress(player);
         if (getCooldown() > 0) return showCooldownProgress(player);
+        if (pot.light(player, hand, potPoint(IncendiaryFuse.WICK_TIP * LOAD_DRAWN_SIZE))) {
+            return InteractionResult.SUCCESS;
+        }
 
         ItemStack itemStack = player.getItemInHand(hand);
         if (itemStack.isEmpty()) {
@@ -225,6 +242,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
             return SiegeActionResult.IN_PROGRESS;
         }
         if (hasAmmoLoaded()) {
+            pot.lightByCrew();
             beginShot();
             playShootSound(serverLevel);
             setOperator(operator);
@@ -243,12 +261,20 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
         if (!automatedLoading.tickComplete()) {
             return SiegeActionResult.IN_PROGRESS;
         }
-        if (!AutomatedLoadingSession.finishStage(inventory, ammo.stage(), ammo.item(), operator)) {
+        String loaded = ammo.ammoKey();
+        if (SiegeAmmo.isFireAmmoKey(loaded)) {
+            PotFilling sealed = EnginePot.takeSealed(inventory);
+            if (sealed == null) {
+                automatedLoading.reset();
+                return SiegeActionResult.MISSING_AMMUNITION;
+            }
+            loaded = pot.load(sealed);
+        } else if (!AutomatedLoadingSession.finishStage(inventory, ammo.stage(), ammo.item(), operator)) {
             automatedLoading.reset();
             return SiegeActionResult.MISSING_AMMUNITION;
         }
 
-        setAmmoLoaded(ammo.ammoKey());
+        setAmmoLoaded(loaded);
         setWindingTime(getLoadingRequirementTicks("winding"));
         setOperator(operator);
         automatedLoading.reset();
@@ -294,7 +320,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
 
     private AutomatedAmmo findAutomatedFireAmmo(Container inventory) {
         Item fireProjectile = SiegeworksItems.FIRE_PROJECTILE.get();
-        if (AutomatedLoadingSession.hasRequiredItem(inventory, AMMO_LOADS[1], fireProjectile)) {
+        if (EnginePot.hasSealed(inventory)) {
             return new AutomatedAmmo(AMMO_LOADS[1], fireProjectile, SiegeAmmo.AMMO_FIRE);
         }
         return null;
@@ -327,6 +353,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
     @Override
     protected void completeLoadingAction(ServerLevel serverLevel, Player player, InteractionHand hand, int stageIndex) {
         ItemStack itemStack = player.getItemInHand(hand);
+        PotFilling held = PotFilling.of(itemStack);
         LoadingRequirement match = findMatchingAmmo(itemStack);
 
         if (match == null || !itemStack.is(getActiveLoadingItem())) {
@@ -341,7 +368,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
         } else if (match.item() == SiegeworksItems.GRAPESHOT.get()) {
             setAmmoLoaded(SiegeAmmo.AMMO_GRAPESHOT);
         } else {
-            setAmmoLoaded(SiegeAmmo.AMMO_FIRE);
+            setAmmoLoaded(pot.load(held));
         }
         setWindingTime(getLoadingRequirementTicks("winding"));
         setOperator(player);
@@ -350,6 +377,9 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
     private LoadingRequirement findMatchingAmmo(ItemStack stack) {
         if (SiegeAmmo.isStoneProjectile(stack)) {
             return LoadingRequirement.consume(stack.getItem()).timedBy("stone");
+        }
+        if (PotFilling.isPot(stack)) {
+            return LoadingRequirement.consume(stack.getItem()).timedBy("fireProjectile");
         }
         for (LoadingRequirement stage : AMMO_LOADS) {
             if (stack.is(stage.item())) return stage;
@@ -366,6 +396,8 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
 
     @Override
     public void onSiegeTick(ServerLevel serverLevel) {
+        pot.burn(serverLevel, () -> potPoint(0.0D), SiegeworksEntities.TREBUCHET_PROJECTILE.get(),
+                ProjectileVariants.TREBUCHET_FIRE_PROJECTILE);
         int animationTick = getShootAnimationTick();
         if (animationTick < 0) {
             return;
@@ -416,7 +448,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
             projectile.setTextureName(ammo);
         } else if (SiegeAmmo.isFireAmmoKey(ammo)) {
             projectile.setPhysicsProfile(ProjectileVariants.TREBUCHET_FIRE_PROJECTILE);
-            projectile.setTextureName(SiegeAmmo.AMMO_FIRE);
+            pot.throwWith(projectile);
         }
 
         serverLevel.addFreshEntity(projectile);
@@ -460,12 +492,27 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
             super.tick();
             StructureMotionSystem.tickStructure(this);
             captureCollisionPose();
+            // Mid-swing the pot is wherever the sling flings it; its sparks rejoin it once released.
+            if (pot.isLit() && getShootAnimationTick() < 0) {
+                pot.sparkle(level(), potPoint(IncendiaryFuse.WICK_TIP * LOAD_DRAWN_SIZE),
+                        potPoint(IncendiaryFuse.WICK_BASE * LOAD_DRAWN_SIZE));
+            }
             return;
         }
 
         captureCollisionPose();
         super.tick();
         StructureMotionSystem.tickStructure(this);
+    }
+
+    /**
+     * A point of a pot waiting in the sling, {@code along} blocks from its centre towards its fuse. The sling lies
+     * turned over on the ground, so the pot is drawn upside down in it and stands upright.
+     */
+    public Vec3 potPoint(double along) {
+        CollisionPose armPose = authoredRotation(GeneratedCollisionShapes.TREBUCHET_ARM.pivot(), getCollisionArmAngle());
+        CollisionPose slingPose = authoredRotation(SLING_PIVOT, LOADED_SLING_ANGLE).then(armPose);
+        return collisionTransform().toWorld(slingPose.toStructure(LOAD_CENTER.add(0.0D, -along, 0.0D)));
     }
 
     private void captureCollisionPose() {
@@ -485,6 +532,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt(TAG_SHOOT_ANIMATION_TICK, getShootAnimationTick());
+        pot.save(tag);
     }
 
     @Override
@@ -493,6 +541,7 @@ public class TrebuchetEntity extends AbstractSiegeEntity implements GeoEntity, S
         setShootAnimationTick(tag.contains(TAG_SHOOT_ANIMATION_TICK)
                 ? Mth.clamp(tag.getInt(TAG_SHOOT_ANIMATION_TICK), -1, SHOOT_ANIMATION_TICKS - 1)
                 : -1);
+        pot.load(tag);
     }
 
     @Override

@@ -4,6 +4,5 @@
   "diameter": 0.25,
   "hardness": 1.0,
   "entity": { "damage": 1.55, "armorPiercing": 0.4, "structure": 0.7 },
-  "shock": { "radius": 9.5, "damage": 0.48 },
-  "fire": { "radius": 8.0, "chance": 0.72 }
+  "shock": { "radius": 9.5, "damage": 0.48 }
 }

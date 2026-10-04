@@ -6,6 +6,7 @@ import me.mss1r.siegeworks.gameplay.ballistics.DistantFlight;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileImpacts;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileSweep;
 import me.mss1r.siegeworks.gameplay.ballistics.SiegeBlockBreaker;
+import me.mss1r.siegeworks.block.IncendiaryPotBlock;
 import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
 import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
 import me.mss1r.axiomata.collision.CollidableStructure;
@@ -411,6 +412,15 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
         }
     }
 
+    /**
+     * A burst no engine fired, such as a pot set down going off, still reaches the blocks around it, answered for
+     * by {@code responsible}.
+     */
+    public void reachBlocksAs(@Nullable UUID responsible) {
+        firedBySiege = true;
+        responsiblePlayerId = responsible;
+    }
+
     /** Only shots from a siege engine touch blocks, even when the engine is gone before they land. */
     public boolean isFiredBySiege() {
         return firedBySiege;
@@ -473,8 +483,25 @@ public abstract class SiegeProjectile extends ThrowableItemProjectile {
                 outward.reverse(), physics, realSpeed(speed), physics.diameterOf(this), breaker());
         craterMouth = null;
         craterFace = null;
-        ProjectileImpacts.blast(level, at, outward, physics.blast().energy(), breaker());
-        ProjectileImpacts.ignite(level, at, physics.fire(), breaker());
+        double blastEnergy = payloadBlastEnergy(physics);
+        ProjectilePhysicsProfile.Fire fire = payloadFire(physics);
+        Player breaker = breaker();
+        ProjectileImpacts.blast(level, at, outward, blastEnergy, breaker);
+        ProjectileImpacts.ignite(level, at, fire, breaker);
+        if (blastEnergy > 0.0D || fire.radius() > 0.0D) {
+            // A charge or a burst of fire going off sets off the pots it reaches, as TNT sets off TNT.
+            IncendiaryPotBlock.detonateAround(level, at, physics.shock().radius(), responsiblePlayerId);
+        }
+    }
+
+    /** The blast of the charge it carries, in joules. */
+    protected double payloadBlastEnergy(ProjectilePhysicsProfile physics) {
+        return physics.blast().energy();
+    }
+
+    /** The fire it spreads where it goes off. */
+    protected ProjectilePhysicsProfile.Fire payloadFire(ProjectilePhysicsProfile physics) {
+        return physics.fire();
     }
 
     /** How fast, in metres per second, a shot flying at {@code speed} blocks per tick strikes. */

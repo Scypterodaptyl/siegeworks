@@ -1,5 +1,6 @@
 package me.mss1r.siegeworks;
 
+import me.mss1r.siegeworks.registry.SiegeworksBlockEntities;
 import me.mss1r.siegeworks.registry.SiegeworksBlocks;
 import me.mss1r.siegeworks.client.SiegeworksClient;
 import me.mss1r.siegeworks.registry.SiegeworksEntities;
@@ -40,6 +41,7 @@ public final class Siegeworks {
       initialized = true;
 
       SiegeworksBlocks.registerBlocks();
+      SiegeworksBlockEntities.registerBlockEntities();
       SiegeworksEntities.register();
       SiegeworksItems.registerItems();
       SiegeworksItemGroups.register();

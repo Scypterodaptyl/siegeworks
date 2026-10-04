@@ -61,6 +61,8 @@ public class TrebuchetRenderer extends SiegeConstructionRenderer<TrebuchetEntity
                 }
                 poseStack.scale(scale, scale, scale);
                 if (SiegeAmmo.isFireAmmoKey(trebuchet.getAmmoLoaded())) {
+                    // The loaded sling lies turned over on the ground; the pot stands upright in it.
+                    poseStack.mulPose(Axis.XP.rotationDegrees(180.0F));
                     TrebuchetProjectileRenderer.renderFirePot(poseStack, state, bufferSource, packedLight, packedOverlay);
                 } else {
                     super.renderBlockForBone(poseStack, bone, state, trebuchet, bufferSource,
