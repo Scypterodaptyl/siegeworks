@@ -68,6 +68,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class RecruitsCompat {
+    /** How far Recruits itself reaches with a command, so siege orders from its screen reach as far; map orders keep the RTS radius. */
     static final double COMMAND_RANGE = 200.0D;
     private static final double COMMAND_RANGE_SQR = COMMAND_RANGE * COMMAND_RANGE;
     private static final ResourceLocation OPERATOR_TYPE = ResourceLocation.fromNamespaceAndPath(Siegeworks.MOD_ID, "recruits");
@@ -264,14 +265,20 @@ public final class RecruitsCompat {
     public static int applyFireZone(ServerPlayer player, BlockPos center, int requestedRadiusX,
                                     int requestedRadiusZ, boolean rectangular,
                                     java.util.function.Predicate<AbstractRecruitEntity> chosen) {
+        return applyFireZone(center, requestedRadiusX, requestedRadiusZ, rectangular,
+                player.serverLevel().getEntitiesOfClass(AbstractRecruitEntity.class,
+                        player.getBoundingBox().inflate(COMMAND_RANGE), chosen::test));
+    }
+
+    /** Gives a fire zone to those of the recruits who work an artillery engine. */
+    public static int applyFireZone(BlockPos center, int requestedRadiusX, int requestedRadiusZ,
+                                    boolean rectangular, List<AbstractRecruitEntity> recruits) {
         int limit = SiegeworksServerConfig.getRecruitFireZoneMaxRadius();
         int radiusX = Mth.clamp(requestedRadiusX, 1, limit);
         int radiusZ = Mth.clamp(requestedRadiusZ, 1, limit);
-        List<AbstractRecruitEntity> nearbyRecruits = player.serverLevel().getEntitiesOfClass(
-                AbstractRecruitEntity.class, player.getBoundingBox().inflate(COMMAND_RANGE));
         int applied = 0;
-        for (AbstractRecruitEntity recruit : nearbyRecruits) {
-            if (!(recruit instanceof SiegeEngineerEntity engineer) || !chosen.test(recruit)) {
+        for (AbstractRecruitEntity recruit : recruits) {
+            if (!(recruit instanceof SiegeEngineerEntity engineer)) {
                 continue;
             }
             AbstractSiegeEntity siege = workedMachine(engineer);
@@ -291,11 +298,14 @@ public final class RecruitsCompat {
 
     public static int clearFireZone(ServerPlayer player,
                                     java.util.function.Predicate<AbstractRecruitEntity> chosen) {
-        List<AbstractRecruitEntity> nearbyRecruits = player.serverLevel().getEntitiesOfClass(
-                AbstractRecruitEntity.class, player.getBoundingBox().inflate(COMMAND_RANGE));
+        return clearFireZone(player.serverLevel().getEntitiesOfClass(AbstractRecruitEntity.class,
+                player.getBoundingBox().inflate(COMMAND_RANGE), chosen::test));
+    }
+
+    public static int clearFireZone(List<AbstractRecruitEntity> recruits) {
         int cleared = 0;
-        for (AbstractRecruitEntity recruit : nearbyRecruits) {
-            if (!(recruit instanceof SiegeEngineerEntity engineer) || !chosen.test(recruit)) continue;
+        for (AbstractRecruitEntity recruit : recruits) {
+            if (!(recruit instanceof SiegeEngineerEntity engineer)) continue;
             RecruitsFireZone.clear(engineer);
             engineer.setShouldStrategicFire(false);
             cleared++;

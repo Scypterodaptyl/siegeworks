@@ -1,14 +1,15 @@
 package me.mss1r.siegeworks.integration.rts;
 
+import com.talhanation.recruits.entities.AbstractRecruitEntity;
 import me.mss1r.recruitsrtscommand.api.FireZoneShape;
 import me.mss1r.recruitsrtscommand.api.MapOrderListener;
 import me.mss1r.recruitsrtscommand.api.RecruitsRTSCommandApi;
 import me.mss1r.siegeworks.integration.recruits.RecruitsCompat;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 final class RtsFireZones {
@@ -22,23 +23,29 @@ final class RtsFireZones {
                                         MapOrderListener.MapFireZone zone) {
                 if (members.isEmpty() || zone.center() == null) return;
 
-                Set<UUID> named = new HashSet<>(members);
-                RecruitsCompat.applyFireZone(commander, zone.center(),
+                RecruitsCompat.applyFireZone(zone.center(),
                         Math.max(1, zone.radiusX()), Math.max(1, zone.radiusZ()),
-                        zone.shape() == FireZoneShape.RECTANGLE,
-                        recruit -> named.contains(recruit.getUUID())
-                                && RecruitsCompat.commandable(commander, recruit));
+                        zone.shape() == FireZoneShape.RECTANGLE, named(commander, members));
             }
 
             @Override
             public void areaFireCleared(ServerPlayer commander, List<UUID> members) {
                 if (members.isEmpty()) return;
 
-                Set<UUID> named = new HashSet<>(members);
-                RecruitsCompat.clearFireZone(commander,
-                        recruit -> named.contains(recruit.getUUID())
-                                && RecruitsCompat.commandable(commander, recruit));
+                RecruitsCompat.clearFireZone(named(commander, members));
             }
         });
+    }
+
+    /** The recruits a map order names, wherever they are: the map commands them from any distance. */
+    private static List<AbstractRecruitEntity> named(ServerPlayer commander, List<UUID> members) {
+        List<AbstractRecruitEntity> recruits = new ArrayList<>(members.size());
+        for (UUID id : new LinkedHashSet<>(members)) {
+            if (commander.serverLevel().getEntity(id) instanceof AbstractRecruitEntity recruit
+                    && RecruitsCompat.commandable(commander, recruit)) {
+                recruits.add(recruit);
+            }
+        }
+        return recruits;
     }
 }

@@ -161,7 +161,7 @@ final class RtsMapObjects {
                 lines,
                 List.of(),
                 ours ? RecruitsCompat.routeOf(siege, player.getUUID()) : List.of(),
-                List.of(),
+                ours && crew instanceof AbstractRecruitEntity recruit ? List.of(recruit.getUUID()) : List.of(),
                 ours ? mapOrders(siege) : java.util.Map.of());
     }
 
