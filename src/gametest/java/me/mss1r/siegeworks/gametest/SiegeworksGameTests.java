@@ -1885,6 +1885,32 @@ public final class SiegeworksGameTests {
         });
     }
 
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void towerUnloadsAcrossItsBridgeOntoTheWall(GameTestHelper helper) {
+        buildFloor(helper);
+        buildBridgeLanding(helper);
+        TowerCrew crew = spawnTestTowerCrew(helper);
+        crew.tower.setDeployed(crew.driver, true);
+        helper.assertTrue(crew.tower.preparePassengerForAutomatedExit(crew.passenger),
+                "Tower could not move its passenger to the bridge floor");
+        double wallTop = helper.absolutePos(BlockPos.ZERO).getY() + 12.0D;
+
+        helper.runAfterDelay(150, () -> {
+            helper.assertTrue(crew.tower.canPassengerExit(crew.passenger),
+                    "Tower found no way across its bridge onto the wall it rests on");
+            helper.assertTrue(crew.tower.disembarkPassenger(crew.passenger),
+                    "Tower did not send its passenger across the bridge");
+        });
+        helper.runAfterDelay(152, () -> helper.succeedWhen(() -> {
+            helper.assertTrue(crew.tower.advanceAutomatedExit(crew.passenger)
+                            != me.mss1r.siegeworks.api.SiegeTransportControl.ExitResult.FAILED,
+                    "The passenger's walk across the bridge failed at " + crew.passenger.position());
+            helper.assertTrue(Math.abs(crew.passenger.getY() - wallTop) < 0.5D
+                            && crew.passenger.getZ() > crew.tower.getZ() + 4.0D,
+                    "The passenger did not land on the wall top: " + crew.passenger.position());
+        }));
+    }
+
     @GameTest(template = "empty", timeoutTicks = 80)
     public static void towerUsesModelCollisionWithoutBoundingBoxPush(GameTestHelper helper) {
         buildFloor(helper);
@@ -2514,6 +2540,67 @@ public final class SiegeworksGameTests {
                     "Tower return disturbed a recruit from an unselected group");
             helper.assertTrue(!tower.isDeployed(),
                     "Temporary bridge deployment did not restore the standing bridge-up order");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 700, batch = "recruits_tower_stay")
+    public static void recruitsStayAboardWhenTheBridgeReachesNothing(GameTestHelper helper) {
+        if (!Platform.isModLoaded("recruits")) {
+            helper.succeed();
+            return;
+        }
+        buildFloor(helper);
+        for (int x = 9; x <= 23; x++) {
+            for (int z = 11; z <= 15; z++) {
+                for (int y = 1; y <= 7; y++) {
+                    helper.setBlock(new BlockPos(x, y, z), Blocks.STONE);
+                }
+            }
+        }
+        ServerLevel level = helper.getLevel();
+        SiegeTowerEntity tower = SiegeworksEntities.SIEGE_TOWER_ENTITY.get().create(level);
+        LivingEntity engineer = createLivingEntity(level, "recruits:siege_engineer");
+        LivingEntity[] recruits = new LivingEntity[3];
+        for (int i = 0; i < recruits.length; i++) {
+            recruits[i] = createLivingEntity(level, "recruits:recruit");
+        }
+        helper.assertTrue(tower != null && engineer != null
+                        && java.util.Arrays.stream(recruits).allMatch(java.util.Objects::nonNull),
+                "Failed to create Recruits tower test entities");
+        FakePlayer commander = SiegeGameTestPlayers.create(level);
+        java.util.UUID groupId = java.util.UUID.randomUUID();
+        moveToRelative(helper, tower, 16.0D, 1.0D, 3.0D);
+        moveToRelative(helper, engineer, 16.0D, 1.0D, 2.0D);
+        commander.setPos(tower.getX(), tower.getY(), tower.getZ());
+        if (engineer instanceof Mob mob) {
+            mob.setPersistenceRequired();
+        }
+        level.addFreshEntity(tower);
+        level.addFreshEntity(engineer);
+        for (int i = 0; i < recruits.length; i++) {
+            moveToRelative(helper, recruits[i], 14.5D + i * 0.75D, 1.0D, 2.0D);
+            if (recruits[i] instanceof Mob mob) {
+                mob.setPersistenceRequired();
+            }
+            level.addFreshEntity(recruits[i]);
+        }
+        helper.runAfterDelay(20, () -> {
+            configureRecruitCommandIdentity(engineer, commander.getUUID(), groupId);
+            helper.assertTrue(engineer.startRiding(tower), "Siege engineer could not take the tower driver seat");
+            for (LivingEntity recruit : recruits) {
+                configureRecruitCommandIdentity(recruit, commander.getUUID(), groupId);
+                assignRecruitMount(recruit, tower.getUUID());
+                helper.assertTrue(tower.reserveInteriorSeat(recruit) && recruit.startRiding(tower),
+                        "Recruit could not board the tower interior");
+            }
+        });
+        helper.runAfterDelay(60, () -> issueTargetedTowerUnload(commander, tower, groupId));
+        helper.runAfterDelay(500, () -> {
+            for (LivingEntity recruit : recruits) {
+                helper.assertTrue(recruit.getVehicle() == tower,
+                        "A recruit left the tower although its bridge reached nothing: " + recruit.position());
+            }
             helper.succeed();
         });
     }

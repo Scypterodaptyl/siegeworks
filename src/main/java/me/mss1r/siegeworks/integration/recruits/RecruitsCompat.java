@@ -1309,20 +1309,15 @@ public final class RecruitsCompat {
             return 0;
         }
 
-        boolean overBridge = tower.isBridgeOpen()
-                || tower.bridgeLeadsSomewhere() || tower.bridgeMoving();
         int applied = 0;
         for (AbstractRecruitEntity passenger : passengers) {
-            if (RecruitsSiegeTraversal.requestTransportExit(passenger, overBridge)) {
+            if (RecruitsSiegeTraversal.requestTransportExit(passenger, true)) {
                 applied++;
             }
         }
         if (applied > 0) {
-            player.displayClientMessage(Component.translatable(overBridge
-                    ? "message.siegeworks.recruits.tower_unload_bridge"
-                    : tower.isBridgeOpen()
-                            ? "message.siegeworks.recruits.tower_unload_no_surface"
-                            : "message.siegeworks.recruits.tower_unload_ground"), true);
+            player.displayClientMessage(
+                    Component.translatable("message.siegeworks.recruits.tower_unload_bridge"), true);
         }
         return applied;
     }

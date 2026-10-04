@@ -7,7 +7,9 @@ import me.mss1r.siegeworks.entity.siege.SiegeLadderEntity;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.entity.siege.SiegeTowerEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
@@ -145,6 +147,18 @@ final class RecruitsSiegeTraversal {
             }
             if (request.overBridge() && recruit.getVehicle() instanceof SiegeTowerEntity tower
                     && (tower.bridgeMoving() || tower.bridgeLeadsSomewhere())) {
+                return;
+            }
+            if (request.overBridge()) {
+                // Sent out over the bridge, it stays aboard rather than drop out at the foot of the tower.
+                if (recruit.tickCount - request.createdTick() >= GROUND_EXIT_PATIENCE_TICKS) {
+                    TRANSPORT_EXIT_REQUESTS.remove(recruit);
+                    RecruitsDebug.tower(recruit, "found no way across the bridge and stays aboard");
+                    if (recruit.getOwner() instanceof ServerPlayer owner) {
+                        owner.displayClientMessage(Component.translatable(
+                                "message.siegeworks.recruits.tower_unload_no_surface"), true);
+                    }
+                }
                 return;
             }
             boolean waitedLongEnough = recruit.tickCount - request.createdTick() >= GROUND_EXIT_PATIENCE_TICKS;
