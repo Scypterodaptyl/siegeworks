@@ -27,6 +27,7 @@ public final class SiegeworksNetworking {
     private static final ResourceLocation LADDER_PUT_DOWN = id("ladder_put_down");
     private static final ResourceLocation OPEN_MAINTENANCE = id("open_maintenance");
     private static final ResourceLocation PROJECTILE_PROFILES = id("projectile_profiles");
+    private static final ResourceLocation POT_FILLINGS = id("pot_fillings");
 
     private SiegeworksNetworking() {
     }
@@ -68,6 +69,7 @@ public final class SiegeworksNetworking {
                     OpenMaintenanceS2CPayload.STREAM_CODEC);
             NetworkManager.registerS2CPayloadType(ProjectileProfilesS2CPayload.TYPE,
                     ProjectileProfilesS2CPayload.STREAM_CODEC);
+            NetworkManager.registerS2CPayloadType(PotFillingsS2CPayload.TYPE, PotFillingsS2CPayload.STREAM_CODEC);
         }
         //?}
         EnvExecutor.runInEnv(Env.CLIENT, () -> SiegeworksNetworking::registerClientReceivers);
@@ -80,11 +82,14 @@ public final class SiegeworksNetworking {
                 OpenMaintenanceS2CPayload::decode, OpenMaintenanceS2CPayload::handle);
         register(NetworkManager.s2c(), PROJECTILE_PROFILES,
                 ProjectileProfilesS2CPayload::decode, ProjectileProfilesS2CPayload::handle);
+        register(NetworkManager.s2c(), POT_FILLINGS, PotFillingsS2CPayload::decode, PotFillingsS2CPayload::handle);
         *///?} else {
         NetworkManager.registerReceiver(NetworkManager.s2c(), OpenMaintenanceS2CPayload.TYPE,
                 OpenMaintenanceS2CPayload.STREAM_CODEC, OpenMaintenanceS2CPayload::handle);
         NetworkManager.registerReceiver(NetworkManager.s2c(), ProjectileProfilesS2CPayload.TYPE,
                 ProjectileProfilesS2CPayload.STREAM_CODEC, ProjectileProfilesS2CPayload::handle);
+        NetworkManager.registerReceiver(NetworkManager.s2c(), PotFillingsS2CPayload.TYPE,
+                PotFillingsS2CPayload.STREAM_CODEC, PotFillingsS2CPayload::handle);
         //?}
     }
 
@@ -144,6 +149,9 @@ public final class SiegeworksNetworking {
         } else if (packet instanceof ProjectileProfilesS2CPayload value) {
             ProjectileProfilesS2CPayload.encode(value, buffer);
             id = PROJECTILE_PROFILES;
+        } else if (packet instanceof PotFillingsS2CPayload value) {
+            PotFillingsS2CPayload.encode(value, buffer);
+            id = POT_FILLINGS;
         } else {
             throw new IllegalArgumentException("Unsupported server packet: " + packet.getClass().getName());
         }

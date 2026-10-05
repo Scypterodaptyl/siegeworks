@@ -15,7 +15,7 @@ import me.mss1r.siegeworks.event.SiegeworksServerTickHandler;
 import me.mss1r.siegeworks.particle.SiegeworksParticles;
 import me.mss1r.siegeworks.registry.SiegeworksItemGroups;
 import me.mss1r.siegeworks.registry.SiegeworksItems;
-import me.mss1r.siegeworks.network.ProjectileProfileSync;
+import me.mss1r.siegeworks.network.ProfileSync;
 import me.mss1r.siegeworks.network.SiegeworksNetworking;
 import me.mss1r.siegeworks.registry.SiegeworksSounds;
 import com.mojang.logging.LogUtils;
@@ -56,7 +56,7 @@ public final class Siegeworks {
       SiegeOwnershipEvents.register();
       EntityAttributesHandler.register();
       SiegeProfileReloads.register();
-      ProjectileProfileSync.register();
+      ProfileSync.register();
       SiegeworksServerTickHandler.register();
       ExplosionPhysicsHandler.register();
       MountedSiegeItemHandler.register();

@@ -5,6 +5,8 @@ public final class SiegeProfileCatalogs {
             new ProfileCatalog<>(SiegeEngineProfile.DEFAULT);
     public static final ProfileCatalog<ProjectilePhysicsProfile> PROJECTILES =
             new ProfileCatalog<>(ProjectilePhysicsProfile.DEFAULT);
+    public static final ProfileCatalog<PotFillingProfile> POT_FILLINGS =
+            new ProfileCatalog<>(PotFillingProfile.DEFAULT);
 
     private SiegeProfileCatalogs() {
     }

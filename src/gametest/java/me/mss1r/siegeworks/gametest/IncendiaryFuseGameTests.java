@@ -1,11 +1,15 @@
 package me.mss1r.siegeworks.gametest;
 
+import com.google.gson.JsonParser;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.block.IncendiaryPotBlock;
 import me.mss1r.siegeworks.block.IncendiaryPotBlockEntity;
 import me.mss1r.siegeworks.config.SiegeBlockDamage;
 import me.mss1r.siegeworks.config.SiegeworksServerConfig;
+import me.mss1r.siegeworks.data.profile.PotFillingProfile;
+import me.mss1r.siegeworks.data.profile.ProfileFormat;
 import me.mss1r.siegeworks.data.profile.ProjectileVariants;
+import me.mss1r.siegeworks.data.profile.SiegeProfileCatalogs;
 import me.mss1r.siegeworks.entity.base.AbstractSiegeEntity;
 import me.mss1r.siegeworks.entity.projectile.TrebuchetProjectile;
 import me.mss1r.siegeworks.entity.siege.MangonelEntity;
@@ -22,6 +26,7 @@ import net.minecraft.gametest.framework.AfterBatch;
 import net.minecraft.gametest.framework.BeforeBatch;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -49,6 +54,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 //?}
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 @GameTestHolder(Siegeworks.MOD_ID)
@@ -335,6 +342,69 @@ public final class IncendiaryFuseGameTests {
         helper.assertTrue(!mangonel.addEffect(new MobEffectInstance(MobEffects.POISON, 100)),
                 "A siege engine was poisoned");
         helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void bundledPotFillingMatchesTheBuiltInValues(GameTestHelper helper) {
+        helper.assertTrue(SiegeProfileCatalogs.POT_FILLINGS.contains(PotFillingProfile.ID),
+                "The bundled pot filling profile did not load");
+        PotFillingProfile loaded = PotFillingProfile.current();
+        helper.assertTrue(loaded.equals(PotFillingProfile.DEFAULT),
+                "The bundled pot filling differs from the built-in one: " + loaded);
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void datapackPotFillingDecidesIngredientsLimitsAndWick(GameTestHelper helper) {
+        PotFilling saved = fill(Items.GUNPOWDER, Items.BLAZE_POWDER);
+        Map<ResourceLocation, PotFillingProfile> before = SiegeProfileCatalogs.POT_FILLINGS.snapshot();
+        SiegeProfileCatalogs.POT_FILLINGS.acceptFromServer(Map.of(PotFillingProfile.ID, new PotFillingProfile(
+                Map.of("#minecraft:coals", 1),
+                new PotFillingProfile.Effect(4.0D, 0.5D, 6, 0.0D),
+                Map.of("minecraft:glowstone_dust", new PotFillingProfile.Effect(3.0D, 0.0D, 0, 0.0D),
+                        "minecraft:blaze_powder", new PotFillingProfile.Effect(0.0D, 0.1D, 0, 0.0D)),
+                2, 1, "minecraft:vine")));
+        try {
+            PotFilling filling = PotFilling.EMPTY.with(Items.COAL).orElse(null);
+            helper.assertTrue(filling != null && filling.hasBase(), "Coal did not make a base through #minecraft:coals");
+            filling = filling.with(Items.GLOWSTONE_DUST).orElseThrow();
+            helper.assertTrue(filling.with(Items.GLOWSTONE_DUST).isEmpty(), "maxOfAKind 1 let a second glowstone in");
+            filling = filling.with(Items.BLAZE_POWDER).orElseThrow();
+            helper.assertTrue(filling.with(Items.GUNPOWDER).isEmpty(), "Gunpowder went in though it is no additive");
+            assertBurst(helper, filling, 7.0D, 0.6D, 6, 0.0D, "a datapack filling");
+            helper.assertTrue(PotFilling.isWick(new ItemStack(Items.VINE))
+                    && !PotFilling.isWick(new ItemStack(Items.STRING)), "The datapack wick is not the one accepted");
+            PotFilling reloaded = PotFilling.load(saved.save());
+            PotFilling expected = PotFilling.EMPTY.with(Items.CHARCOAL).orElseThrow()
+                    .with(Items.BLAZE_POWDER).orElseThrow();
+            helper.assertTrue(reloaded.equals(expected),
+                    "A saved pot kept what the datapack no longer accepts: " + reloaded);
+        } finally {
+            SiegeProfileCatalogs.POT_FILLINGS.acceptFromServer(before);
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void brokenPotFillingNamesTheFieldAtFault(GameTestHelper helper) {
+        String good = "{\"formatVersion\": 2, \"base\": {\"minecraft:charcoal\": 1}, \"baseBurst\": {\"fireRadius\": 5}}";
+        helper.assertTrue(ProfileFormat.potFilling(JsonParser.parseString(good)).isEmpty(),
+                "A valid pot filling was rejected");
+        assertFormatError(helper, good.replace("\"baseBurst\"", "\"basBurst\""), "unknown field basBurst");
+        assertFormatError(helper, good.replace("\"fireRadius\"", "\"fireRadious\""),
+                "unknown field baseBurst.fireRadious");
+        assertFormatError(helper, good.replace(": 1}", ": 1.5}"), "base.minecraft:charcoal must be a whole number");
+        Optional<String> error = new PotFillingProfile(Map.of("minecraft:charcol", 1), PotFillingProfile.Effect.NONE,
+                Map.of(), 6, 3, "minecraft:string").validationError();
+        helper.assertTrue(error.isPresent() && error.get().contains("base.minecraft:charcol: there is no item"),
+                "A misspelt item was not reported: " + error);
+        helper.succeed();
+    }
+
+    private static void assertFormatError(GameTestHelper helper, String json, String expected) {
+        Optional<String> error = ProfileFormat.potFilling(JsonParser.parseString(json));
+        helper.assertTrue(error.isPresent() && error.get().contains(expected),
+                "Expected '" + expected + "' but got " + error);
     }
 
     private static void assertBurst(GameTestHelper helper, PotFilling filling, double radius, double chance,

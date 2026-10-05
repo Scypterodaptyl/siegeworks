@@ -9,6 +9,7 @@ import net.minecraft.world.level.LevelReader;
 /*import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.enchantment.Enchantments;
 *///?}
+import me.mss1r.siegeworks.data.profile.PotFillingProfile;
 import me.mss1r.siegeworks.gameplay.ballistics.IncendiaryFuse;
 import me.mss1r.siegeworks.item.PotFilling;
 import me.mss1r.siegeworks.particle.SiegeParticleEffects;
@@ -202,11 +203,13 @@ public class IncendiaryPotBlock extends HorizontalDirectionalBlock implements Si
     }
 
     private static void refuse(Player player, PotFilling filling) {
-        String reason = filling.wick() ? "sealed"
-                : !filling.hasBase() ? "needs_base"
-                : filling.additives().size() >= PotFilling.ADDITIVE_SLOTS ? "full"
-                : "kind_full";
-        player.displayClientMessage(Component.translatable("siege.pot." + reason), true);
+        PotFillingProfile profile = PotFillingProfile.current();
+        Component message = filling.wick() ? Component.translatable("siege.pot.sealed")
+                : !filling.hasBase() ? Component.translatable("siege.pot.needs_base",
+                        PotFilling.names(filling.missingBase()))
+                : filling.additives().size() >= profile.additiveSlots() ? Component.translatable("siege.pot.full")
+                : Component.translatable("siege.pot.kind_full", profile.maxOfAKind());
+        player.displayClientMessage(message, true);
     }
 
     private static SoundEvent insertSound() {

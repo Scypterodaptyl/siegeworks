@@ -3,6 +3,7 @@ package me.mss1r.siegeworks.data.profile;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -27,6 +28,7 @@ public final class ProfileFormat {
             "shock", Set.of("radius", "damage"),
             "blast", Set.of("energy"),
             "fire", Set.of("radius", "chance"));
+    private static final Set<String> EFFECT_FIELDS = Set.of("fireRadius", "fireChance", "burnSeconds", "blastEnergy");
 
     private ProfileFormat() {
     }
@@ -52,6 +54,88 @@ public final class ProfileFormat {
         return error;
     }
 
+    public static Optional<String> potFilling(JsonElement json) {
+        if (!json.isJsonObject()) {
+            return Optional.of("expected a profile object");
+        }
+        JsonObject object = json.getAsJsonObject();
+        Optional<String> error = version(object).or(() -> unknown(object, Set.of("formatVersion", "base",
+                "baseBurst", "additives", "additiveSlots", "maxOfAKind", "wick"), ""));
+        if (error.isPresent()) {
+            return error;
+        }
+        if (!object.has("base") || !object.get("base").isJsonObject()) {
+            return Optional.of("base must be an object of item or #tag ids to counts");
+        }
+        for (var entry : object.getAsJsonObject("base").entrySet()) {
+            if (!isInteger(entry.getValue())) {
+                return Optional.of("base." + entry.getKey() + " must be a whole number");
+            }
+        }
+        if (!object.has("baseBurst")) {
+            return Optional.of("baseBurst is missing");
+        }
+        error = effect(object.get("baseBurst"), "baseBurst");
+        if (error.isPresent()) {
+            return error;
+        }
+        if (object.has("additives")) {
+            if (!object.get("additives").isJsonObject()) {
+                return Optional.of("additives must be an object of item or #tag ids to effects");
+            }
+            for (var entry : object.getAsJsonObject("additives").entrySet()) {
+                error = effect(entry.getValue(), "additives." + entry.getKey());
+                if (error.isPresent()) {
+                    return error;
+                }
+            }
+        }
+        for (String key : List.of("additiveSlots", "maxOfAKind")) {
+            if (object.has(key) && !isInteger(object.get(key))) {
+                return Optional.of(key + " must be a whole number");
+            }
+        }
+        if (object.has("wick") && (!object.get("wick").isJsonPrimitive()
+                || !object.get("wick").getAsJsonPrimitive().isString())) {
+            return Optional.of("wick must be an item or #tag id");
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<String> effect(JsonElement json, String name) {
+        if (!json.isJsonObject()) {
+            return Optional.of(name + " must be an object");
+        }
+        Optional<String> error = unknown(json.getAsJsonObject(), EFFECT_FIELDS, name + ".");
+        if (error.isPresent()) {
+            return error;
+        }
+        for (var field : json.getAsJsonObject().entrySet()) {
+            boolean whole = field.getKey().equals("burnSeconds");
+            if (whole ? !isInteger(field.getValue()) : !field.getValue().isJsonPrimitive()
+                    || !field.getValue().getAsJsonPrimitive().isNumber()) {
+                return Optional.of(name + "." + field.getKey() + " must be a " + (whole ? "whole number" : "number"));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static boolean isInteger(JsonElement value) {
+        return value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber()
+                && value.getAsDouble() == Math.rint(value.getAsDouble());
+    }
+
+    private static Optional<String> version(JsonObject object) {
+        if (object.has("formatVersion")) {
+            JsonElement version = object.get("formatVersion");
+            if (!version.isJsonPrimitive() || !version.getAsJsonPrimitive().isNumber()
+                    || version.getAsDouble() != VERSION) {
+                return Optional.of("unsupported formatVersion " + version + "; expected " + VERSION);
+            }
+        }
+        return Optional.empty();
+    }
+
     private static Optional<String> check(JsonElement json, Set<String> fields, Set<String> oldFields,
                                            Map<String, Set<String>> parts) {
         if (!json.isJsonObject()) {
@@ -64,14 +148,7 @@ public final class ProfileFormat {
                     + " are not supported by format 2; see "
                     + "https://github.com/mess1re/siegeworks/wiki/Data-Pack-Reference");
         }
-        if (object.has("formatVersion")) {
-            JsonElement version = object.get("formatVersion");
-            if (!version.isJsonPrimitive() || !version.getAsJsonPrimitive().isNumber()
-                    || version.getAsDouble() != VERSION) {
-                return Optional.of("unsupported formatVersion " + version + "; expected " + VERSION);
-            }
-        }
-        Optional<String> error = unknown(object, fields, "");
+        Optional<String> error = version(object).or(() -> unknown(object, fields, ""));
         if (error.isPresent()) {
             return error;
         }

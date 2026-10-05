@@ -4,6 +4,7 @@ import dev.architectury.registry.ReloadListenerRegistry;
 import dev.architectury.event.events.common.LifecycleEvent;
 import me.mss1r.siegeworks.Siegeworks;
 import me.mss1r.siegeworks.data.profile.JsonProfileReloadListener;
+import me.mss1r.siegeworks.data.profile.PotFillingProfile;
 import me.mss1r.siegeworks.data.profile.ProjectilePhysicsProfile;
 import me.mss1r.siegeworks.data.profile.ProfileFormat;
 import me.mss1r.siegeworks.data.profile.BlockMaterialProfile;
@@ -37,10 +38,15 @@ public final class SiegeProfileReloads {
                         "definitions/block_materials", "block materials", BlockMaterialProfile.CODEC,
                         BlockMaterialProfile::validationError, BlockMaterialProfiles.CATALOG,
                         ProfileFormat::blockMaterial), id("block_materials"));
+        ReloadListenerRegistry.register(PackType.SERVER_DATA, new JsonProfileReloadListener<>(
+                "definitions/pot_fillings", "pot fillings", PotFillingProfile.CODEC,
+                PotFillingProfile::validationError, SiegeProfileCatalogs.POT_FILLINGS,
+                ProfileFormat::potFilling), id("pot_fillings"));
         LifecycleEvent.SERVER_STOPPED.register(server -> {
             SiegeProfileCatalogs.ENGINES.reset();
             SiegeProfileCatalogs.PROJECTILES.reset();
             BlockMaterialProfiles.reset();
+            SiegeProfileCatalogs.POT_FILLINGS.reset();
         });
     }
 

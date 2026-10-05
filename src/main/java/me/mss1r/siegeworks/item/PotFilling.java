@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.item;
 
-import me.mss1r.siegeworks.config.SiegeworksServerConfig;
+import me.mss1r.siegeworks.data.profile.PotFillingProfile;
+import me.mss1r.siegeworks.data.profile.PotFillingProfile.Effect;
 import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
 import me.mss1r.siegeworks.registry.SiegeworksItems;
 import net.minecraft.ChatFormatting;
@@ -17,62 +18,74 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * Contents of an incendiary pot. Filled in order: the base (one charcoal and one honeycomb), required for it to burn;
- * then up to {@link #ADDITIVE_SLOTS} additives, at most {@link #MAX_OF_A_KIND} of each; then a string wick, which seals
- * it and makes it lightable.
+ * Contents of an incendiary pot, filled in order: the base, required for it to burn; then additives; then a wick,
+ * which seals it and makes it lightable. Which items those are, and what they do, comes from
+ * {@link PotFillingProfile}.
  */
 public record PotFilling(List<Item> contents, boolean wick) {
-    public static final int BASE_SLOTS = 2;
-    public static final int ADDITIVE_SLOTS = 6;
-    public static final int MAX_OF_A_KIND = 3;
     public static final PotFilling EMPTY = new PotFilling(List.of(), false);
     private static final String TAG_POT = "Pot";
     private static final String TAG_CONTENTS = "Contents";
     private static final String TAG_WICK = "Wick";
+    /** What pots held before hand filling existed. */
+    private static final List<Item> LEGACY_STANDARD = List.of(Items.CHARCOAL, Items.HONEYCOMB,
+            Items.CHARCOAL, Items.CHARCOAL, Items.HONEYCOMB, Items.HONEYCOMB);
 
     public PotFilling {
         contents = List.copyOf(contents);
     }
 
-    /** Filling of pots made before hand filling existed: base, two more charcoal, two more honeycomb, and a wick. */
+    /**
+     * Filling of pots made before hand filling existed: base, two more charcoal, two more honeycomb, and a wick.
+     * Items the current profile no longer accepts are left out.
+     */
     public static PotFilling standard() {
-        return new PotFilling(List.of(Items.CHARCOAL, Items.HONEYCOMB,
-                Items.CHARCOAL, Items.CHARCOAL, Items.HONEYCOMB, Items.HONEYCOMB), true);
-    }
-
-    public static boolean isBaseIngredient(Item item) {
-        return item == Items.CHARCOAL || item == Items.HONEYCOMB;
+        return rebuild(LEGACY_STANDARD, true);
     }
 
     public static boolean isIngredient(Item item) {
-        return isBaseIngredient(item) || item == Items.BLAZE_POWDER || item == Items.GUNPOWDER;
+        return profile().isIngredient(item);
     }
 
     public static boolean isWick(ItemStack stack) {
-        return stack.is(Items.STRING);
+        return profile().isWick(stack);
+    }
+
+    private static PotFillingProfile profile() {
+        return PotFillingProfile.current();
     }
 
     public boolean isEmpty() {
         return contents.isEmpty();
     }
 
+    /** Base ingredients still missing, by profile key. Empty once the base is complete. */
+    public Map<String, Integer> missingBase() {
+        return baseState().missing();
+    }
+
     public boolean hasBase() {
-        return contents.size() >= BASE_SLOTS
-                && contents.subList(0, BASE_SLOTS).contains(Items.CHARCOAL)
-                && contents.subList(0, BASE_SLOTS).contains(Items.HONEYCOMB);
+        return baseState().missing().isEmpty();
     }
 
     public List<Item> additives() {
-        return hasBase() ? contents.subList(BASE_SLOTS, contents.size()) : List.of();
+        BaseState state = baseState();
+        return state.missing().isEmpty() ? contents.subList(state.used(), contents.size()) : List.of();
     }
 
-    /** Count of this additive, excluding the base. */
+    /** Count of additives filed under the same profile key as {@code item}. */
     public int additivesOf(Item item) {
-        return (int) additives().stream().filter(additive -> additive == item).count();
+        String key = profile().additiveKey(item);
+        if (key == null) {
+            return 0;
+        }
+        return (int) additives().stream().filter(additive -> key.equals(profile().additiveKey(additive))).count();
     }
 
     public boolean canLight() {
@@ -81,14 +94,17 @@ public record PotFilling(List<Item> contents, boolean wick) {
 
     /** This filling with one more ingredient, if it is accepted now. */
     public Optional<PotFilling> with(Item item) {
-        if (wick || !isIngredient(item)) {
+        if (wick) {
             return Optional.empty();
         }
-        if (!hasBase()) {
-            if (!isBaseIngredient(item) || contents.contains(item)) {
+        PotFillingProfile profile = profile();
+        Map<String, Integer> missing = missingBase();
+        if (!missing.isEmpty()) {
+            if (PotFillingProfile.firstMatch(missing.keySet(), item) == null) {
                 return Optional.empty();
             }
-        } else if (additives().size() >= ADDITIVE_SLOTS || additivesOf(item) >= MAX_OF_A_KIND) {
+        } else if (profile.additiveKey(item) == null || additives().size() >= profile.additiveSlots()
+                || additivesOf(item) >= profile.maxOfAKind()) {
             return Optional.empty();
         }
         List<Item> more = new ArrayList<>(contents);
@@ -106,22 +122,16 @@ public record PotFilling(List<Item> contents, boolean wick) {
         if (!hasBase()) {
             return Burst.NONE;
         }
-        double fireRadius = SiegeworksServerConfig.getIncendiaryBaseFireRadius();
-        double fireChance = SiegeworksServerConfig.getIncendiaryBaseFireChance();
-        int burnSeconds = SiegeworksServerConfig.getIncendiaryBaseBurnSeconds();
-        double blastEnergy = 0.0D;
+        PotFillingProfile profile = profile();
+        Effect total = profile.baseBurst();
         for (Item additive : additives()) {
-            if (additive == Items.CHARCOAL) {
-                fireRadius += SiegeworksServerConfig.getIncendiaryCharcoalFireRadius();
-            } else if (additive == Items.HONEYCOMB) {
-                burnSeconds += SiegeworksServerConfig.getIncendiaryHoneycombBurnSeconds();
-            } else if (additive == Items.BLAZE_POWDER) {
-                fireChance += SiegeworksServerConfig.getIncendiaryBlazePowderFireChance();
-            } else if (additive == Items.GUNPOWDER) {
-                blastEnergy += SiegeworksServerConfig.getIncendiaryGunpowderBlastEnergy();
+            String key = profile.additiveKey(additive);
+            if (key != null) {
+                total = total.plus(profile.additives().get(key));
             }
         }
-        return new Burst(fireRadius, Math.min(1.0D, fireChance), burnSeconds, blastEnergy);
+        return new Burst(total.fireRadius(), Math.min(1.0D, total.fireChance()), total.burnSeconds(),
+                total.blastEnergy());
     }
 
     /** Fire radius and chance, burn time for entities, and blast energy. */
@@ -136,9 +146,19 @@ public record PotFilling(List<Item> contents, boolean wick) {
             items.add(new ItemStack(item));
         }
         if (wick) {
-            items.add(new ItemStack(Items.STRING));
+            items.add(wickItem());
         }
         return items;
+    }
+
+    private static ItemStack wickItem() {
+        String key = profile().wick();
+        if (!key.startsWith("#")) {
+            ResourceLocation id = ResourceLocation.tryParse(key);
+            return id == null ? new ItemStack(Items.STRING) : new ItemStack(BuiltInRegistries.ITEM.get(id));
+        }
+        return BuiltInRegistries.ITEM.stream().filter(item -> PotFillingProfile.matches(key, item)).findFirst()
+                .map(ItemStack::new).orElseGet(() -> new ItemStack(Items.STRING));
     }
 
     /**
@@ -179,16 +199,24 @@ public record PotFilling(List<Item> contents, boolean wick) {
         return tag;
     }
 
+    /** Reads saved contents, keeping only what the current profile still accepts in that order. */
     public static PotFilling load(CompoundTag tag) {
         List<Item> contents = new ArrayList<>();
         for (Tag entry : tag.getList(TAG_CONTENTS, Tag.TAG_STRING)) {
             ResourceLocation id = ResourceLocation.tryParse(entry.getAsString());
-            Item item = id == null ? Items.AIR : BuiltInRegistries.ITEM.get(id);
-            if (isIngredient(item)) {
-                contents.add(item);
+            if (id != null && BuiltInRegistries.ITEM.containsKey(id)) {
+                contents.add(BuiltInRegistries.ITEM.get(id));
             }
         }
-        return new PotFilling(contents, tag.getBoolean(TAG_WICK));
+        return rebuild(contents, tag.getBoolean(TAG_WICK));
+    }
+
+    private static PotFilling rebuild(List<Item> items, boolean wick) {
+        PotFilling filling = EMPTY;
+        for (Item item : items) {
+            filling = filling.with(item).orElse(filling);
+        }
+        return wick ? filling.withWick().orElse(filling) : filling;
     }
 
     /** Tooltip lines: whether the base is complete, and additive counts. */
@@ -198,9 +226,9 @@ public record PotFilling(List<Item> contents, boolean wick) {
             lines.add(Component.translatable("tooltip.siegeworks.pot.empty").withStyle(ChatFormatting.GRAY));
             return lines;
         }
-        if (!hasBase()) {
-            Item missing = contents.contains(Items.CHARCOAL) ? Items.HONEYCOMB : Items.CHARCOAL;
-            lines.add(Component.translatable("tooltip.siegeworks.pot.base_missing", missing.getDescription())
+        Map<String, Integer> missing = missingBase();
+        if (!missing.isEmpty()) {
+            lines.add(Component.translatable("tooltip.siegeworks.pot.base_missing", names(missing))
                     .withStyle(ChatFormatting.GRAY));
             return lines;
         }
@@ -210,9 +238,26 @@ public record PotFilling(List<Item> contents, boolean wick) {
                     .withStyle(ChatFormatting.GRAY));
         }
         if (!wick) {
-            lines.add(Component.translatable("tooltip.siegeworks.pot.needs_wick").withStyle(ChatFormatting.DARK_GRAY));
+            lines.add(Component.translatable("tooltip.siegeworks.pot.needs_wick",
+                    PotFillingProfile.name(profile().wick())).withStyle(ChatFormatting.DARK_GRAY));
         }
         return lines;
+    }
+
+    /** Profile keys with counts above one shown as "name ×count", joined by commas. */
+    public static Component names(Map<String, Integer> keys) {
+        MutableComponent names = Component.empty();
+        boolean first = true;
+        for (Map.Entry<String, Integer> entry : keys.entrySet()) {
+            if (!first) {
+                names.append(", ");
+            }
+            first = false;
+            Component name = PotFillingProfile.name(entry.getKey());
+            names.append(entry.getValue() > 1
+                    ? Component.translatable("tooltip.siegeworks.pot.count", name, entry.getValue()) : name);
+        }
+        return names;
     }
 
     /** Each additive once, in insertion order, with its count. */
@@ -228,5 +273,32 @@ public record PotFilling(List<Item> contents, boolean wick) {
             names.append(Component.translatable("tooltip.siegeworks.pot.count", kind.getDescription(), count));
         }
         return names;
+    }
+
+    /** Base keys still missing, and how many contents items went into the base so far. */
+    private BaseState baseState() {
+        Map<String, Integer> missing = new LinkedHashMap<>(sortedBase());
+        int used = 0;
+        while (used < contents.size() && !missing.isEmpty()) {
+            String key = PotFillingProfile.firstMatch(missing.keySet(), contents.get(used));
+            if (key == null) {
+                break;
+            }
+            missing.merge(key, -1, Integer::sum);
+            missing.values().removeIf(count -> count <= 0);
+            used++;
+        }
+        return new BaseState(missing, used);
+    }
+
+    /** The profile's base in a stable order, so tooltips list it the same way every time. */
+    private static Map<String, Integer> sortedBase() {
+        Map<String, Integer> sorted = new LinkedHashMap<>();
+        profile().base().entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> sorted.put(entry.getKey(), entry.getValue()));
+        return sorted;
+    }
+
+    private record BaseState(Map<String, Integer> missing, int used) {
     }
 }

@@ -2,9 +2,9 @@ package me.mss1r.siegeworks.entity.projectile;
 
 import me.mss1r.siegeworks.gameplay.ballistics.IncendiaryFuse;
 import me.mss1r.siegeworks.item.PotFilling;
+import me.mss1r.siegeworks.data.profile.PotFillingProfile;
 import me.mss1r.siegeworks.registry.SiegeworksSounds;
 import me.mss1r.siegeworks.platform.MinecraftVersionCompat;
-import me.mss1r.siegeworks.config.SiegeworksServerConfig;
 import me.mss1r.siegeworks.item.SiegeAmmo;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectilePhysics;
 import me.mss1r.siegeworks.gameplay.ballistics.ProjectileBlastResolver;
@@ -297,7 +297,7 @@ public class TrebuchetProjectile extends SiegeProjectile {
         if (!(blastEnergy > 0.0D)) {
             return;
         }
-        double fullCharge = SiegeworksServerConfig.getIncendiaryGunpowderBlastEnergy() * PotFilling.MAX_OF_A_KIND;
+        double fullCharge = PotFillingProfile.current().fullCharge();
         float charge = (float) Mth.clamp(blastEnergy / Math.max(1.0D, fullCharge), 0.0D, 1.0D);
         serverLevel.playSound(null, at.x, at.y, at.z, MinecraftVersionCompat.genericExplodeSound(), SoundSource.PLAYERS,
                 2.0F + 2.0F * charge, 1.1F - 0.25F * charge + random.nextFloat() * 0.1F);
