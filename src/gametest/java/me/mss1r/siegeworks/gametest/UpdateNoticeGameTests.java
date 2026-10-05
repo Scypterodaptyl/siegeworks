@@ -71,7 +71,7 @@ public final class UpdateNoticeGameTests {
         for (String url : new String[] {"file:///etc/passwd", "javascript:alert(1)", "broken url"}) {
             var message = new SiegeUpdateNotice().take(result(VersionChecker.Status.OUTDATED, url)).orElseThrow();
             ClickEvent click = message.getSiblings().get(1).getStyle().getClickEvent();
-            helper.assertTrue(click != null && "https://modrinth.com/mod/siegeworks/versions".equals(click.getValue()),
+            helper.assertTrue(click != null && "https://www.curseforge.com/projects/1713906".equals(click.getValue()),
                     "An invalid download URL made it into chat: " + url);
         }
         helper.succeed();

@@ -47,6 +47,6 @@ public final class SiegeUpdateNotice {
             } catch (IllegalArgumentException ignored) {
             }
         }
-        return "https://modrinth.com/mod/siegeworks/versions";
+        return "https://www.curseforge.com/projects/1713906";
     }
 }
