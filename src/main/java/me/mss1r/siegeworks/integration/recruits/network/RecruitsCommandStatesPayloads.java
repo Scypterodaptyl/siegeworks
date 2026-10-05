@@ -9,6 +9,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,8 @@ public final class RecruitsCommandStatesPayloads {
     private static final int MAX_GROUPS = 64;
     private static final int MAX_STATES = 256;
     private static final int MAX_TYPES = 32;
+    private static final int QUERY_COOLDOWN_TICKS = 10;
+    private static final Map<UUID, Long> LAST_QUERY = new HashMap<>();
 
     private RecruitsCommandStatesPayloads() {
     }
@@ -58,6 +61,11 @@ public final class RecruitsCommandStatesPayloads {
         public static void handle(Query query, NetworkManager.PacketContext context) {
             context.queue(() -> {
                 if (context.getPlayer() instanceof ServerPlayer sender && Platform.isModLoaded("recruits")) {
+                    long now = sender.serverLevel().getGameTime();
+                    Long last = LAST_QUERY.put(sender.getUUID(), now);
+                    if (last != null && now - last < QUERY_COOLDOWN_TICKS && now >= last) {
+                        return;
+                    }
                     RecruitsCommandStates.States states = RecruitsCommandStates.compute(
                             sender, query.groupIds, query.targetEntityId, query.targetPos);
                     RecruitsNetworking.sendToPlayer(sender, new Answer(query.queryId,
