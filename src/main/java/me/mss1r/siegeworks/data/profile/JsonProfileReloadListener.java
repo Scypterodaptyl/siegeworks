@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
+import me.mss1r.axiomata.PackPriority;
 import me.mss1r.siegeworks.Siegeworks;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
@@ -65,8 +66,9 @@ public final class JsonProfileReloadListener<T>
                 continue;
             }
 
-            List<Resource> stack = entry.getValue();
-            // The last resource is the winning pack; lower packs can supply a safe startup fallback.
+            // The last resource is the winning pack; lower packs can supply a safe startup fallback. Datapacks always
+            // rank above the mod jars, which some loaders place on top.
+            List<Resource> stack = PackPriority.datapacksOverMods(entry.getValue());
             for (int i = stack.size() - 1; i >= 0; i--) {
                 Resource resource = stack.get(i);
                 String source = resourceId + " [" + resource.sourcePackId() + "]";

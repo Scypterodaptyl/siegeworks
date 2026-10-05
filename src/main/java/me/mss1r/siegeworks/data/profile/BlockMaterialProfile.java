@@ -1,6 +1,7 @@
 package me.mss1r.siegeworks.data.profile;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -12,9 +13,14 @@ import java.util.Optional;
 public record BlockMaterialProfile(Optional<ResourceLocation> block, Optional<ResourceLocation> tag, int priority,
                                    Optional<Double> strength, Optional<Double> drag,
                                    Optional<Double> fractureEnergy, Optional<Double> projectileResistance) {
+    /** A block tag id, written with {@code #} in front as elsewhere in Siegeworks data; the bare id is accepted too. */
+    private static final Codec<ResourceLocation> TAG_ID = Codec.STRING.comapFlatMap(text -> {
+        ResourceLocation id = ResourceLocation.tryParse(text.startsWith("#") ? text.substring(1) : text);
+        return id == null ? DataResult.error(() -> "not a tag id: " + text) : DataResult.success(id);
+    }, id -> "#" + id);
     public static final Codec<BlockMaterialProfile> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.optionalFieldOf("block").forGetter(BlockMaterialProfile::block),
-            ResourceLocation.CODEC.optionalFieldOf("tag").forGetter(BlockMaterialProfile::tag),
+            TAG_ID.optionalFieldOf("tag").forGetter(BlockMaterialProfile::tag),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(BlockMaterialProfile::priority),
             Codec.DOUBLE.optionalFieldOf("strength").forGetter(BlockMaterialProfile::strength),
             Codec.DOUBLE.optionalFieldOf("drag").forGetter(BlockMaterialProfile::drag),
